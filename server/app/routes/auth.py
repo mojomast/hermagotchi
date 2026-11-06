@@ -92,9 +92,34 @@ def _limiter(request: Request) -> auth.AuthRateLimiter:
 
 
 def _client_ip(request: Request) -> str:
+    # Respect forwarding headers only when a trusted proxy is declared via
+    # HERMAGOTCHI_TRUSTED_PROXY (1/true/yes); otherwise they are untrusted input.
+    if auth.trusted_proxy():
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            first_hop = forwarded.split(",", 1)[0].strip()
+            if first_hop:
+                return first_hop
+        real_ip = (request.headers.get("x-real-ip") or "").strip()
+        if real_ip:
+            return real_ip
     if request.client is None or not request.client.host:
         return "unknown"
     return request.client.host
+
+
+def _signup_error(code: str) -> HTTPException:
+    if code == "signup_closed":
+        return _error(
+            403,
+            "signup_closed",
+            "New account sign-ups are closed right now.",
+        )
+    return _error(
+        403,
+        "signup_ip_limit",
+        "This network has reached the new-account limit.",
+    )
 
 
 def _require_active_account(conn: sqlite3.Connection, account_id: str) -> None:
@@ -144,15 +169,30 @@ def _create_account(
     conn: sqlite3.Connection,
     public_handle: str | None,
     now_iso: str,
+    client_ip: str,
 ) -> str:
+    limit_code = auth.signup_limit_code(conn, client_ip)
+    if limit_code is not None:
+        raise _signup_error(limit_code)
+
     account_id = str(uuid.uuid4())
     handle = _unique_public_handle(conn, public_handle, account_id)
     conn.execute(
         """
-        INSERT INTO accounts (id, public_handle, status, created_at, privacy_flags)
-        VALUES (?, ?, 'active', ?, '{}')
+        INSERT INTO accounts (id, public_handle, status, created_at, privacy_flags, created_ip)
+        VALUES (?, ?, 'active', ?, '{}', ?)
         """,
-        (account_id, handle, now_iso),
+        (account_id, handle, now_iso, client_ip),
+    )
+    conn.execute(
+        """
+        INSERT INTO signup_ip_stats (ip, signup_count, first_signup_at, last_signup_at)
+        VALUES (?, 1, ?, ?)
+        ON CONFLICT(ip) DO UPDATE SET
+            signup_count = signup_ip_stats.signup_count + 1,
+            last_signup_at = excluded.last_signup_at
+        """,
+        (client_ip, now_iso, now_iso),
     )
     return account_id
 
@@ -253,6 +293,11 @@ def start_pairing(
     if not allowed:
         raise _rate_limited(retry_after_s)
 
+    if payload.new_account:
+        limit_code = auth.signup_limit_code(conn, _client_ip(request))
+        if limit_code is not None:
+            raise _signup_error(limit_code)
+
     now = auth.now_ts()
     created_at = auth.iso_from_ts(now)
     expires_at = auth.iso_from_ts(now + auth.pairing_ttl_s())
@@ -346,6 +391,7 @@ def approve_pairing(
 @router.post("/pair/token")
 def exchange_pairing(
     payload: PairTokenRequest,
+    request: Request,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, Any]:
     now = auth.now_ts()
@@ -397,7 +443,12 @@ def exchange_pairing(
         if account_id is None:
             if not row["new_account"]:
                 raise _error(400, "invalid_grant", "That device code is not approved.")
-            account_id = _create_account(conn, row["public_handle"], now_iso)
+            account_id = _create_account(
+                conn,
+                row["public_handle"],
+                now_iso,
+                _client_ip(request),
+            )
 
         device_id = str(uuid.uuid4())
         conn.execute(

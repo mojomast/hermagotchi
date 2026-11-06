@@ -9,6 +9,7 @@ import {
 } from "../logic/connection.js";
 import {
   PAIRING_STATES,
+  SIGNUP_ERROR_MESSAGES,
   deviceRowsFromEnvelope,
   emptyPairingState,
   formatCountdown,
@@ -39,8 +40,15 @@ function SettingRow(props) {
 }
 
 function noticeText(envelope, fallback) {
-  if (envelope && envelope.error && envelope.error.message) {
-    return envelope.error.message;
+  const error = envelope && envelope.error;
+  if (error) {
+    const signupMessage = SIGNUP_ERROR_MESSAGES[error.code];
+    if (signupMessage) {
+      return signupMessage;
+    }
+    if (error.message) {
+      return error.message;
+    }
   }
   return fallback;
 }

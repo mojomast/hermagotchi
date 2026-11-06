@@ -12,6 +12,7 @@ import hmac
 import math
 import os
 import secrets
+import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
@@ -32,6 +33,10 @@ DEFAULT_POLL_INTERVAL_S = 5
 PAIR_START_LIMIT = 10
 PAIR_START_WINDOW_S = 60
 APPROVE_FAILURE_LIMIT = 5
+
+DEFAULT_SIGNUP_CAP = 100
+DEFAULT_SIGNUP_PER_IP = 5
+TRUSTED_PROXY_VALUES = {"1", "true", "yes"}
 
 
 def now_ts() -> float:
@@ -97,6 +102,63 @@ def poll_interval_s() -> int:
         ("HERMAGOTCHI_POLL_INTERVAL_S", "HERMAGOTCHI_POLL_INTERVAL_SECONDS", "HERMAGOTCHI_POLL_INTERVAL"),
         DEFAULT_POLL_INTERVAL_S,
     )
+
+
+def _env_nonnegative_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 0 else default
+
+
+def signup_cap() -> int:
+    """Maximum number of account rows (default 100). Resolved per call."""
+    return _env_nonnegative_int("HERMAGOTCHI_SIGNUP_CAP", DEFAULT_SIGNUP_CAP)
+
+
+def signup_per_ip() -> int:
+    """Maximum new accounts created from one client IP (default 5)."""
+    return _env_nonnegative_int("HERMAGOTCHI_SIGNUP_PER_IP", DEFAULT_SIGNUP_PER_IP)
+
+
+def trusted_proxy() -> bool:
+    """Whether X-Forwarded-For / X-Real-IP may supply the client IP.
+
+    Only enable HERMAGOTCHI_TRUSTED_PROXY (1/true/yes) when a trusted reverse
+    proxy in front of the API overwrites those headers.
+    """
+    raw = os.environ.get("HERMAGOTCHI_TRUSTED_PROXY", "").strip().lower()
+    return raw in TRUSTED_PROXY_VALUES
+
+
+def signup_account_count(conn: sqlite3.Connection) -> int:
+    row = conn.execute("SELECT COUNT(*) AS count FROM accounts").fetchone()
+    if row is None:
+        return 0
+    return int(row["count"] or 0)
+
+
+def signup_ip_count(conn: sqlite3.Connection, ip: str) -> int:
+    row = conn.execute(
+        "SELECT signup_count FROM signup_ip_stats WHERE ip = ?",
+        (ip,),
+    ).fetchone()
+    if row is None:
+        return 0
+    return int(row["signup_count"] or 0)
+
+
+def signup_limit_code(conn: sqlite3.Connection, ip: str) -> str | None:
+    """Return the 403 error code for a closed signup channel, else ``None``."""
+    if signup_account_count(conn) >= signup_cap():
+        return "signup_closed"
+    if signup_ip_count(conn, ip) >= signup_per_ip():
+        return "signup_ip_limit"
+    return None
 
 
 def new_token(prefix: str) -> str:

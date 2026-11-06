@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   PAIRING_STATES,
+  SIGNUP_ERROR_MESSAGES,
   buildPairingViewModel,
   countdownLabel,
   deviceRowsFromEnvelope,
@@ -10,6 +11,7 @@ import {
   formatUserCode,
   isValidUserCode,
   normalizeUserCode,
+  pairingStateFromError,
   pairingStateFromPoll,
   pairingStateFromStart,
   parseExpiry,
@@ -87,6 +89,45 @@ test("start failures become an error state", () => {
   assert.equal(state.status, PAIRING_STATES.ERROR);
   assert.equal(state.error.code, "network_error");
   assert.equal(state.error.retryAfterS, 2);
+});
+
+test("signup limit errors surface specific pairing messages", () => {
+  assert.equal(
+    SIGNUP_ERROR_MESSAGES.signup_closed,
+    "New account sign-ups are closed right now."
+  );
+  assert.equal(
+    SIGNUP_ERROR_MESSAGES.signup_ip_limit,
+    "This network has reached the new-account limit."
+  );
+
+  const closed = pairingStateFromStart({
+    ok: false,
+    status: "forbidden",
+    error: { code: "signup_closed", message: "Request failed.", retry_after_s: 0 },
+  });
+  assert.equal(closed.status, PAIRING_STATES.ERROR);
+  assert.equal(closed.error.code, "signup_closed");
+  assert.equal(closed.error.message, "New account sign-ups are closed right now.");
+
+  const perIp = pairingStateFromError({
+    ok: false,
+    status: "forbidden",
+    error: { code: "signup_ip_limit" },
+  });
+  assert.equal(perIp.status, PAIRING_STATES.ERROR);
+  assert.equal(perIp.error.code, "signup_ip_limit");
+  assert.equal(
+    perIp.error.message,
+    "This network has reached the new-account limit."
+  );
+
+  const generic = pairingStateFromError({
+    ok: false,
+    status: "offline",
+    error: { code: "network_error", message: "No bridge." },
+  });
+  assert.equal(generic.error.message, "No bridge.");
 });
 
 test("poll keeps a pending pairing pending", () => {

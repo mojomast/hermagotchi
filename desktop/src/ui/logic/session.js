@@ -18,7 +18,20 @@ export const PAIRING_STATES = Object.freeze({
 export const PAIRING_STATUS = PAIRING_STATES;
 export const SESSION_STATES = PAIRING_STATES;
 
+export const SIGNUP_ERROR_MESSAGES = Object.freeze({
+  signup_closed: "New account sign-ups are closed right now.",
+  signup_ip_limit: "This network has reached the new-account limit.",
+});
+
 const USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789";
+
+function signupMessageFor(failure) {
+  if (!failure) {
+    return failure;
+  }
+  const message = SIGNUP_ERROR_MESSAGES[failure.code];
+  return message ? Object.assign({}, failure, { message: message }) : failure;
+}
 
 export function normalizeUserCode(value) {
   return String(value === undefined || value === null ? "" : value)
@@ -167,7 +180,7 @@ function withCountdown(state, now) {
 }
 
 export function pairingStateFromStart(value, now) {
-  const failure = envelopeError(value);
+  const failure = signupMessageFor(envelopeError(value));
   if (failure) {
     return Object.assign(emptyPairingState(), {
       status:
@@ -270,13 +283,14 @@ export function pairingStateFromPoll(value, previous, now) {
 
 export function pairingStateFromError(value, previous) {
   const prior = Object.assign(emptyPairingState(), previous || {});
-  const failure =
+  const failure = signupMessageFor(
     envelopeError(value) || {
       status: "unavailable",
       code: "unavailable",
       message: "The request could not be completed.",
       retryAfterS: 0,
-    };
+    }
+  );
   return Object.assign(prior, {
     status: PAIRING_STATES.ERROR,
     paired: false,
