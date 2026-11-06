@@ -7,6 +7,7 @@ import { extractPetId } from "../logic/habitat.js";
 import {
   groupCatalogBySlot,
   itemAvailability,
+  joinAssetUrl,
   manifestFromCatalog,
   normaliseWallet,
   readEnvelope,
@@ -16,6 +17,15 @@ export const SHOP_PLACEHOLDER_ITEMS = Object.freeze([
   { id: "placeholder.crown", name: "Binary Crown", slot: "head", priceBits: 2000 },
   { id: "placeholder.scarf", name: "Patch Scarf", slot: "front", priceBits: 350 },
   { id: "placeholder.aura", name: "Soft Static Aura", slot: "aura", priceBits: 700 },
+]);
+
+export const SHOP_FILTERS = Object.freeze([
+  { id: "all", label: "All" },
+  { id: "head", label: "Hats" },
+  { id: "face", label: "Face" },
+  { id: "back", label: "Neck/Back" },
+  { id: "front", label: "Hand props" },
+  { id: "aura", label: "Auras" },
 ]);
 
 function stateForEnvelope(result) {
@@ -106,6 +116,158 @@ function StubShop(props) {
   });
 }
 
+function manifestAssetFor(manifest, item) {
+  if (!manifest || !Array.isArray(manifest.assets) || !item) {
+    return null;
+  }
+  const wanted = new Set(
+    [item.assetId, item.id].filter(Boolean).map((value) => String(value))
+  );
+  for (const asset of manifest.assets) {
+    if (!asset || typeof asset !== "object") continue;
+    const candidates = [asset.id, asset.asset_id, asset.assetId]
+      .filter(Boolean)
+      .map((value) => String(value));
+    if (candidates.some((value) => wanted.has(value))) {
+      return asset;
+    }
+  }
+  return null;
+}
+
+function itemThumbPath(item, manifest) {
+  const asset = manifestAssetFor(manifest, item);
+  if (asset && asset.path) {
+    return String(asset.path);
+  }
+  if (item.assetUrl) {
+    return String(item.assetUrl);
+  }
+  const shortName = String(item.id || "").split(".").pop();
+  return shortName ? "px3/items/" + shortName + ".png" : "";
+}
+
+function itemThumbUrl(assetBase, item, manifest) {
+  const path = itemThumbPath(item, manifest);
+  if (!path) {
+    return "";
+  }
+  if (/^(?:https?:|data:|blob:)/i.test(path)) {
+    return path;
+  }
+  if (!assetBase) {
+    return "";
+  }
+  return joinAssetUrl(assetBase, path);
+}
+
+function ShopCard(props) {
+  const item = props.item;
+  const availability = props.availability;
+  const busy = props.busy;
+  const thumb = props.thumb;
+  const equipped = availability.equipped;
+
+  return jsxs("article", {
+    className:
+      "hg-shop-card" +
+      (item.owned ? " hg-shop-card--owned" : "") +
+      (equipped ? " hg-shop-card--equipped" : ""),
+    "data-item-id": item.id,
+    "data-slot": item.slot,
+    "data-owned": item.owned ? "true" : "false",
+    "data-equipped": equipped ? "true" : "false",
+    children: [
+      jsx("div", {
+        className: "hg-shop-card__thumb",
+        children: thumb
+          ? jsx("img", {
+              className: "hg-shop-card__image",
+              src: thumb,
+              alt: item.name,
+              loading: "lazy",
+              decoding: "async",
+              draggable: "false",
+            })
+          : jsx("span", {
+              className: "hg-shop-card__thumb-empty",
+              "aria-hidden": "true",
+            }),
+      }),
+      jsx("h4", { className: "hg-shop-card__name", children: item.name }),
+      jsxs("div", {
+        className: "hg-shop-card__meta",
+        children: [
+          jsx("span", { className: "hg-shop-card__slot", children: item.slotLabel }),
+          jsx("span", {
+            className: "hg-shop-card__price",
+            children: item.priceBits + " Bits",
+          }),
+        ],
+      }),
+      jsxs("div", {
+        className: "hg-shop-card__badges",
+        children: [
+          item.owned
+            ? jsx("span", { className: "hg-badge", children: "Owned" })
+            : null,
+          equipped
+            ? jsx("span", {
+                className: "hg-badge hg-badge--equipped",
+                children: "Equipped",
+              })
+            : null,
+        ],
+      }),
+      jsxs("div", {
+        className: "hg-shop-card__actions",
+        children: [
+          jsx("button", {
+            type: "button",
+            className: "hg-btn hg-btn--primary",
+            "data-action": "buy",
+            "data-item-id": item.id,
+            disabled: Boolean(busy) || item.owned || !availability.affordable,
+            onClick: function () {
+              props.onBuy(item);
+            },
+            children: item.owned
+              ? "Owned"
+              : busy === "buy:" + item.id
+                ? "Buying..."
+                : "Buy",
+          }),
+          equipped
+            ? jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                "data-action": "unequip",
+                "data-item-id": item.id,
+                disabled: Boolean(busy) || !props.petId,
+                onClick: function () {
+                  props.onUnequip(item.slot);
+                },
+                children:
+                  busy === "unequip:" + item.slot ? "Removing..." : "Unequip",
+              })
+            : jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                "data-action": "equip",
+                "data-item-id": item.id,
+                disabled: Boolean(busy) || !props.petId,
+                onClick: function () {
+                  props.onEquip(item);
+                },
+                children:
+                  busy === "equip:" + item.id ? "Equipping..." : "Equip",
+              }),
+        ],
+      }),
+    ],
+  });
+}
+
 export function ShopTab(props = {}) {
   const api = props.api;
   const hasApi = Boolean(api && typeof api.get === "function" && typeof api.post === "function");
@@ -121,6 +283,8 @@ export function ShopTab(props = {}) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [bridgeState, setBridgeState] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!hasApi) return undefined;
@@ -203,11 +367,33 @@ export function ShopTab(props = {}) {
     };
   }, [api, hasApi, requestedPetId]);
 
+  useEffect(() => {
+    if (!hasApi || manifest) return undefined;
+    if (!api.assets || typeof api.assets.manifest !== "function") return undefined;
+    let alive = true;
+    api.assets.manifest().then(
+      function (envelope) {
+        if (alive && envelope && envelope.ok && envelope.data) {
+          setManifest(envelope.data);
+        }
+      },
+      function () {}
+    );
+    return function cleanup() {
+      alive = false;
+    };
+  }, [api, hasApi, manifest]);
+
   const uiState = props.state || props.uiState || bridgeState || UI_STATES.READY;
   if (!hasApi) {
     return jsx(StubShop, { uiState });
   }
 
+  const assetBase =
+    props.assetBaseUrl ||
+    (api.assets && typeof api.assets.url === "function"
+      ? api.assets.url("")
+      : "");
   const walletView = normaliseWallet(wallet);
   const petId = requestedPetId || (pet && pet.id) || "";
   const groups = groupCatalogBySlot(catalog).map((group) => ({
@@ -217,6 +403,17 @@ export function ShopTab(props = {}) {
       owned: Boolean(item.owned || owned.has(item.id)),
     })),
   }));
+  const allItems = groups.reduce((items, group) => items.concat(group.items), []);
+  const needle = query.trim().toLowerCase();
+  const visibleItems = allItems.filter(function (item) {
+    if (filter !== "all" && item.slot !== filter) return false;
+    if (!needle) return true;
+    return (
+      item.name.toLowerCase().includes(needle) ||
+      item.id.toLowerCase().includes(needle) ||
+      item.slot.toLowerCase().includes(needle)
+    );
+  });
 
   async function buy(item) {
     setBusy("buy:" + item.id);
@@ -338,127 +535,103 @@ export function ShopTab(props = {}) {
             loadout,
             catalog,
             manifest,
-            assetBaseUrl: props.assetBaseUrl,
+            assetBaseUrl: props.assetBaseUrl || assetBase,
             label: (pet && pet.name ? pet.name : "Pet") + " loadout preview",
           }),
         ],
       }),
-      groups.length === 0
-        ? jsx("p", {
-            className: "hg-muted",
-            children: "No catalog items are available yet.",
-          })
-        : null,
-      groups.map((group) =>
-        jsxs(
-          "div",
-          {
-            className: "hg-card",
-            "data-slot": group.slot,
+      jsxs("div", {
+        className: "hg-card hg-shop-catalog",
+        children: [
+          jsxs("header", {
+            className: "hg-card__header",
             children: [
-              jsx("h3", { children: group.label }),
-              jsxs("table", {
-                className: "hg-table",
-                children: [
-                  jsx("thead", {
-                    children: jsxs("tr", {
-                      children: [
-                        jsx("th", { children: "Item" }),
-                        jsx("th", { children: "Rarity" }),
-                        jsx("th", { children: "Price" }),
-                        jsx("th", { children: "Action" }),
-                      ],
-                    }),
-                  }),
-                  jsx("tbody", {
-                    children: group.items.map((item) => {
-                      const availability = itemAvailability({
-                        item,
-                        wallet: walletView,
-                        petId,
-                        loadout,
-                      });
-                      return jsxs(
-                        "tr",
-                        {
-                          className: availability.equipped ? "hg-row--equipped" : undefined,
-                          children: [
-                            jsx("td", {
-                              children: [
-                                item.name,
-                                availability.equipped
-                                  ? jsx("span", {
-                                      className: "hg-badge",
-                                      children: "Equipped",
-                                    })
-                                  : null,
-                              ],
-                            }),
-                            jsx("td", { children: item.rarity }),
-                            jsx("td", { children: item.priceBits + " Bits" }),
-                            jsx("td", {
-                              className: "hg-row",
-                              children: [
-                                jsx("button", {
-                                  type: "button",
-                                  className: "hg-btn hg-btn--primary",
-                                  "data-action": "buy",
-                                  "data-item-id": item.id,
-                                  disabled:
-                                    Boolean(busy) || item.owned || !availability.affordable,
-                                  onClick: function () {
-                                    buy(item);
-                                  },
-                                  children: item.owned
-                                    ? "Owned"
-                                    : busy === "buy:" + item.id
-                                      ? "Buying..."
-                                      : "Buy",
-                                }),
-                                availability.equipped
-                                  ? jsx("button", {
-                                      type: "button",
-                                      className: "hg-btn",
-                                      "data-action": "unequip",
-                                      "data-item-id": item.id,
-                                      disabled: Boolean(busy) || !petId,
-                                      onClick: function () {
-                                        unequip(item.slot);
-                                      },
-                                      children:
-                                        busy === "unequip:" + item.slot
-                                          ? "Removing..."
-                                          : "Unequip",
-                                    })
-                                  : jsx("button", {
-                                      type: "button",
-                                      className: "hg-btn",
-                                      "data-action": "equip",
-                                      "data-item-id": item.id,
-                                      disabled: Boolean(busy) || !petId,
-                                      onClick: function () {
-                                        equip(item);
-                                      },
-                                      children:
-                                        busy === "equip:" + item.id
-                                          ? "Equipping..."
-                                          : "Equip",
-                                    }),
-                              ],
-                            }),
-                          ],
-                        },
-                        item.id
-                      );
-                    }),
-                  }),
-                ],
+              jsx("h3", { children: "Merch" }),
+              jsx("span", {
+                className: "hg-muted",
+                "data-shop-count": String(visibleItems.length),
+                children:
+                  visibleItems.length +
+                  " item" +
+                  (visibleItems.length === 1 ? "" : "s"),
               }),
             ],
-          },
-          group.slot
-        )
-      ),
+          }),
+          jsxs("div", {
+            className: "hg-shop-tabs",
+            role: "tablist",
+            "aria-label": "Shop item slots",
+            children: SHOP_FILTERS.map((option) =>
+              jsx(
+                "button",
+                {
+                  type: "button",
+                  role: "tab",
+                  "aria-selected": filter === option.id ? "true" : "false",
+                  className:
+                    "hg-shop-tab" +
+                    (filter === option.id ? " hg-shop-tab--active" : ""),
+                  "data-filter": option.id,
+                  onClick: function () {
+                    setFilter(option.id);
+                  },
+                  children: option.label,
+                },
+                option.id
+              )
+            ),
+          }),
+          jsx("label", {
+            className: "hg-shop-search",
+            children: [
+              jsx("span", { className: "hg-label", children: "Search" }),
+              jsx("input", {
+                className: "hg-input hg-shop-search__input",
+                type: "search",
+                value: query,
+                placeholder: "Find merch by name",
+                "aria-label": "Search shop items",
+                onChange: function (event) {
+                  setQuery(event.target.value);
+                },
+              }),
+            ],
+          }),
+          visibleItems.length === 0
+            ? jsx("p", {
+                className: "hg-muted hg-shop-empty",
+                children:
+                  allItems.length === 0
+                    ? "No catalog items are available yet."
+                    : "No merch matches that filter.",
+              })
+            : jsx("div", {
+                className: "hg-shop-grid",
+                children: visibleItems.map((item) => {
+                  const availability = itemAvailability({
+                    item,
+                    wallet: walletView,
+                    petId,
+                    loadout,
+                  });
+                  return jsx(
+                    ShopCard,
+                    {
+                      item,
+                      availability,
+                      busy,
+                      petId,
+                      thumb: itemThumbUrl(assetBase, item, manifest),
+                      onBuy: buy,
+                      onEquip: equip,
+                      onUnequip: unequip,
+                    },
+                    item.id
+                  );
+                }),
+              }),
+        ],
+      }),
     ],
   });
 }

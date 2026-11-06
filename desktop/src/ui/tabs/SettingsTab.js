@@ -3,6 +3,11 @@ import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
 import { NpcHostBanner } from "../components/NpcHostBanner.js";
 import {
+  connectionRows,
+  deriveConnectionStatus,
+  resolveConnectionUiState,
+} from "../logic/connection.js";
+import {
   PAIRING_STATES,
   deviceRowsFromEnvelope,
   emptyPairingState,
@@ -38,6 +43,56 @@ function noticeText(envelope, fallback) {
     return envelope.error.message;
   }
   return fallback;
+}
+
+function callMaybe(fn) {
+  try {
+    const result = fn();
+    return result && typeof result.catch === "function"
+      ? result.catch(function () {
+          return null;
+        })
+      : Promise.resolve(result);
+  } catch (_error) {
+    return Promise.resolve(null);
+  }
+}
+
+function statusEnvelopeFor(api) {
+  if (api && typeof api.status === "function") {
+    return callMaybe(function () {
+      return api.status();
+    });
+  }
+  if (api && typeof api.get === "function") {
+    return callMaybe(function () {
+      return api.get("/status");
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function healthEnvelopeFor(api) {
+  if (api && typeof api.health === "function") {
+    return callMaybe(function () {
+      return api.health();
+    });
+  }
+  if (api && typeof api.get === "function") {
+    return callMaybe(function () {
+      return api.get("/health");
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function pairEnvelopeFor(api) {
+  if (api && api.pair && typeof api.pair.poll === "function") {
+    return callMaybe(function () {
+      return api.pair.poll();
+    });
+  }
+  return Promise.resolve(null);
 }
 
 function formatExpiry(value) {
@@ -140,6 +195,7 @@ export function SettingsTab(props = {}) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [connection, setConnection] = useState(null);
 
   const loadDevices = useCallback(
     async function loadDevices() {
@@ -164,6 +220,39 @@ export function SettingsTab(props = {}) {
         setNow(Date.now());
       }, 1000);
       return function () {
+        clearInterval(timer);
+      };
+    },
+    [api]
+  );
+
+  useEffect(
+    function pollConnection() {
+      if (!api) {
+        return undefined;
+      }
+      let cancelled = false;
+      async function run() {
+        const [statusEnvelope, healthEnvelope, pairEnvelope] = await Promise.all([
+          statusEnvelopeFor(api),
+          healthEnvelopeFor(api),
+          pairEnvelopeFor(api),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setConnection(
+          deriveConnectionStatus({
+            statusEnvelope: statusEnvelope,
+            healthEnvelope: healthEnvelope,
+            pairEnvelope: pairEnvelope,
+          })
+        );
+      }
+      run();
+      const timer = setInterval(run, 10000);
+      return function () {
+        cancelled = true;
         clearInterval(timer);
       };
     },
@@ -226,6 +315,9 @@ export function SettingsTab(props = {}) {
   if (!api) {
     return jsx(SettingsStub, { uiState: uiState });
   }
+
+  const liveRows = connection ? connectionRows(connection) : SETTINGS_PLACEHOLDER;
+  const liveState = connection ? resolveConnectionUiState(connection) : uiState;
 
   async function startPairing() {
     setBusy("start");
@@ -299,7 +391,7 @@ export function SettingsTab(props = {}) {
     className: "hg-settings",
     "data-tab": "settings",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      jsx(StateNotice, { state: liveState }),
       jsx(NpcHostBanner, { surface: "settings" }),
       jsxs("div", {
         className: "hg-card",
@@ -312,7 +404,8 @@ export function SettingsTab(props = {}) {
           }),
           jsx("div", {
             className: "hg-settings__list",
-            children: SETTINGS_PLACEHOLDER.map((setting) =>
+            "data-live-status": connection ? "true" : "false",
+            children: liveRows.map((setting) =>
               jsx(SettingRow, { setting }, setting.key)
             ),
           }),

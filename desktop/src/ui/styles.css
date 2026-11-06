@@ -331,7 +331,7 @@
 
 .hg-npc-host {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   border: 2px solid #3a2f5f;
   background: #17132a;
@@ -394,6 +394,174 @@
   height: auto;
 }
 
+.hg-sprite img,
+.hg-sprite .hg-sprite__layer {
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+.hg-npc-host__portrait {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  border: 1px solid #3a2f5f;
+  background: var(--hg-bg-sunken);
+}
+
+.hg-shop-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+
+.hg-shop-tab {
+  appearance: none;
+  border: 2px solid var(--hg-border);
+  background: var(--hg-bg-sunken);
+  color: var(--hg-muted);
+  padding: 4px 9px;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.hg-shop-tab:hover,
+.hg-shop-tab:focus-visible {
+  border-color: var(--hg-border-bright);
+  color: var(--hg-text);
+}
+
+.hg-shop-tab--active {
+  border-color: var(--hg-accent);
+  background: #132a24;
+  color: var(--hg-accent-strong);
+}
+
+.hg-shop-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hg-shop-search .hg-label {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.hg-shop-search__input {
+  max-width: 320px;
+}
+
+.hg-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.hg-shop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  border: 2px solid var(--hg-border);
+  background: var(--hg-bg-sunken);
+  padding: 8px;
+}
+
+.hg-shop-card--equipped {
+  border-color: var(--hg-accent);
+}
+
+.hg-shop-card--owned {
+  background: #101a1c;
+}
+
+.hg-shop-card__thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 96px;
+  border: 1px dashed var(--hg-border);
+  background: #0d1020;
+  overflow: hidden;
+}
+
+.hg-shop-card__thumb img,
+.hg-shop-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+.hg-shop-card__thumb-empty {
+  display: block;
+  width: 48%;
+  height: 48%;
+  background: var(--hg-border);
+  opacity: 0.35;
+}
+
+.hg-shop-card__name {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.hg-shop-card__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.hg-shop-card__slot {
+  color: var(--hg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hg-shop-card__price {
+  color: var(--hg-accent);
+  white-space: nowrap;
+}
+
+.hg-shop-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 1.2em;
+}
+
+.hg-shop-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.hg-shop-card__actions .hg-btn {
+  flex: 1 1 auto;
+  padding: 4px 8px;
+}
+
+.hg-shop-card--equipped .hg-badge--equipped {
+  border-color: var(--hg-accent);
+  color: var(--hg-accent-strong);
+}
+
 .hg-log {
   list-style: none;
   margin: 0 0 12px;
@@ -406,9 +574,59 @@
 }
 
 .hg-log__item {
+  display: grid;
+  grid-template-columns:
+    3.25rem
+    minmax(5.5rem, 1fr)
+    minmax(6.5rem, 1.4fr)
+    4.75rem
+    minmax(5.5rem, 1fr)
+    minmax(6.5rem, 1.2fr)
+    6rem;
+  grid-template-areas: "round actor move damage types effect hp";
+  gap: 4px 10px;
+  align-items: center;
   border: 1px solid var(--hg-border);
   background: var(--hg-bg-sunken);
   padding: 8px;
+  font-size: 0.8125rem;
+}
+
+.hg-log__round {
+  grid-area: round;
+}
+
+.hg-log__actor {
+  grid-area: actor;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.hg-log__move {
+  grid-area: move;
+  color: var(--hg-text);
+}
+
+.hg-log__damage {
+  grid-area: damage;
+  color: var(--hg-error);
+  white-space: nowrap;
+}
+
+.hg-log__types {
+  grid-area: types;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hg-log__effect {
+  grid-area: effect;
+}
+
+.hg-log__hp {
+  grid-area: hp;
+  white-space: nowrap;
 }
 
 .hg-log__body {
@@ -430,6 +648,17 @@
 .hg-chat,
 .hg-settings {
   min-width: 0;
+}
+
+@media (max-width: 679px) {
+  .hg-log__item {
+    grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      "round actor damage"
+      "move move move"
+      "types types effect"
+      "hp hp hp";
+  }
 }
 
 @media (min-width: 640px) {

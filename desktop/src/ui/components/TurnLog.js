@@ -44,31 +44,49 @@ export function TurnLog(props = {}) {
         "data-round": String(row.round),
         "data-actor": row.actor || "",
         children: [
-          jsx("span", { className: "hg-badge", children: "R" + row.round }),
-          jsx("span", { className: "hg-log__actor", children: row.actorName }),
-          jsx("span", { className: "hg-log__move", children: row.moveLabel }),
-          row.damage > 0
-            ? jsx("span", {
-                className: "hg-log__damage",
-                children: "-" + row.damage + " HP",
-              })
-            : null,
-          jsx(TypeChip, { type: row.actorType }),
-          jsx(TypeChip, { type: row.defenderType }),
-          jsx(EffectivenessBadge, {
-            label: row.effectiveness,
-            text: row.effectivenessText,
+          jsx("span", {
+            className: "hg-log__round",
+            "data-column": "round",
+            children: jsx("span", { className: "hg-badge", children: "R" + row.round }),
           }),
-          row.hpAfter
-            ? jsx("span", {
-                className: "hg-muted hg-log__hp",
-                children:
-                  "HP " +
-                  String(row.hpAfter.a) +
-                  " / " +
-                  String(row.hpAfter.b),
-              })
-            : null,
+          jsx("span", {
+            className: "hg-log__actor",
+            "data-column": "actor",
+            children: row.actorName,
+          }),
+          jsx("span", {
+            className: "hg-log__move",
+            "data-column": "move",
+            children: row.moveLabel,
+          }),
+          jsx("span", {
+            className: "hg-log__damage",
+            "data-column": "damage",
+            children: row.damage > 0 ? "-" + row.damage + " HP" : "",
+          }),
+          jsxs("span", {
+            className: "hg-log__types",
+            "data-column": "types",
+            children: [
+              jsx(TypeChip, { type: row.actorType }),
+              jsx(TypeChip, { type: row.defenderType }),
+            ],
+          }),
+          jsx("span", {
+            className: "hg-log__effect",
+            "data-column": "effect",
+            children: jsx(EffectivenessBadge, {
+              label: row.effectiveness,
+              text: row.effectivenessText,
+            }),
+          }),
+          jsx("span", {
+            className: "hg-muted hg-log__hp",
+            "data-column": "hp",
+            children: row.hpAfter
+              ? "HP " + String(row.hpAfter.a) + " / " + String(row.hpAfter.b)
+              : "",
+          }),
         ],
       },
       String(row.index)
