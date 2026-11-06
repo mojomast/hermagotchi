@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_OPS = {
-    "hermagotchi_status": ["me", "pet", "wallet", "goal", "inbox", "health"],
+    "hermagotchi_status": ["me", "pet", "wallet", "goal", "inbox", "health", "pair"],
     "hermagotchi_pet": ["adopt", "rename", "set_mode", "care"],
     "hermagotchi_goals": ["list", "set", "clear"],
     "hermagotchi_challenge": [

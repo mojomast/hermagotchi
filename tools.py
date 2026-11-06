@@ -37,7 +37,7 @@ ENVELOPE_KEYS = ("ok", "data", "error_code", "correlation_id")
 DEFAULT_POLICY: dict[str, Any] = dict(_AGENT_DEFAULT_POLICY.as_dict())
 
 MUTATING_OPS: dict[str, set[str]] = {
-    "hermagotchi_status": set(),
+    "hermagotchi_status": {"pair"},
     "hermagotchi_pet": {"adopt", "rename", "set_mode", "care"},
     "hermagotchi_goals": {"set", "clear"},
     "hermagotchi_challenge": {"invite", "respond", "submit_tactics"},
@@ -46,6 +46,8 @@ MUTATING_OPS: dict[str, set[str]] = {
     "hermagotchi_social": {"send", "block", "report"},
     "hermagotchi_meta": {"claim_bounty"},
 }
+
+USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789"
 
 SPECIES = ("byteblob", "patchfox", "nullgeist")
 MODES = ("human", "agent", "co-op")
@@ -67,6 +69,22 @@ BOUNTIES = (
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _future_iso(seconds: int) -> str:
+    return (
+        (datetime.now(timezone.utc) + timedelta(seconds=seconds))
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def _normalise_user_code(value: Any) -> str:
+    return "".join(str(value or "").upper().replace("-", " ").split())
+
+
+def _format_user_code(value: str) -> str:
+    return f"{value[:4]}-{value[4:]}" if len(value) == 8 else value
 
 
 def _ok(data: Any, correlation_id: str) -> dict[str, Any]:
@@ -112,6 +130,11 @@ class FakeGameClient:
         self.calls: list[tuple[str, dict[str, Any]]] = []
         self._idempotency: dict[tuple[str, str], dict[str, Any]] = {}
         self._counter = 0
+        self.auth_session: dict[str, Any] | None = None
+        self.pending_pairing: dict[str, Any] | None = None
+        self.auth_devices: list[dict[str, Any]] = []
+        self.used_user_codes: set[str] = set()
+        self.expired_user_codes: set[str] = set()
 
     # -- dispatch ---------------------------------------------------------
     def execute(self, tool: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -126,7 +149,7 @@ class FakeGameClient:
         if not isinstance(op, str) or op not in OP_ENUMS[tool]:
             return _error("unknown_op", correlation_id)
 
-        mutating = op in MUTATING_OPS[tool]
+        mutating = self._is_mutating(tool, op, args)
         idem_key: str | None = None
         if mutating:
             candidate = args.get("idempotency_key")
@@ -153,11 +176,23 @@ class FakeGameClient:
             self._idempotency[(tool, idem_key)] = dict(result)
         return result
 
+    def _is_mutating(self, tool: str, op: str, args: dict[str, Any]) -> bool:
+        if op not in MUTATING_OPS[tool]:
+            return False
+        if tool == "hermagotchi_status" and op == "pair":
+            return bool(args.get("user_code") or args.get("revoke_device_id"))
+        return True
+
     def _policy_action(self, tool: str, op: str, args: dict[str, Any]) -> str:
         """Map a tool op to the stable action name used by the policy gate."""
 
         prefix = tool[len("hermagotchi_") :] if tool.startswith("hermagotchi_") else tool
         action = f"{prefix}.{op}"
+        if tool == "hermagotchi_status" and op == "pair":
+            # Account pairing is a human/network-only mutation; it must not
+            # require agent autonomy. ``social.block`` is the stable policy
+            # action that already enforces exactly that network-only gate.
+            return "social.block"
         if tool == "hermagotchi_pet":
             return f"local.{action}"
         if tool == "hermagotchi_goals" and op in {"set", "clear"}:
@@ -181,6 +216,7 @@ class FakeGameClient:
             ("hermagotchi_status", "goal"): self._status_goal,
             ("hermagotchi_status", "inbox"): self._status_inbox,
             ("hermagotchi_status", "health"): self._status_health,
+            ("hermagotchi_status", "pair"): self._status_pair,
             ("hermagotchi_pet", "adopt"): self._pet_adopt,
             ("hermagotchi_pet", "rename"): self._pet_rename,
             ("hermagotchi_pet", "set_mode"): self._pet_set_mode,
@@ -271,6 +307,167 @@ class FakeGameClient:
                 "fake": True,
                 **self._policy_view(),
                 "checked_at": _now(),
+            },
+            cid,
+        )
+
+    def _status_pair(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
+        revoke_id = args.get("revoke_device_id")
+        if revoke_id is not None:
+            return self._pair_revoke(revoke_id, cid)
+        user_code = args.get("user_code")
+        if user_code is not None:
+            return self._pair_approve(user_code, cid)
+        if self.auth_session is not None:
+            return _ok(self._pair_session_view(), cid)
+        return self._pair_start_or_poll(args, cid)
+
+    def _pair_start_or_poll(
+        self, args: dict[str, Any], cid: str
+    ) -> dict[str, Any]:
+        pending = self.pending_pairing
+        if pending is not None:
+            expires_at_ts = pending.get("expires_at_ts")
+            if (
+                expires_at_ts is not None
+                and expires_at_ts < datetime.now(timezone.utc).timestamp()
+            ):
+                self.expired_user_codes.add(str(pending.get("user_code") or ""))
+                self.pending_pairing = None
+                return _error("expired_token", cid)
+            if not pending.get("approved"):
+                return _ok(self._pair_pending_view(pending), cid)
+            return self._pair_complete(pending, cid)
+
+        name = args.get("device_name") or "Hermes"
+        if not isinstance(name, str) or not name.strip() or len(name.strip()) > 64:
+            return _error("invalid_arguments", cid)
+        name = name.strip()
+        new_account = bool(args.get("new_account"))
+        self._counter += 1
+        code = "".join(
+            USER_CODE_ALPHABET[(self._counter * 7 + index * 3) % len(USER_CODE_ALPHABET)]
+            for index in range(8)
+        )
+        pending = {
+            "user_code": code,
+            "device_name": name,
+            "new_account": new_account,
+            "approved": new_account,
+            "account_id": self._next_id("acct") if new_account else None,
+            "expires_at": _future_iso(600),
+            "expires_at_ts": datetime.now(timezone.utc).timestamp() + 600,
+            "interval_s": 5,
+        }
+        self.pending_pairing = pending
+        return _ok(self._pair_pending_view(pending), cid)
+
+    def _pair_pending_view(self, pending: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "user_code": _format_user_code(pending["user_code"]),
+            "device_name": pending["device_name"],
+            "paired": False,
+            "account_id": None,
+            "devices": [],
+            "new_account": bool(pending["new_account"]),
+            "interval_s": 5,
+            "expires_at": pending["expires_at"],
+        }
+
+    def _pair_complete(
+        self, pending: dict[str, Any], cid: str
+    ) -> dict[str, Any]:
+        account_id = pending.get("account_id") or self._next_id("acct")
+        device_id = self._next_id("dev")
+        now = _now()
+        device = {
+            "device_id": device_id,
+            "device_name": pending["device_name"],
+            "created_at": now,
+            "last_seen_at": now,
+            "current": True,
+            "revoked": False,
+        }
+        self.auth_devices.append(device)
+        self.auth_session = {
+            "account_id": account_id,
+            "device_id": device_id,
+            "device_name": pending["device_name"],
+        }
+        self.used_user_codes.add(str(pending.get("user_code") or ""))
+        self.pending_pairing = None
+        return _ok(self._pair_session_view(), cid)
+
+    def _pair_session_view(self) -> dict[str, Any]:
+        assert self.auth_session is not None
+        device_id = self.auth_session["device_id"]
+        devices = [
+            {**device, "current": device["device_id"] == device_id}
+            for device in self.auth_devices
+        ]
+        return {
+            "paired": True,
+            "account_id": self.auth_session["account_id"],
+            "device_name": self.auth_session["device_name"],
+            "devices": devices,
+        }
+
+    def _pair_approve(self, user_code: Any, cid: str) -> dict[str, Any]:
+        if self.auth_session is None:
+            return _error("unauthorized", cid)
+        code = _normalise_user_code(user_code)
+        if not code:
+            return _error("invalid_user_code", cid)
+        pending = self.pending_pairing
+        if pending is None or pending.get("user_code") != code:
+            if code in self.used_user_codes:
+                return _error("already_used", cid)
+            if code in self.expired_user_codes:
+                return _error("expired_token", cid)
+            return _error("invalid_user_code", cid)
+        expires_at_ts = pending.get("expires_at_ts")
+        if (
+            expires_at_ts is not None
+            and expires_at_ts < datetime.now(timezone.utc).timestamp()
+        ):
+            self.expired_user_codes.add(code)
+            self.pending_pairing = None
+            return _error("expired_token", cid)
+        if pending.get("approved"):
+            self.used_user_codes.add(code)
+            return _error("already_used", cid)
+        pending["approved"] = True
+        pending["account_id"] = self.auth_session["account_id"]
+        return _ok(
+            {"approved": True, "device_name": pending["device_name"]}, cid
+        )
+
+    def _pair_revoke(self, device_id: Any, cid: str) -> dict[str, Any]:
+        if self.auth_session is None:
+            return _error("unauthorized", cid)
+        if not isinstance(device_id, str) or not device_id.strip():
+            return _error("invalid_arguments", cid)
+        value = device_id.strip()
+        device = next(
+            (row for row in self.auth_devices if row["device_id"] == value), None
+        )
+        if device is None:
+            return _error("not_found", cid)
+        device["revoked"] = True
+        current = self.auth_session.get("device_id") == value
+        if current:
+            self.auth_session = None
+        return _ok(
+            {
+                "revoked": True,
+                "device_id": value,
+                "revoked_current": current,
+                "paired": self.auth_session is not None,
+                "account_id": (
+                    self.auth_session["account_id"]
+                    if self.auth_session is not None
+                    else None
+                ),
             },
             cid,
         )

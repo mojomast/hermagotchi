@@ -81,6 +81,60 @@ Never log or persist tokens, and never place credentials in module-level
 constants. The game server must never receive Hermes prompts, memory, tool I/O,
 or inference keys.
 
+## Device pairing
+
+`HERMAGOTCHI_AUTH_MODE` selects the server auth mode. `production` ignores
+`X-Account-Id` and accepts only `Authorization: Bearer <access_token>`;
+`dev` also accepts the legacy UUID stub. The hosted deployment must set
+`production`.
+
+The client ships a session store and a pairing client:
+
+```python
+from game_client.auth import PairingClient, SessionStore
+from game_client import GameClient
+
+store = SessionStore()
+pairing = PairingClient("https://game.example.invalid/v1")
+
+started = pairing.start("Desktop", new_account=True)
+print(started["user_code"])              # show this to the owner only
+
+tokens = pairing.poll_token(started["device_code"])
+client = GameClient(
+    "https://game.example.invalid/v1",
+    token_provider=lambda: store.access_token,
+)
+```
+
+The session file is `<plugin-data>/hermagotchi/session.json`. The data root is
+`HERMES_PLUGIN_DATA_DIR`, else `HERMES_HOME/plugins_data`, else
+`~/.hermes/plugins_data`. The directory is created mode `0700` and the file is
+written atomically mode `0600`. Tokens never appear in tool output, logs, or
+error bodies.
+
+- `pairing.start(...)` creates a pairing challenge and returns a `user_code`.
+- `pairing.poll_token(device_code)` exchanges an approved challenge and saves
+  the session. Poll no faster than the returned `interval_s` (5 seconds);
+  `authorization_pending` and `slow_down` are normal errors.
+- From an already-paired device, `pairing.approve(user_code)` approves another
+  device. Codes are case-insensitive and may include spaces or dashes.
+- `pairing.refresh()` rotates both tokens and saves the replacement session.
+  Reusing an old refresh token is rejected and revokes that device.
+- `pairing.list_devices()` and `pairing.revoke(device_id)` manage the current
+  account's devices. Revoking the current device clears the local session.
+- `pairing.logout()` revokes the current device and clears the local session.
+
+`GameClient` accepts a `token_provider` callback. When it returns a token the
+client sends `Authorization: Bearer` and never sends `X-Account-Id`; when it
+returns `None` the legacy development header may still be used.
+
+The plugin exposes pairing through the existing `hermagotchi_status` tool, not a
+ninth tool. The `pair` op accepts optional `user_code`, `device_name`,
+`new_account`, and `revoke_device_id`. Approve and revoke are treated as
+mutations. Tool output contains only `user_code`, `device_name`, `paired`,
+`account_id`, and device metadata.
+
 ## Client surface
 
 ```python
@@ -158,7 +212,7 @@ router = create_router(base_url="https://game.example.invalid/v1")
 ## Tests
 
 ```bash
-python3 -m pytest -q tests/test_game_client.py tests/test_dashboard_api.py
+python3 -m pytest -q tests/test_game_client.py tests/test_dashboard_api.py tests/test_pairing_client.py
 ```
 
 The tests use `httpx.MockTransport` and FastAPI ASGI clients only; they make no

@@ -40,6 +40,7 @@ class GameClient:
         timeout: float = 10.0,
         headers: Mapping[str, str] | None = None,
         auth_token: str | None = None,
+        token_provider: Callable[[], str | None] | None = None,
         max_retries: int = 2,
         backoff_s: float = 0.25,
         sleep: Callable[[float], None] | None = None,
@@ -57,6 +58,7 @@ class GameClient:
         if auth_token:
             merged_headers.setdefault("Authorization", f"Bearer {auth_token}")
         self._headers = merged_headers
+        self._token_provider = token_provider
 
     def close(self) -> None:
         if self._owns_client:
@@ -73,6 +75,25 @@ class GameClient:
             return path
         return f"{self.base_url}/{path.lstrip('/')}"
 
+    def _request_headers(self) -> dict[str, str]:
+        headers = dict(self._headers)
+        provider = self._token_provider
+        if provider is None:
+            return headers
+        if callable(provider):
+            token = provider()
+        elif isinstance(provider, str):
+            token = provider
+        else:
+            token = getattr(provider, "access_token", None)
+        if not token:
+            return headers
+        headers["Authorization"] = f"Bearer {token}"
+        for key in tuple(headers):
+            if key.lower() == "x-account-id":
+                headers.pop(key)
+        return headers
+
     def _request(
         self,
         method: str,
@@ -84,7 +105,7 @@ class GameClient:
         idempotency_key: str | None = None,
     ) -> Any:
         method = method.upper()
-        headers = dict(self._headers)
+        headers = self._request_headers()
         body: dict[str, Any] | None = dict(json_body) if json_body is not None else None
 
         if method != "GET":

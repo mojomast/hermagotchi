@@ -21,7 +21,7 @@ TOOL_NAMES = (
 
 _IDEMPOTENCY = {
     "type": "string",
-    "description": "Client-generated UUID/ULID; required for mutations.",
+    "description": "Client UUID/ULID for mutations.",
 }
 
 _SPECIES = {"type": "string", "enum": ["byteblob", "patchfox", "nullgeist"]}
@@ -55,11 +55,17 @@ def _schema(
 
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "hermagotchi_status": _schema(
-        "Read account, pet, wallet, goal, inbox, or health status.",
-        ["me", "pet", "wallet", "goal", "inbox", "health"],
+        "Read account, pet, wallet, goal, inbox, health, pairing.",
+        ["me", "pet", "wallet", "goal", "inbox", "health", "pair"],
+        {
+            "user_code": {"type": "string", "maxLength": 9},
+            "device_name": {"type": "string", "maxLength": 64},
+            "new_account": {"type": "boolean"},
+            "revoke_device_id": {"type": "string"},
+        },
     ),
     "hermagotchi_pet": _schema(
-        "Adopt or rename a pet, set ownership mode, or feed/play/rest it.",
+        "Adopt or rename a pet, set mode, or feed/play/rest.",
         ["adopt", "rename", "set_mode", "care"],
         {
             "species": _SPECIES,
@@ -77,17 +83,17 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "target_id": {
                 "type": "string",
                 "maxLength": 64,
-                "description": "Allowlisted catalog item id or rank target; never a URL/path.",
+                "description": "Allowlisted catalog item or rank target.",
             },
             "chosen_by": {"type": "string", "enum": ["human", "agent", "co-op"]},
             "spending_limit_bits": {"type": "integer", "minimum": 0},
             "max_battles": {"type": "integer", "minimum": 0},
-            "expires_at": {"type": "string", "description": "ISO-8601 UTC expiry."},
+            "expires_at": {"type": "string", "description": "ISO-8601 UTC."},
         },
         mutating=True,
     ),
     "hermagotchi_challenge": _schema(
-        "List opponents, invite, respond to a challenge, or submit bounded tactics.",
+        "List opponents, invite, respond, or submit tactics.",
         ["list_opponents", "invite", "respond", "submit_tactics"],
         {
             "opponent_id": {"type": "string"},
@@ -100,19 +106,19 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         mutating=True,
     ),
     "hermagotchi_battle": _schema(
-        "Practice against a bot, fetch a match, replay a match, or claim eligible rewards.",
+        "Practice against a bot, fetch or replay a match, or claim rewards.",
         ["practice", "get", "replay", "claim"],
         {"match_id": {"type": "string"}},
         mutating=True,
     ),
     "hermagotchi_shop": _schema(
-        "Browse the catalog, inspect inventory, buy, or equip a cosmetic.",
+        "Browse catalog, inspect inventory, buy, or equip.",
         ["catalog", "inventory", "buy", "equip"],
         {"item_id": {"type": "string"}, "slot": _SLOT},
         mutating=True,
     ),
     "hermagotchi_social": _schema(
-        "Read moderated messages, send when chat is enabled, block, or report.",
+        "Read chat, send if enabled, block, or report.",
         ["read", "send", "block", "report"],
         {
             "channel_id": {"type": "string"},
@@ -123,7 +129,7 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         mutating=True,
     ),
     "hermagotchi_meta": _schema(
-        "Read the leaderboard or bounties, or claim one eligible bounty.",
+        "Read leaderboard/bounties, or claim a bounty.",
         ["leaderboard", "bounties", "claim_bounty"],
         {"season_id": {"type": "string"}, "bounty_id": {"type": "string"}},
         mutating=True,
