@@ -94,6 +94,8 @@ TAB_ORDER = ["habitat", "battle", "shop", "leaderboard", "chat", "settings"]
 TAB_LABELS = ["Habitat", "Battle", "Shop", "Leaderboard", "Chat", "Settings"]
 
 ALLOWED_IMPORTS = {"react", "react/jsx-runtime", "@hermes/plugin-sdk"}
+FETCH_ALLOWED = UI / "api.js"
+FETCH_PATTERN = re.compile(r"\bfetch\s*\(")
 
 _EXPORT_DECL = re.compile(
     r"export\s+(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)"
@@ -210,6 +212,16 @@ def test_sources_use_only_allowed_imports_and_no_jsx_syntax() -> None:
 
     pane = _source(UI / "pane.js")
     assert "jsx(" in pane and "jsxs(" in pane, "pane.js must use the jsx/jsxs runtime"
+
+
+def test_only_the_api_module_may_call_fetch() -> None:
+    for path in sorted(UI.rglob("*.js")):
+        source = _source(path)
+        if path == FETCH_ALLOWED:
+            continue
+        assert not FETCH_PATTERN.search(source), (
+            f"{path.relative_to(ROOT)} must route network calls through api.js"
+        )
 
 
 def test_docs_and_sources_do_not_contain_secrets_or_private_paths() -> None:
