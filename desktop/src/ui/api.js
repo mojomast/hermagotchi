@@ -297,6 +297,20 @@ export function createApiClient(options) {
           opts.idempotencyKey || opts.idempotency_key || randomKey(),
       });
     },
+    put: function put(path, body, putOptions) {
+      const opts = putOptions || {};
+      return request("PUT", proxyUrl(path), {
+        body: body,
+        idempotencyKey: opts.idempotencyKey,
+      });
+    },
+    patch: function patch(path, body, patchOptions) {
+      const opts = patchOptions || {};
+      return request("PATCH", proxyUrl(path), {
+        body: body,
+        idempotencyKey: opts.idempotencyKey,
+      });
+    },
     del: function del(path, deleteOptions) {
       const opts = deleteOptions || {};
       return request("DELETE", proxyUrl(path), {

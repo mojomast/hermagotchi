@@ -118,6 +118,7 @@ def test_unknown_proxy_path_is_rejected_without_network(tmp_path: Path) -> None:
         "bounties/b_1/claim",
         "chat/channels/lobby/messages",
         "chat/inbox",
+        "chat/inbox/read",
         "chat/taunt",
         "me/chat-settings",
         "me/policy",
@@ -531,3 +532,83 @@ def test_pair_admin_endpoints_require_and_use_the_session(tmp_path: Path) -> Non
         ("/v1/auth/devices/dev_2/revoke", f"Bearer {ACCESS}"),
         ("/v1/auth/logout", f"Bearer {ACCESS}"),
     ]
+
+
+def test_proxy_allows_pane_taunt_path() -> None:
+    """Battle tab posts /chat/taunt (singular); plural must stay rejected."""
+    assert plugin_api._match_proxy_path("chat/taunt") == "chat/taunt"
+    assert plugin_api._match_proxy_path("chat/taunts") is None
+    assert plugin_api._match_proxy_path("chat/inbox/read") == "chat/inbox/read"
+
+
+def test_bridge_forwards_post_chat_taunt(tmp_path: Path) -> None:
+    """End-to-end bridge: pane Send taunt reaches /v1/chat/taunt with Bearer."""
+    store = make_store(tmp_path)
+    store.save(token_payload())
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["path"] = request.url.path
+        seen["auth"] = request.headers.get("Authorization")
+        import json as _json
+        seen["body"] = _json.loads(request.content.decode("utf-8") or "{}")
+        return httpx.Response(
+            201,
+            json={
+                "contracts_version": "contracts-v1",
+                "message": {
+                    "id": "t1",
+                    "body": "gg",
+                    "kind": "taunt",
+                    "phase": "post",
+                },
+            },
+        )
+
+    client = TestClient(build_app(make_pair_client(handler, store), store))
+    response = client.post(
+        f"{PREFIX}/proxy/v1/chat/taunt",
+        json={
+            "match_id": "m1",
+            "body": "gg",
+            "phase": "post",
+            "lobby": True,
+            "actor_mode": "human",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert seen["method"] == "POST"
+    assert seen["path"] == "/v1/chat/taunt"
+    assert seen["auth"] == f"Bearer {ACCESS}"
+    assert seen["body"]["match_id"] == "m1"
+    assert seen["body"]["body"] == "gg"
+
+    blocked = client.post(
+        f"{PREFIX}/proxy/v1/chat/taunts",
+        json={"match_id": "m1", "body": "nope", "phase": "post"},
+    )
+    assert blocked.status_code == 404
+    assert blocked.json()["error"]["code"] == "not_allowed"
+
+
+def test_bridge_forwards_patch_chat_settings(tmp_path: Path) -> None:
+    store = make_store(tmp_path)
+    store.save(token_payload())
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["method"] = request.method
+        seen["path"] = request.url.path
+        return httpx.Response(200, json={"agent_chat_enabled": True})
+
+    client = TestClient(build_app(make_pair_client(handler, store), store))
+    response = client.patch(
+        f"{PREFIX}/proxy/v1/me/chat-settings",
+        json={"agent_chat_enabled": True},
+    )
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert seen == {"method": "PATCH", "path": "/v1/me/chat-settings"}

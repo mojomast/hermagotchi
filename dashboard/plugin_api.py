@@ -82,6 +82,7 @@ PROXY_ALLOWLIST = (
     r"bounties/[A-Za-z0-9_.:~-]+/claim",
     r"chat/channels/[A-Za-z0-9_.:~-]+/messages",
     r"chat/inbox",
+    r"chat/inbox/read",
     r"chat/taunt",
     r"me/chat-settings",
     r"me/policy",
@@ -735,7 +736,7 @@ def create_router(
 
     @router.api_route(
         "/proxy/v1/{path:path}",
-        methods=["GET", "POST", "DELETE"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     )
     async def proxy(
         path: str,

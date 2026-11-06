@@ -383,7 +383,7 @@ test("taunts carry a short match summary and a post phase", () => {
   assert.equal(payload.phase, "post");
   assert.equal(payload.match_id, "match-1");
   assert.equal(payload.match_context.winner_name, "Wisp");
-  assert.equal(CHAT_TAUNTS_PATH, "/chat/taunts");
+  assert.equal(CHAT_TAUNTS_PATH, "/chat/taunt");
 });
 
 test("machine reason codes become plain chat notices", () => {
