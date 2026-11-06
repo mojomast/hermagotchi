@@ -8,7 +8,7 @@ later be replaced by the hosted HTTP client without changing the tool surface.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 try:  # Imported as part of a plugin package.
@@ -16,23 +16,20 @@ try:  # Imported as part of a plugin package.
 except ImportError:  # Imported from a checkout with the plugin root on sys.path.
     from schemas import OP_ENUMS, TOOL_SCHEMAS
 
+try:  # Imported as part of a plugin package.
+    from .agent_policy import (
+        DEFAULT_POLICY as _AGENT_DEFAULT_POLICY,
+        check_mutation as _check_mutation,
+    )
+except ImportError:  # Imported from a checkout with the plugin root on sys.path.
+    from agent_policy import (
+        DEFAULT_POLICY as _AGENT_DEFAULT_POLICY,
+        check_mutation as _check_mutation,
+    )
+
 ENVELOPE_KEYS = ("ok", "data", "error_code", "correlation_id")
 
-DEFAULT_POLICY: dict[str, Any] = {
-    "mode": "human",
-    "network_enabled": False,
-    "agent_autonomy_enabled": False,
-    "agent_chat_enabled": False,
-    "agent_chat_send_per_day": 0,
-    "agent_challenges_per_day": 0,
-    "agent_ranked_matches_per_day": 0,
-    "agent_inference_decisions_per_day": 0,
-    "llm_budget_usd_per_day": 0.0,
-    "allow_goal_selection": False,
-    "allow_cosmetic_purchases": False,
-    "require_human_approval_for_ranked": True,
-    "quiet_hours_local": ["22:00", "08:00"],
-}
+DEFAULT_POLICY: dict[str, Any] = dict(_AGENT_DEFAULT_POLICY.as_dict())
 
 MUTATING_OPS: dict[str, set[str]] = {
     "hermagotchi_status": set(),
@@ -139,10 +136,37 @@ class FakeGameClient:
         if handler is None:  # Defensive: every contract op has a handler.
             return _error("unknown_op", correlation_id)
 
+        if mutating:
+            policy_code = _check_mutation(
+                self.policy, self._policy_action(tool, op, args)
+            )
+            if policy_code != "ok":
+                return _error(policy_code, correlation_id)
+
         result = handler(args, correlation_id)
         if mutating and idem_key is not None and result["ok"]:
             self._idempotency[(tool, idem_key)] = dict(result)
         return result
+
+    def _policy_action(self, tool: str, op: str, args: dict[str, Any]) -> str:
+        """Map a tool op to the stable action name used by the policy gate."""
+
+        prefix = tool[len("hermagotchi_") :] if tool.startswith("hermagotchi_") else tool
+        action = f"{prefix}.{op}"
+        if tool == "hermagotchi_pet":
+            return f"local.{action}"
+        if tool == "hermagotchi_goals" and op in {"set", "clear"}:
+            chosen_by = str(args.get("chosen_by") or self.policy.get("mode", "human"))
+            chosen_by = "co-op" if chosen_by == "coop" else chosen_by.lower()
+            actor = "agent" if chosen_by == "agent" else "human"
+            return f"goals.{op}.{actor}"
+        if tool == "hermagotchi_challenge" and op == "invite":
+            if args.get("mode") == "ranked":
+                return "challenge.invite.ranked"
+        if tool == "hermagotchi_battle" and op == "practice":
+            if args.get("mode") == "ranked":
+                return "battle.ranked"
+        return action
 
     def _handlers(self) -> dict[tuple[str, str], Callable[[dict[str, Any], str], dict[str, Any]]]:
         return {
@@ -319,22 +343,33 @@ class FakeGameClient:
         return _ok({"goals": [self.goal] if self.goal else []}, cid)
 
     def _goals_set(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
-        target_type = args.get("target_type")
+        # Lazy import keeps the tool surface import-safe when the hosted client
+        # extras are absent and avoids any network/asset work during planning.
+        try:
+            from .game_client.goals import make_goal, validate_goal
+        except ImportError:
+            from game_client.goals import make_goal, validate_goal
+
+        target_type = args.get("target_type") or args.get("type")
         target_id = args.get("target_id")
-        if target_type not in ("cosmetic", "rank", "achievement") or not isinstance(
-            target_id, str
-        ):
+        chosen_by = args.get("chosen_by") or self.policy.get("mode", "human")
+        expires_at = args.get("expires_at")
+        if expires_at is None:
+            expires_at = (
+                datetime.now(timezone.utc) + timedelta(hours=24)
+            ).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+        goal = make_goal(
+            target_type,
+            target_id if isinstance(target_id, str) else "",
+            chosen_by=str(chosen_by),
+            spending_limit_bits=args.get("spending_limit_bits", 0),
+            max_battles=args.get("max_battles", 0),
+            expires_at=expires_at,
+        )
+        if validate_goal(goal) != "ok":
             return _error("invalid_arguments", cid)
-        if not (self.policy["allow_goal_selection"] or self.policy["mode"] != "agent"):
-            return _error("policy_denied", cid)
-        self.goal = {
-            "type": target_type,
-            "target_id": target_id,
-            "chosen_by": self.policy["mode"],
-            "chosen_at": _now(),
-            "spending_limit_bits": int(args.get("spending_limit_bits", 0)),
-            "max_battles": int(args.get("max_battles", 0)),
-        }
+        self.goal = goal.to_dict()
         return _ok({"goal": self.goal}, cid)
 
     def _goals_clear(self, args: dict[str, Any], cid: str) -> dict[str, Any]:

@@ -74,9 +74,15 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         ["list", "set", "clear"],
         {
             "target_type": {"type": "string", "enum": ["cosmetic", "rank", "achievement"]},
-            "target_id": {"type": "string"},
+            "target_id": {
+                "type": "string",
+                "maxLength": 64,
+                "description": "Allowlisted catalog item id or rank target; never a URL/path.",
+            },
+            "chosen_by": {"type": "string", "enum": ["human", "agent", "co-op"]},
             "spending_limit_bits": {"type": "integer", "minimum": 0},
             "max_battles": {"type": "integer", "minimum": 0},
+            "expires_at": {"type": "string", "description": "ISO-8601 UTC expiry."},
         },
         mutating=True,
     ),

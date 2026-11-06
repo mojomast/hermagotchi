@@ -1,4 +1,11 @@
-"""Owner policy gate for outbound game actions."""
+"""Owner policy gate for outbound game actions.
+
+``PolicyGate`` is the small, frozen four-switch client gate used by
+:class:`game_client.GameClient`. The complete owner policy (budgets, goal
+selection, cosmetic purchases and ranked approval) lives in
+:mod:`agent_policy`; this module re-exports it as a thin client so callers have
+one import location.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +13,26 @@ from typing import Any, Mapping
 
 from .errors import PolicyDeniedError
 
-DEFAULT_POLICY: dict[str, Any] = {
+try:  # Imported as ``hermagotchi.game_client.policy``.
+    from ..agent_policy import (
+        DEFAULT_POLICY as _AGENT_DEFAULT_POLICY,
+        Policy as AgentPolicy,
+        check_budget as _check_budget,
+        check_mutation as _check_mutation,
+    )
+except ImportError:  # Imported as ``game_client.policy`` from a checkout.
+    from agent_policy import (
+        DEFAULT_POLICY as _AGENT_DEFAULT_POLICY,
+        Policy as AgentPolicy,
+        check_budget as _check_budget,
+        check_mutation as _check_mutation,
+    )
+
+#: Full contracts-v1 owner policy defaults (12 fields).
+DEFAULT_POLICY: dict[str, Any] = dict(_AGENT_DEFAULT_POLICY.as_dict())
+
+#: Minimal defaults kept for the existing four-switch transport gate.
+_GATE_DEFAULTS: dict[str, Any] = {
     "mode": "human",
     "network_enabled": False,
     "autonomy_enabled": False,
@@ -33,7 +59,7 @@ class PolicyGate:
     """Small, explicit gate matching the frozen contracts-v1 defaults."""
 
     def __init__(self, policy: Mapping[str, Any] | None = None) -> None:
-        values = dict(DEFAULT_POLICY)
+        values = dict(_GATE_DEFAULTS)
         if policy:
             raw = dict(policy)
             if "autonomy_enabled" not in raw and "agent_autonomy_enabled" in raw:
@@ -104,3 +130,38 @@ class PolicyGate:
             self.require_chat(action)
         if action in AUTONOMY_MUTATIONS:
             self.require_autonomy(action)
+
+
+# -- thin client re-exports ------------------------------------------------
+Policy = AgentPolicy
+
+
+def policy_from_mapping(value: Mapping[str, Any] | AgentPolicy | None = None) -> AgentPolicy:
+    return AgentPolicy.from_mapping(value)
+
+
+def check_mutation(
+    policy: AgentPolicy | Mapping[str, Any] | None, action: str
+) -> str:
+    """Return ``"ok"`` or a stable error code for one mutation action."""
+
+    return _check_mutation(policy, action)
+
+
+def check_budget(
+    policy: AgentPolicy | Mapping[str, Any] | None, kind: str, used: int
+) -> str:
+    return _check_budget(policy, kind, used)
+
+
+__all__ = [
+    "AgentPolicy",
+    "AUTONOMY_MUTATIONS",
+    "CHAT_MUTATIONS",
+    "DEFAULT_POLICY",
+    "Policy",
+    "PolicyGate",
+    "check_budget",
+    "check_mutation",
+    "policy_from_mapping",
+]
