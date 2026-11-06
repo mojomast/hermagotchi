@@ -26,9 +26,9 @@ provider keys stay outside the game boundary.
 
 ## 2. Authentication, authorization, and account isolation
 
-- Every mutation requires an authenticated account session. Development and unit
-  tests may use the injectable account-header stub; production must replace it
-  with the device-pairing/session resolver before any hosted use.
+- Every mutation requires an authenticated account session. The hosted API uses
+  an OAuth-style device-pairing flow; the injectable UUID account-header stub is
+  available only in `HERMAGOTCHI_AUTH_MODE=dev`.
 - Server-side account identity is derived from the authenticated session, never
   from a client-supplied owner field. Extra body fields such as `account_id`,
   `balance`, `delta`, or `amount` are ignored for authorization and pricing.
@@ -42,6 +42,42 @@ provider keys stay outside the game boundary.
 - Every mutation carries a client-generated `idempotency_key`. Reusing a key
   returns the original receipt; a key is bound to one account and one operation
   and cannot be replayed into another account's state.
+
+### Device pairing and session tokens
+
+- `HERMAGOTCHI_AUTH_MODE` selects `dev` (default) or `production`. Production
+  **must** be set on the VPS. In production `X-Account-Id` is ignored entirely;
+  only `Authorization: Bearer <access_token>` resolved against the session table
+  is accepted. Raw UUID bearer values are rejected. Dev tries the session token
+  first and then falls back to the legacy UUID stub for local tests only.
+- Approval model: the first device may self-register a fresh account with
+  `new_account=true`. Additional devices start a pairing (`new_account=false`),
+  show an 8-character user code, and must be approved from an already-paired
+  device signed in to the same account. The approving session is the account;
+  a device cannot choose an owner id.
+- Access, refresh and device codes are generated as 256-bit URL-safe secrets
+  with `hga_`, `hgr_` and `hgd_` prefixes. The server stores only SHA-256 hex
+  digests and compares with `hmac.compare_digest`. Raw tokens never appear in
+  logs, error bodies, tool output or the database. The client keeps its token
+  file outside the repository, in the Hermes plugin data directory with file
+  mode `0600` and directory mode `0700`.
+- Default lifetimes are pairing 600 s, access 3600 s and refresh 30 days, with
+  a 5 s polling interval. Refresh rotates both tokens. Reusing an older refresh
+  token is treated as replay: it returns `401 invalid_grant` and immediately
+  revokes that device. Device revocation and logout invalidate its access and
+  refresh tokens at once.
+- Pairing codes use an unambiguous alphabet and are displayed `XXXX-XXXX`;
+  approval input is normalized (uppercase, separators removed). Pair starts are
+  limited to 10/minute per client IP, five failed approvals lock the code/attempt
+  source, and polling faster than the interval returns `429 slow_down` with
+  `retry_after_s`.
+- Threat notes: pairing codes are short-lived and single-use; device codes are
+  single-use and replayed exchanges return `invalid_grant`; sessions are bound
+  to one device and account so a stolen access token cannot select another
+  account; refresh replay revokes the device rather than minting another pair;
+  all device listing and revocation is account-scoped and cross-account device
+  ids return 404. Rate limits are in-process and are backed by the database's
+  single-use state; a multi-process deployment should add a shared limiter.
 
 ## 3. Ledger and economy invariants
 

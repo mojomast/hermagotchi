@@ -8,36 +8,16 @@ uses only species, name and equipped item ids (never image bytes or URLs).
 from __future__ import annotations
 
 import sqlite3
-import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Query
 
 from .. import CONTRACTS_VERSION
-from ..db import get_db
+from ..db import get_current_account_id_optional, get_db
 
 router = APIRouter(tags=["leaderboard"])
 
 RANKING_VERSION = "rating-1"
-
-
-def _optional_account_id(request: Request) -> str | None:
-    raw = request.headers.get("X-Account-Id")
-    if not raw:
-        authorization = request.headers.get("Authorization") or ""
-        if authorization.lower().startswith("bearer "):
-            raw = authorization[7:]
-    if not raw:
-        return None
-    candidate = raw.strip()
-    try:
-        uuid.UUID(candidate)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=401,
-            detail={"code": "unauthorized", "message": "A valid account session is required."},
-        ) from exc
-    return candidate
 
 
 def _public_handle(value: object) -> str | None:
@@ -99,7 +79,7 @@ def get_leaderboard(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     near: int = Query(default=2, ge=0, le=25),
-    account_id: str | None = Depends(_optional_account_id),
+    account_id: str | None = Depends(get_current_account_id_optional),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, Any]:
     rows = _ranked_rows(conn, season_id)

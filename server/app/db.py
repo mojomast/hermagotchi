@@ -9,7 +9,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
+
+from . import auth
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 DEFAULT_DB_PATH = "hermagotchi.db"
@@ -91,27 +93,73 @@ def _unauthorized(message: str = "A valid account session is required.") -> HTTP
     return HTTPException(status_code=401, detail={"code": "unauthorized", "message": message})
 
 
-def get_current_account_id(
-    x_account_id: Annotated[str | None, Header(alias="X-Account-Id")] = None,
-    authorization: Annotated[str | None, Header()] = None,
-) -> str:
-    """Dev/test auth stub.
-
-    Production replaces this dependency with the device-pairing session resolver.
-    Tests can also inject their own callable through ``create_app(auth_dependency=...)``
-    or FastAPI ``dependency_overrides``.
-    """
-    candidate: str | None = None
-    if x_account_id:
-        candidate = x_account_id.strip()
-    elif authorization and authorization.lower().startswith("bearer "):
-        candidate = authorization[7:].strip()
-
+def _dev_stub_account_id(
+    x_account_id: str | None, token: str | None
+) -> str | None:
+    candidate = (x_account_id or "").strip() or (token or "").strip()
     if not candidate:
-        raise _unauthorized()
-
+        return None
     try:
         uuid.UUID(candidate)
     except ValueError as exc:
         raise _unauthorized() from exc
     return candidate
+
+
+def get_current_account_id(
+    request: Request,
+    x_account_id: Annotated[str | None, Header(alias="X-Account-Id")] = None,
+    authorization: Annotated[str | None, Header()] = None,
+    conn: sqlite3.Connection = Depends(get_db),
+) -> str:
+    """Resolve the caller account according to HERMAGOTCHI_AUTH_MODE.
+
+    ``production`` ignores ``X-Account-Id`` completely and accepts only a
+    session access token resolved against ``auth_sessions``. ``dev`` tries the
+    session token first and then falls back to the historical UUID stub.
+    Tests can also inject their own callable through
+    ``create_app(auth_dependency=...)`` or FastAPI ``dependency_overrides``.
+    """
+    token = auth.bearer_token(authorization)
+
+    if auth.auth_mode() == "production":
+        account_id = auth.resolve_session(conn, token)
+        if account_id is None:
+            raise _unauthorized()
+        return account_id
+
+    if token:
+        account_id = auth.resolve_session(conn, token)
+        if account_id is not None:
+            return account_id
+
+    account_id = _dev_stub_account_id(x_account_id, token)
+    if account_id is None:
+        raise _unauthorized()
+    return account_id
+
+
+def get_current_account_id_optional(
+    request: Request,
+    x_account_id: Annotated[str | None, Header(alias="X-Account-Id")] = None,
+    authorization: Annotated[str | None, Header()] = None,
+    conn: sqlite3.Connection = Depends(get_db),
+) -> str | None:
+    """Optional variant for public projections such as the leaderboard.
+
+    Missing credentials yield ``None``; present but invalid credentials still
+    fail closed with 401 in both dev and production modes.
+    """
+    token = auth.bearer_token(authorization)
+    if auth.auth_mode() == "production":
+        if token is None:
+            return None
+    elif not (x_account_id or "").strip() and token is None:
+        return None
+
+    return get_current_account_id(
+        request=request,
+        x_account_id=x_account_id,
+        authorization=authorization,
+        conn=conn,
+    )

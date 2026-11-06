@@ -270,3 +270,45 @@ python3 scripts/asset_validate.py assets/manifest.json
 ```
 
 Bees: test-first on assigned files; leave changes **uncommitted** in the sandbox (launcher collects `git diff HEAD`).
+
+---
+
+## Auth (contracts-v1 addendum)
+
+`HERMAGOTCHI_AUTH_MODE=dev|production` (default `dev`; the VPS must set
+`production`). Production ignores `X-Account-Id` completely and accepts only
+`Authorization: Bearer <access_token>` resolved against the sessions table. Dev
+tries the session token first, then falls back to the existing UUID stub.
+
+Tokens are 256-bit URL-safe secrets with prefixes `hga_` (access), `hgr_`
+(refresh), `hgd_` (device code). Only SHA-256 hex digests are stored. User codes
+are 8 characters from `BCDFGHJKLMNPQRSTVWXZ23456789`, displayed `XXXX-XXXX`, and
+normalized by uppercasing and removing `-`/spaces. Default TTLs: pairing 600 s,
+access 3600 s, refresh 30 days; poll interval 5 s.
+
+All endpoints are under `/v1`, return JSON, and use the standard error envelope
+`{code, message, retry_after_s, correlation_id}`.
+
+| Method | Path | Auth | Result |
+|---|---|---|---|
+| POST | `/v1/auth/pair/start` | none | `201 {"device_code","user_code","expires_at","interval_s":5,"new_account"}` |
+| POST | `/v1/auth/pair/approve` | Bearer session (dev UUID stub allowed in dev) | `200 {"approved":true,"device_name"}` |
+| POST | `/v1/auth/pair/token` | none | `200 {"access_token","refresh_token","token_type":"Bearer","expires_in","refresh_expires_in","account_id","device_id"}` |
+| POST | `/v1/auth/refresh` | none | same token shape; rotates both tokens |
+| GET | `/v1/auth/devices` | Bearer | `{"devices":[{"device_id","device_name","created_at","last_seen_at","current","revoked"}]}` |
+| POST | `/v1/auth/devices/{device_id}/revoke` | Bearer | `{"revoked":true}` |
+| POST | `/v1/auth/logout` | Bearer | revokes the current device |
+
+Pair start body: `{"device_name": str<=64, "new_account": bool=false,
+"public_handle": str<=32 optional}`. `new_account=true` auto-approves the first
+device and token exchange creates a fresh account; `new_account=false` requires
+an already-paired device to approve the user code. Approve body: `{"user_code"}`;
+unknown/wrong → `404 invalid_user_code`, expired → `400 expired_token`, already
+used → `409 already_used`. Token errors: `400 authorization_pending`,
+`400 expired_token`, `400 invalid_grant` (unknown, already exchanged, or replay),
+`429 slow_down`. Refresh reuse of an old token → `401 invalid_grant` and revokes
+the device. Cross-account device revoke → `404`.
+
+Limits are in-process: pair/start 10/minute/IP; five failed approvals lock the
+user code/attempt source; polling faster than the interval returns `429` with
+`retry_after_s`.
