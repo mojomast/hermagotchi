@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """launch-003 compositor (generic native-grid): composites on the native pixel grid, then x4 nearest upscale,
-so every layer shares one uniform pixel grid."""
+so every layer shares one uniform pixel grid.
+
+Supports pet state animation frames via art_ext/manifest animations{}:
+cosmetics follow per-frame anchor_delta (bob/lunge/recoil); aura items keep their 2-frame cycle.
+"""
 from __future__ import annotations
 import argparse, json, random
 from pathlib import Path
@@ -10,33 +14,100 @@ ROOT = Path(__file__).resolve().parents[1]; A = ROOT / "assets"
 MAN = json.loads((A / "manifest.launch-003.json").read_text()); EXT = json.loads((A / "art_ext.launch-003.json").read_text())
 F = EXT["pixel_factor"]; N = EXT["native_size"]; ITEMS = {a["id"]: a for a in MAN["assets"]}
 SLOTS = ["head", "face", "back", "front", "aura", "emote", "habitat", "title"]; _c = {}
+ANIMS = (EXT.get("animations") or {}).get("clips") or {}
 
 def _n(rel):
     if rel not in _c: _c[rel] = Image.open(A / rel).convert("RGBA").resize((N, N), Image.NEAREST)
     return _c[rel]
 
-def _item(cv, it, sp):
-    s = EXT["species"][sp]; ax, ay = s["anchors_native"][it["anchor"]]
+def _strip_frame(rel: str, index: int, frame_w: int = N) -> Image.Image:
+    """Extract one native frame from a horizontal strip (hi-res or native)."""
+    key = f"{rel}#f{index}"
+    if key in _c:
+        return _c[key]
+    im = Image.open(A / rel).convert("RGBA")
+    # detect scale
+    if im.size[1] == N:
+        fw = frame_w
+    elif im.size[1] % N == 0:
+        scale = im.size[1] // N
+        fw = frame_w * scale
+        im = im.resize((im.size[0] // scale, im.size[1] // scale), Image.NEAREST)
+        fw = frame_w
+    else:
+        im = im.resize((im.size[0] * N // im.size[1], N), Image.NEAREST)
+        fw = frame_w
+    x0 = index * fw
+    fr = im.crop((x0, 0, x0 + fw, N))
+    if fr.size != (N, N):
+        fr = fr.resize((N, N), Image.NEAREST)
+    _c[key] = fr
+    return fr
+
+def clip_id(species: str, palette: str, state: str) -> str:
+    return f"{species}.{palette}.{state}"
+
+def clip_meta(species: str, palette: str, state: str) -> dict:
+    cid = clip_id(species, palette, state)
+    if cid not in ANIMS:
+        raise KeyError(f"missing animation clip {cid}")
+    return ANIMS[cid]
+
+def _item(cv, it, sp, anchor_delta=(0, 0), aura_frame=0):
+    s = EXT["species"][sp]
+    ax, ay = s["anchors_native"][it["anchor"]]
+    ax = ax + int(anchor_delta[0]); ay = ay + int(anchor_delta[1])
     dx, dy, sm = EXT["items"][it["id"]]["per_species"][sp]["transform_native"]
-    k = it["scale"] * s["item_scale"] * sm; lay = _n(it["path"])
+    k = it["scale"] * s["item_scale"] * sm
+    # aura 2-frame cycle
+    path = it["path"]
+    meta = EXT["items"].get(it["id"], {})
+    frames = meta.get("frames")
+    if it.get("slot") == "aura" and isinstance(frames, list) and frames:
+        path = frames[aura_frame % len(frames)]["path"]
+    lay = _n(path)
     if abs(k - 1) > 1e-3:
         size = round(N * k); lay = lay.resize((size, size), Image.NEAREST)
-    ox = ax + it["offset_px"][0] // F + dx - round(N // 2 * k); oy = ay + it["offset_px"][1] // F + dy - round(N // 2 * k)
+    ox = ax + it["offset_px"][0] // F + dx - round(N // 2 * k)
+    oy = ay + it["offset_px"][1] // F + dy - round(N // 2 * k)
     cv.paste(lay, (ox, oy), lay)
 
-def render_pet(species, appearance_seed=0, palette=None, marking="none", loadout=None, native=False):
+def render_pet(species, appearance_seed=0, palette=None, marking="none", loadout=None, native=False,
+               state: str | None = None, frame_index: int = 0):
+    """Render a pet. If state is set, use that animation clip frame as the body and
+    apply the frame's anchor_delta to all cosmetic anchors (cosmetics follow bob/lunge)."""
     loadout = loadout or {}
     for iid in loadout.values():
         if iid not in ITEMS: raise ValueError(f"unknown asset id {iid!r}")
     s = EXT["species"][species]; palette = palette or s["default_palette"]
-    seq = [(0, 0, ("img", s["palettes"][palette]["path"]))]
+    anchor_delta = (0, 0)
+    body_path = s["palettes"][palette]["path"]
+    body_img = None
+    if state:
+        meta = clip_meta(species, palette, state)
+        fi = int(frame_index) % int(meta["frame_count"])
+        body_img = _strip_frame(meta["path"], fi, meta.get("frame_native", N))
+        fr = meta["frames"][fi]
+        ad = fr.get("anchor_delta") or [0, 0]
+        anchor_delta = (int(ad[0]), int(ad[1]))
+    seq = [(0, 0, ("body", body_img if body_img is not None else body_path))]
     if marking != "none": seq.append((5, 0, ("img", s["markings"][marking]["path"])))
-    if "head" in loadout and palette in s.get("ear_overlays", {}): seq.append((35, 0, ("img", s["ear_overlays"][palette]["path"])))
+    if "head" in loadout and palette in s.get("ear_overlays", {}):
+        seq.append((35, 0, ("img", s["ear_overlays"][palette]["path"])))
     seq += [(ITEMS[i]["z"], 1, ("item", ITEMS[i])) for i in loadout.values()]
     cv = Image.new("RGBA", (N, N))
+    aura_frame = int(frame_index)  # auras keep 2-frame cycle tied to time
     for _, _, (kind, x) in sorted(seq, key=lambda t: (t[0], t[1])):
-        if kind == "img": im = _n(x); cv.paste(im, (0, 0), im)
-        else: _item(cv, x, species)
+        if kind == "body":
+            im = x if isinstance(x, Image.Image) else _n(x)
+            # When body already includes bob shift, paste at 0,0 (delta is for anchors only).
+            cv.paste(im, (0, 0), im)
+        elif kind == "img":
+            im = _n(x)
+            # markings / ears follow bob
+            cv.paste(im, (int(anchor_delta[0]), int(anchor_delta[1])), im)
+        else:
+            _item(cv, x, species, anchor_delta=anchor_delta, aura_frame=aura_frame)
     return cv if native else cv.resize((N * F, N * F), Image.NEAREST)
 
 def seeded_look(seed):

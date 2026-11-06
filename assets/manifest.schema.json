@@ -4,7 +4,14 @@
   "title": "Hermagotchi Asset Manifest (contracts-v1)",
   "description": "Normative shape for assets/manifest.json. Canvas is 512x512 RGBA. Equipped slots: head, face, back, front, aura, emote, habitat, title. Z-order vocabulary: aura_back=-30, shadow=-20, back_attachment=-10, body=0, markings=5, eyes_mouth=10, facewear=20, headwear=30, front_attachment=40, particles_front=50.",
   "type": "object",
-  "required": ["schema_version", "asset_pack_id", "canvas", "rigs", "species", "assets"],
+  "required": [
+    "schema_version",
+    "asset_pack_id",
+    "canvas",
+    "rigs",
+    "species",
+    "assets"
+  ],
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -41,6 +48,145 @@
       "items": {
         "$ref": "#/$defs/asset"
       }
+    },
+    "animations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "states",
+        "clips"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "native_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pixel_factor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "clip_meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "fps": {
+                "type": "number"
+              },
+              "loop": {
+                "type": "boolean"
+              },
+              "frame_count": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "clips": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "species",
+              "palette",
+              "state",
+              "path",
+              "frame_w",
+              "frame_h",
+              "frame_count",
+              "fps",
+              "loop",
+              "sha256"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "species": {
+                "type": "string",
+                "minLength": 1
+              },
+              "palette": {
+                "type": "string",
+                "minLength": 1
+              },
+              "state": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string",
+                "pattern": "\\.png$"
+              },
+              "frame_w": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "frame_h": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "frame_count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "fps": {
+                "type": "number",
+                "minimum": 1
+              },
+              "loop": {
+                "type": "boolean"
+              },
+              "sha256": {
+                "type": "string",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "layout": {
+                "type": "string"
+              },
+              "frames": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "i": {
+                      "type": "integer"
+                    },
+                    "anchor_delta": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "duration_ms": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -57,7 +203,11 @@
     },
     "canvas": {
       "type": "object",
-      "required": ["width", "height", "baseline_y"],
+      "required": [
+        "width",
+        "height",
+        "baseline_y"
+      ],
       "additionalProperties": false,
       "properties": {
         "width": {
@@ -73,12 +223,20 @@
     },
     "rig": {
       "type": "object",
-      "required": ["anchors"],
+      "required": [
+        "anchors"
+      ],
       "additionalProperties": false,
       "properties": {
         "anchors": {
           "type": "object",
-          "required": ["head", "face", "back", "front", "ground"],
+          "required": [
+            "head",
+            "face",
+            "back",
+            "front",
+            "ground"
+          ],
           "additionalProperties": {
             "$ref": "#/$defs/anchor_point"
           }
@@ -87,7 +245,12 @@
     },
     "species": {
       "type": "object",
-      "required": ["rig", "base", "overrides", "features"],
+      "required": [
+        "rig",
+        "base",
+        "overrides",
+        "features"
+      ],
       "additionalProperties": false,
       "properties": {
         "rig": {
@@ -140,7 +303,16 @@
         },
         "slot": {
           "type": "string",
-          "enum": ["head", "face", "back", "front", "aura", "emote", "habitat", "title"]
+          "enum": [
+            "head",
+            "face",
+            "back",
+            "front",
+            "aura",
+            "emote",
+            "habitat",
+            "title"
+          ]
         },
         "path": {
           "type": "string",
@@ -158,7 +330,18 @@
         },
         "z": {
           "type": "integer",
-          "enum": [-30, -20, -10, 0, 5, 10, 20, 30, 40, 50],
+          "enum": [
+            -30,
+            -20,
+            -10,
+            0,
+            5,
+            10,
+            20,
+            30,
+            40,
+            50
+          ],
           "description": "Z-order vocabulary: aura_back(-30), shadow(-20), back(-10), body(0), markings(5), eyes_mouth(10), face(20), head(30), front(40), particles_front(50)."
         },
         "anchor": {

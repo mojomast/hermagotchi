@@ -478,7 +478,72 @@ def validate_manifest_data(
             f"pack size {total_bytes} exceeds budget of {MAX_PACK_BYTES} bytes"
         )
 
+    errors.extend(validate_animations(manifest, base_dir))
+
     return errors
+
+
+def validate_animations(manifest: dict, base_dir: Path) -> list[str]:
+    """Optional animations{} block: strips exist, sha matches, deltas in bounds."""
+    errors: list[str] = []
+    anim = manifest.get("animations")
+    if anim is None:
+        return errors
+    if not isinstance(anim, dict):
+        return ["animations must be an object"]
+    clips = anim.get("clips")
+    if not isinstance(clips, list):
+        return ["animations.clips must be an array"]
+    species = set((manifest.get("species") or {}).keys())
+    pf = int(anim.get("pixel_factor") or 1)
+    try:
+        from PIL import Image
+    except ImportError:
+        return ["Pillow required to validate animation strips"]
+    for i, clip in enumerate(clips):
+        label = f"animations.clips[{i}]"
+        if not isinstance(clip, dict):
+            errors.append(f"{label}: must be object")
+            continue
+        cid = clip.get("id", label)
+        path = clip.get("path")
+        if not isinstance(path, str):
+            errors.append(f"{cid}: path required")
+            continue
+        fp = (base_dir / path).resolve()
+        if not fp.is_file():
+            errors.append(f"{cid}: missing strip {path}")
+            continue
+        expected_hash = clip.get("sha256")
+        if isinstance(expected_hash, str):
+            actual = sha256_file(fp)
+            if actual != expected_hash:
+                errors.append(f"{cid}: sha256 mismatch")
+        sp = clip.get("species")
+        if isinstance(sp, str) and sp not in species:
+            errors.append(f"{cid}: unknown species {sp!r}")
+        fw = int(clip.get("frame_w") or 0)
+        fh = int(clip.get("frame_h") or 0)
+        fc = int(clip.get("frame_count") or 0)
+        if fw < 1 or fh < 1 or fc < 1:
+            errors.append(f"{cid}: invalid frame geometry")
+            continue
+        im = Image.open(fp)
+        expect_hi = (fw * fc * pf, fh * pf)
+        expect_lo = (fw * fc, fh)
+        if im.size not in (expect_hi, expect_lo):
+            errors.append(f"{cid}: strip size {im.size} != {expect_hi} or {expect_lo}")
+        for fr in clip.get("frames") or []:
+            if not isinstance(fr, dict):
+                continue
+            ad = fr.get("anchor_delta") or [0, 0]
+            if not (isinstance(ad, list) and len(ad) == 2):
+                errors.append(f"{cid}: bad anchor_delta")
+                continue
+            if abs(int(ad[0])) > 8 or abs(int(ad[1])) > 8:
+                errors.append(f"{cid}: anchor_delta out of bounds {ad}")
+    return errors
+
 
 
 def default_schema_path() -> Path:

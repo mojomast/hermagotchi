@@ -116,4 +116,5 @@ Follow-up: filled brow notch and facial-disc pad so the third eye is embedded in
 
 ### Cosmetics pack (~60), 2026-11-05
 Kyle: ~60 NEW cosmetics, hand-authored in `scripts/draw_cosmetics.py` (no GenerateImage). Categories: hats, face, neck/back, held props, auras (many 2-frame). Per-species transforms for all 10 pets; `hand` anchor for held props; daemowl face offsets clear the third eye. Shop migration `0008_cosmetics_pack.sql`. Existing 13 px3 items kept and given full per_species maps.
-
+### Pet state animations, 2026-11-05
+Kyle: simple hand-authored animations (idle/happy/eat/sleep/hurt/attack) for all 10 species × palette variants. Derived in `scripts/draw_anims.py` from existing palette sprites via pixel transforms + blink/Zz edits — no GenerateImage. Strips in `assets/px3/anims/`; metadata in manifest `animations{}` + art_ext. Desktop contract: `desktop/src/anim/`.
