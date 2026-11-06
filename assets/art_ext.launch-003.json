@@ -584,7 +584,7 @@
             1,
             1
           ],
-          "sha256": "188db7f5e6897821d63354a4e44499b5ba2848c53c7a90c6c8449b92e234e2ff"
+          "sha256": "7ba859ebe5be20ecd8e673db9d9fa0a3f9e5f58b84c4edf48f86d8c4cde1ed04"
         },
         "snowy": {
           "path": "px3/palettes/daemowl_snowy.png",
@@ -593,7 +593,7 @@
             0.3,
             1.25
           ],
-          "sha256": "dbb0e76b11a347152cc93fe6e70cb63b0c9f531465c3677374ebac5412f7c812"
+          "sha256": "af5510ac2e35c65278c70d33a3dcb0756fcae8e251a07ab61aeb6c1d1cad3297"
         },
         "ash": {
           "path": "px3/palettes/daemowl_ash.png",
@@ -602,7 +602,7 @@
             0.4,
             0.9
           ],
-          "sha256": "5a993f4e51e4642acca1b58b1bf3b5e5a873792dcc072698fdae33e023460e6a"
+          "sha256": "318f4be46703b9d27fbcc00a6c053c6ae989a7ed00ddc0e2806bd9eb6f96f952"
         },
         "rose": {
           "path": "px3/palettes/daemowl_rose.png",
@@ -611,7 +611,7 @@
             1,
             1.05
           ],
-          "sha256": "5e4473cefef4601903ec778be17d7d1ec764fe428384be88aa55e89e73a611bf"
+          "sha256": "df8e28391220abc7623d00a0c1e0569ed9e7ee9a6c668f891a37f5f86c34690f"
         }
       },
       "default_palette": "bark",
@@ -633,7 +633,7 @@
         }
       },
       "ear_overlays": {},
-      "base_sha256": "188db7f5e6897821d63354a4e44499b5ba2848c53c7a90c6c8449b92e234e2ff"
+      "base_sha256": "7ba859ebe5be20ecd8e673db9d9fa0a3f9e5f58b84c4edf48f86d8c4cde1ed04"
     },
     "shellsnail": {
       "concept": "Snail carrying a retro terminal as its shell, with a prompt on the screen.",

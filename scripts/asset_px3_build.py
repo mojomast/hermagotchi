@@ -84,7 +84,7 @@ MARKINGS = ["none", "freckles", "stripes", "spot"]
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 def daemowl_third_eye(body: Image.Image) -> Image.Image:
-    """Third amber forehead eye fully embedded in feather fill (Kyle)."""
+    """Third amber forehead eye; pupil centred in 3x3 iris (Kyle)."""
     a = np.asarray(body).copy()
     AMBER, WHITE = (239, 142, 1), (255, 255, 255)
     TAN, MID, DARK = (214, 181, 138), (165, 97, 24), (94, 48, 0)
@@ -92,31 +92,31 @@ def daemowl_third_eye(body: Image.Image) -> Image.Image:
         if 0 <= x < N and 0 <= y < N:
             a[y, x, :3] = rgb
             a[y, x, 3] = 255
-    # solid brow between ear tufts
     for x in range(12, 19):
         put(x, 8, TAN if x <= 15 else MID)
     put(12, 8, DARK); put(18, 8, DARK)
-    # facial-disc pad
     for y, x, col in [
         (9, 13, TAN), (9, 14, TAN), (9, 15, MID), (9, 16, TAN), (9, 17, TAN),
-        (10, 13, TAN), (10, 14, TAN), (10, 15, TAN), (10, 16, TAN), (10, 17, MID),
+        (10, 13, TAN), (10, 17, MID),
         (11, 13, TAN), (11, 17, TAN),
         (12, 13, MID), (12, 17, MID),
         (13, 13, MID), (13, 17, MID),
         (14, 13, MID), (14, 14, MID), (14, 15, MID), (14, 16, MID), (14, 17, MID),
     ]:
         put(x, y, col)
-    # outline ring
-    for x, y in [(13, 11), (14, 10), (15, 10), (16, 10), (17, 11), (13, 12), (17, 12),
-                 (13, 13), (17, 13), (14, 14), (15, 14), (16, 14)]:
+    for x, y in [
+        (14, 10), (15, 10), (16, 10),
+        (13, 11), (17, 11),
+        (13, 12), (17, 12),
+        (13, 13), (17, 13),
+        (14, 14), (15, 14), (16, 14),
+    ]:
         put(x, y, OUTLINE)
-    # iris / pupil / highlight
-    put(14, 11, AMBER); put(15, 11, AMBER); put(16, 11, AMBER)
-    put(14, 12, AMBER); put(15, 12, AMBER); put(16, 12, AMBER)
-    put(14, 13, AMBER); put(16, 13, AMBER)
-    put(15, 13, OUTLINE)
-    put(14, 11, WHITE)
-    # fill any remaining enclosed transparent in forehead band
+    for y in (11, 12, 13):
+        for x in (14, 15, 16):
+            put(x, y, AMBER)
+    put(15, 12, OUTLINE)  # centred pupil
+    put(14, 11, WHITE)    # UL highlight
     for y in range(7, 15):
         for x in range(11, 20):
             if a[y, x, 3] > 0:
