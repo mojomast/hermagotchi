@@ -342,3 +342,97 @@ export function battleSummary(match = {}, replay = {}, participants = {}) {
 export function replaySummary(replay = {}, participants = {}) {
   return battleSummary({}, replay, participants);
 }
+
+function _tauntText(value) {
+  return typeof value === "string" ? value : "";
+}
+
+/** Coerce one server taunt row into the display shape. */
+export function normalizeTaunt(item) {
+  if (!item || typeof item !== "object") return null;
+  const body =
+    _tauntText(item.body) || _tauntText(item.text) || _tauntText(item.taunt);
+  if (!body) return null;
+  const matchContext =
+    item.match_context && typeof item.match_context === "object"
+      ? item.match_context
+      : item.matchContext && typeof item.matchContext === "object"
+        ? item.matchContext
+        : null;
+  return {
+    id:
+      _tauntText(item.id) ||
+      _tauntText(item.account_id) + ":" + body.slice(0, 24),
+    body,
+    account_id: _tauntText(item.account_id) || null,
+    actor_mode: item.actor_mode === "agent" ? "agent" : "human",
+    created_at: _tauntText(item.created_at),
+    kind: "taunt",
+    phase: _tauntText(item.phase) || null,
+    match_context: matchContext,
+  };
+}
+
+/** Collect opponent taunts from a practice response, match or replay. */
+export function battleTaunts(source) {
+  if (!source || typeof source !== "object") return [];
+  const containers = [
+    source,
+    source.data,
+    source.match,
+    source.replay,
+    source.data && source.data.match,
+    source.data && source.data.replay,
+  ].filter(Boolean);
+  const seen = new Set();
+  const rows = [];
+  for (const container of containers) {
+    if (!container) continue;
+    const lists = [
+      container.taunts,
+      container.opponent_taunts,
+      container.opponentTaunts,
+    ];
+    for (const list of lists) {
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        const taunt = normalizeTaunt(item);
+        if (!taunt || seen.has(taunt.id)) continue;
+        seen.add(taunt.id);
+        rows.push(taunt);
+      }
+    }
+  }
+  return rows;
+}
+
+/** Match summary passed with a post-battle taunt. */
+export function battleTauntContext(match = {}, summary = {}) {
+  const source = match && typeof match === "object" ? match : {};
+  const header =
+    source.match_context && typeof source.match_context === "object"
+      ? source.match_context
+      : {};
+  return {
+    match_id: source.id || header.match_id || null,
+    winner:
+      summary && summary.winner !== undefined && summary.winner !== null
+        ? summary.winner
+        : source.winner !== undefined
+          ? source.winner
+          : header.winner || null,
+    winner_name:
+      (summary && summary.winnerName) || header.winner_name || null,
+    hp:
+      (summary && summary.finalHp) ||
+      source.final_hp ||
+      header.hp ||
+      null,
+    rounds:
+      summary && summary.rounds !== undefined && summary.rounds !== null
+        ? summary.rounds
+        : source.rounds !== undefined
+          ? source.rounds
+          : header.rounds || 0,
+  };
+}

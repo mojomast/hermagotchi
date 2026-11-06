@@ -760,6 +760,145 @@
   padding-top: 10px;
 }
 
+.hg-chat__dm-target {
+  margin-top: 8px;
+}
+
+.hg-chat__thread {
+  border-left: 3px solid var(--hg-accent-strong);
+  padding-left: 8px;
+}
+
+.hg-inbox__badge {
+  margin-left: 6px;
+  color: var(--hg-muted);
+}
+
+.hg-inbox__badge--unread {
+  color: var(--hg-bg);
+  background: var(--hg-accent);
+  border-color: var(--hg-accent-strong);
+}
+
+.hg-inbox__list,
+.hg-taunt__list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hg-inbox__item {
+  border: 1px solid var(--hg-border);
+  background: var(--hg-bg-sunken);
+  padding: 6px 8px;
+}
+
+.hg-inbox__item--unread {
+  border-left: 3px solid var(--hg-accent);
+}
+
+.hg-inbox__item--mention {
+  border-left-color: var(--hg-warn);
+}
+
+.hg-inbox__item--dm {
+  border-left-color: var(--hg-accent-strong);
+}
+
+.hg-inbox__preview {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hg-taunt {
+  border: 1px solid var(--hg-warn);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 204, 102, 0.05) 0,
+      rgba(255, 204, 102, 0.05) 6px,
+      transparent 6px,
+      transparent 12px
+    ),
+    var(--hg-bg-sunken);
+}
+
+.hg-log__item.hg-taunt {
+  display: block;
+}
+
+.hg-taunt__bubble,
+.hg-taunt--row {
+  padding: 8px 10px;
+}
+
+.hg-taunt__body {
+  margin: 4px 0;
+  color: var(--hg-warn);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hg-taunt__match {
+  margin: 0 0 6px;
+  color: var(--hg-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hg-taunt__compose {
+  margin-top: 12px;
+  border-top: 1px dashed var(--hg-border);
+  padding-top: 10px;
+}
+
+.hg-taunt__compose h4 {
+  margin: 0 0 4px;
+  font-size: 0.875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hg-setting--toggle {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.hg-setting__hint {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.hg-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hg-toggle__input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--hg-accent);
+}
+
+.hg-toggle__value {
+  color: var(--hg-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hg-setting__notice {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+}
+
 .hg-shop,
 .hg-habitat,
 .hg-battle,

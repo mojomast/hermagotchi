@@ -26,6 +26,7 @@ SURFACE_DEFAULTS: dict[str, tuple[str, str]] = {
     "lobby.welcome": ("npc.nous_girl", "lobby.welcome"),
     "lobby.chat": ("npc.nous_girl", "lobby.chat"),
     "lobby.moderation": ("npc.nous_girl", "lobby.moderation"),
+    "lobby.upset": ("npc.southpaw", "lobby.upset"),
     "practice": ("npc.teknium", "practice.start"),
     "practice.start": ("npc.teknium", "practice.start"),
     "practice.win": ("npc.teknium", "practice.win"),
