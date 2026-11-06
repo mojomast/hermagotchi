@@ -14,7 +14,7 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
 - Branch: `hgt/w14-social-hub` (PR into `feat/hackathon`; switch pin branch to `feat/hackathon` after merge)
-- **Deploy tip SHA (full):** `e47ebd25896cd5f21b15e861049b253da7556868`
+- **Deploy tip SHA (full):** `4077af4df2a7c05c61200c0c3ca61500cbcaa7aa`
 - Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — W11 tip; W12+W13 not yet live. Use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
