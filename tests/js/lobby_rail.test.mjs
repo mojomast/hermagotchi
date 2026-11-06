@@ -1,0 +1,119 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import test from "node:test";
+
+import {
+  LOBBY_RAIL_BREAKPOINT,
+  lobbyRailAutoCollapsed,
+  lobbyUnreadCount,
+  lobbyUnreadLabel,
+} from "../../desktop/src/ui/logic/chat.js";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const UI = path.join(ROOT, "desktop", "src", "ui");
+const RAIL = readFileSync(path.join(UI, "components", "LobbyRail.js"), "utf8");
+const PANE = readFileSync(path.join(UI, "pane.js"), "utf8");
+const STYLES = readFileSync(path.join(UI, "styles.css"), "utf8");
+
+test("lobby rail collapses below the 840px breakpoint", () => {
+  assert.equal(LOBBY_RAIL_BREAKPOINT, 840);
+  assert.equal(lobbyRailAutoCollapsed(320), true);
+  assert.equal(lobbyRailAutoCollapsed(839), true);
+  assert.equal(lobbyRailAutoCollapsed(840), false);
+  assert.equal(lobbyRailAutoCollapsed(1280), false);
+  assert.equal(lobbyRailAutoCollapsed(undefined), false);
+});
+
+test("lobby unread helpers prefer the server count and bound the badge", () => {
+  assert.equal(
+    lobbyUnreadCount({
+      ok: true,
+      data: {
+        unread_count: 4,
+        items: [{ id: "n1", unread: true, body: "hi" }],
+      },
+    }),
+    4
+  );
+  assert.equal(
+    lobbyUnreadCount({
+      items: [
+        { id: "n1", unread: true, body: "hi" },
+        { id: "n2", unread: true, body: "yo" },
+      ],
+    }),
+    2
+  );
+  assert.equal(lobbyUnreadCount(null), 0);
+  assert.equal(lobbyUnreadLabel(0), "");
+  assert.equal(lobbyUnreadLabel(7), "7");
+  assert.equal(lobbyUnreadLabel(120), "99+");
+  assert.equal(lobbyUnreadLabel(-1), "");
+});
+
+test("LobbyRail owns messages, taunt bubbles, composer and reason notices", () => {
+  assert.match(RAIL, /export function LobbyRail/);
+  for (const className of [
+    "hg-lobby-rail",
+    "hg-lobby-rail--collapsed",
+    "hg-lobby-rail__header",
+    "hg-lobby-rail__toggle",
+    "hg-lobby-rail__badge",
+    "hg-lobby-rail__messages",
+    "hg-lobby-rail__taunt",
+    "hg-lobby-rail__compose",
+    "hg-lobby-rail__notice",
+  ]) {
+    assert.ok(RAIL.includes(className), `missing ${className}`);
+  }
+  for (const helper of [
+    "CHAT_MESSAGES_PATH",
+    "CHAT_INBOX_PATH",
+    "normalizeMessages",
+    "mergeMessages",
+    "messageFromEnvelope",
+    "validateChatDraft",
+    "chatMessagePayload",
+    "chatNoticeFromEnvelope",
+    "isTauntMessage",
+    "tauntSummary",
+    "shouldShowChatStub",
+  ]) {
+    assert.ok(RAIL.includes(helper), `LobbyRail must reuse chat helper ${helper}`);
+  }
+  assert.ok(RAIL.includes('"data-rail": "lobby"') || RAIL.includes('"data-rail": "chat"'));
+  assert.ok(RAIL.includes("aria-expanded"));
+  assert.ok(RAIL.includes("Chat is off by default"));
+  assert.doesNotMatch(RAIL, /dangerouslySetInnerHTML/);
+  assert.doesNotMatch(RAIL, /innerHTML/);
+});
+
+test("pane mounts the lobby rail beside every tab and collapses it", () => {
+  assert.match(PANE, /from "\.\/components\/LobbyRail\.js"/);
+  assert.ok(PANE.includes("hg-pane__layout"), "pane needs a main + rail layout");
+  assert.ok(PANE.includes("hg-pane__layout--rail-collapsed"));
+  assert.ok(PANE.includes("hg-pane__main"));
+  assert.ok(PANE.includes("LobbyRail"));
+  assert.ok(PANE.includes("lobbyRailAutoCollapsed"));
+  assert.ok(PANE.includes("matchMedia"));
+  assert.ok(PANE.includes("839") || PANE.includes("LOBBY_RAIL_BREAKPOINT"));
+  assert.ok(PANE.includes("onToggle"));
+});
+
+test("stylesheet lays out the rail, badge and narrow toggle breakpoint", () => {
+  for (const selector of [
+    ".hg-pane__layout",
+    ".hg-pane__layout--rail-collapsed",
+    ".hg-pane__main",
+    ".hg-lobby-rail",
+    ".hg-lobby-rail--collapsed",
+    ".hg-lobby-rail__badge",
+    ".hg-lobby-rail__toggle",
+    ".hg-lobby-rail__compose",
+  ]) {
+    assert.ok(STYLES.includes(selector), `missing ${selector}`);
+  }
+  assert.match(STYLES, /@media \(max-width: 839px\)/);
+});

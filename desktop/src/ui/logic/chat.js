@@ -15,6 +15,7 @@ export const CHAT_MESSAGE_MAX_CHARS = 400;
 export const CHAT_TAUNT_MAX_CHARS = 90;
 export const CHAT_DM_TARGET_MAX_CHARS = 64;
 export const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
+export const LOBBY_RAIL_BREAKPOINT = 840;
 
 const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
 
@@ -342,6 +343,25 @@ export function normalizeInbox(envelopeOrData) {
       return item.kind === "mention";
     }),
   };
+}
+
+/** The persistent rail collapses below this viewport width. */
+export function lobbyRailAutoCollapsed(width) {
+  const value = Number(width);
+  if (!Number.isFinite(value)) return false;
+  return value < LOBBY_RAIL_BREAKPOINT;
+}
+
+/** Unread count for the collapsed lobby rail badge. */
+export function lobbyUnreadCount(inbox) {
+  return normalizeInbox(inbox).unreadCount;
+}
+
+/** Compact badge label; empty at zero and capped for very busy lobbies. */
+export function lobbyUnreadLabel(count) {
+  const value = Math.trunc(Number(count));
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return value > 99 ? "99+" : String(value);
 }
 
 /** Mark every inbox row read locally without mutating the input. */

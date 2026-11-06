@@ -13,12 +13,16 @@ import {
   CHAT_SETTINGS_PATH,
   CHAT_TAUNTS_PATH,
   CHAT_TAUNT_MAX_CHARS,
+  LOBBY_RAIL_BREAKPOINT,
   chatActionNotice,
   chatMessagePayload,
   chatModerationHost,
   chatNoticeFromEnvelope,
   isChatEnabled,
   isTauntMessage,
+  lobbyRailAutoCollapsed,
+  lobbyUnreadCount,
+  lobbyUnreadLabel,
   markInboxRead,
   mergeMessages,
   messageFromEnvelope,
@@ -64,6 +68,20 @@ test("stub is required without an api or while chat is disabled", () => {
   assert.equal(shouldShowChatStub({}), true);
   assert.equal(shouldShowChatStub({ api: {}, chatEnabled: false }), true);
   assert.equal(shouldShowChatStub({ api: {}, chatEnabled: true }), false);
+});
+
+test("lobby rail helpers share the narrow breakpoint and unread badge", () => {
+  assert.equal(LOBBY_RAIL_BREAKPOINT, 840);
+  assert.equal(lobbyRailAutoCollapsed(320), true);
+  assert.equal(lobbyRailAutoCollapsed(839), true);
+  assert.equal(lobbyRailAutoCollapsed(840), false);
+  assert.equal(lobbyRailAutoCollapsed("1280"), false);
+  assert.equal(lobbyRailAutoCollapsed("wide"), false);
+  assert.equal(lobbyUnreadCount({ data: { unread_count: 3 } }), 3);
+  assert.equal(lobbyUnreadCount({ items: [{ id: "n1", unread: true, body: "hi" }] }), 1);
+  assert.equal(lobbyUnreadLabel(0), "");
+  assert.equal(lobbyUnreadLabel(3), "3");
+  assert.equal(lobbyUnreadLabel(400), "99+");
 });
 
 test("message normalization keeps untrusted bodies as plain strings", () => {

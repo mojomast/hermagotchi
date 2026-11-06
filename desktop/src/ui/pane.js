@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
+import { LobbyRail } from "./components/LobbyRail.js";
 import { deriveConnectionStatus, resolveConnectionUiState } from "./logic/connection.js";
+import { lobbyRailAutoCollapsed } from "./logic/chat.js";
 import { BattleTab } from "./tabs/BattleTab.js";
 import { ChatTab } from "./tabs/ChatTab.js";
 import { HabitatTab } from "./tabs/HabitatTab.js";
@@ -80,6 +82,13 @@ function pairEnvelopeFor(api) {
   return Promise.resolve(null);
 }
 
+function initialRailCollapsed() {
+  if (typeof window === "undefined" || typeof window.innerWidth !== "number") {
+    return false;
+  }
+  return lobbyRailAutoCollapsed(window.innerWidth);
+}
+
 export function HermagotchiPane(props = {}) {
   const initialTab = TAB_IDS.includes(props.initialTab) ? props.initialTab : "habitat";
   const api = props.api;
@@ -92,6 +101,9 @@ export function HermagotchiPane(props = {}) {
   const connectionState = useState(null);
   const connection = connectionState[0];
   const setConnection = connectionState[1];
+  const railState = useState(initialRailCollapsed);
+  const railCollapsed = railState[0];
+  const setRailCollapsed = railState[1];
 
   useEffect(
     function pollConnection() {
@@ -126,6 +138,38 @@ export function HermagotchiPane(props = {}) {
     [api, hasApi]
   );
 
+  useEffect(
+    function syncLobbyRail() {
+      if (
+        typeof window === "undefined" ||
+        typeof window.matchMedia !== "function"
+      ) {
+        return undefined;
+      }
+      const query = window.matchMedia("(max-width: 839px)");
+      function sync(event) {
+        if (event && event.matches) {
+          setRailCollapsed(true);
+        }
+      }
+      sync(query);
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", sync);
+        return function () {
+          query.removeEventListener("change", sync);
+        };
+      }
+      if (typeof query.addListener === "function") {
+        query.addListener(sync);
+        return function () {
+          query.removeListener(sync);
+        };
+      }
+      return undefined;
+    },
+    []
+  );
+
   const effectiveState = hasApi
     ? connection
       ? resolveConnectionUiState(connection)
@@ -137,6 +181,12 @@ export function HermagotchiPane(props = {}) {
     if (typeof props.onTabChange === "function") {
       props.onTabChange(nextTab);
     }
+  }
+
+  function toggleLobbyRail() {
+    setRailCollapsed(function (current) {
+      return !current;
+    });
   }
 
   const tabButtons = TAB_IDS.map((tabId) =>
@@ -184,11 +234,27 @@ export function HermagotchiPane(props = {}) {
         "aria-label": "Hermagotchi sections",
         children: tabButtons,
       }),
-      jsx("main", {
-        className: "hg-pane__body",
-        role: "tabpanel",
-        "aria-label": TAB_LABELS[activeTab],
-        children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+      jsxs("div", {
+        className: railCollapsed
+          ? "hg-pane__layout hg-pane__layout--rail-collapsed"
+          : "hg-pane__layout",
+        children: [
+          jsx("main", {
+            className: "hg-pane__body hg-pane__main",
+            role: "tabpanel",
+            "aria-label": TAB_LABELS[activeTab],
+            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+          }),
+          jsx(LobbyRail, Object.assign({}, props, {
+            api: api,
+            uiState: effectiveState,
+            state: effectiveState,
+            collapsed: railCollapsed,
+            onToggle: toggleLobbyRail,
+            initialTab: undefined,
+            onTabChange: undefined,
+          })),
+        ],
       }),
     ],
   });
