@@ -393,7 +393,9 @@ export function SettingsTab(props = {}) {
     className: "hg-settings",
     "data-tab": "settings",
     children: [
-      jsx(StateNotice, { state: liveState }),
+      liveState && liveState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: liveState })
+        : null,
       jsx(NpcHostBanner, { surface: "settings" }),
       jsxs("div", {
         className: "hg-card",
