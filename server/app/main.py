@@ -19,9 +19,8 @@ from .db import (
     init_db,
     seed_account,
 )
-from .routes.health import router as health_router
-from .routes.me import router as me_router
-from .routes.pets import router as pets_router
+import importlib
+from pathlib import Path as _Path
 
 
 def _correlation_id(request: Request) -> str:
@@ -101,7 +100,14 @@ def create_app(
             },
         )
 
-    app.include_router(health_router, prefix="/v1")
-    app.include_router(me_router, prefix="/v1")
-    app.include_router(pets_router, prefix="/v1")
+    # Autoload every server.app.routes.* module that exports `router`
+    # so wave bees can add route files without editing main.py.
+    routes_dir = _Path(__file__).resolve().parent / "routes"
+    for path in sorted(routes_dir.glob("*.py")):
+        if path.name.startswith("_"):
+            continue
+        mod = importlib.import_module(f".routes.{path.stem}", __package__)
+        router = getattr(mod, "router", None)
+        if router is not None:
+            app.include_router(router, prefix="/v1")
     return app
