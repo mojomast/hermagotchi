@@ -30,11 +30,10 @@ export function draw(g,t,e){
     text(g,c.before,660,398,43,ink,'Broadcast','center');text(g,c.after,953,398,43,ink,'Broadcast','center');
     pet(g,e,0,526,440,256,t,{state:'happy',items:false});pet(g,e,0,815,440,256,t,{state:'happy'});
     text(g,c.loadout,803,772,29,ink,'BroadcastMono','center');
-    // Film 42–46 / source 12–16s: hold Don Piedro+wallet, pan to mythic price row.
+    // Film 42–46 / source 12–16s: brief mid-grid peek, then hold ≥2s on four mythics (48k–55k).
     const shopCrop=holdPan(t-12,[
-      [{sx:0.00,sy:0.12,sw:0.55,sh:0.31},1.5],
-      [{sx:0.00,sy:0.18,sw:0.62,sh:0.349},0.8],
-      [{sx:0.00,sy:0.55,sw:0.68,sh:0.383},1.5]
+      [{sx:0.00,sy:0.28,sw:0.62,sh:0.349},0.5],
+      [{sx:0.00,sy:0.55,sw:0.68,sh:0.383},3.0]
     ],0.9);
     slot(g,e,'CLIP_SHOP_GRID',1150,423,600,338,shopCrop);
   }

@@ -23,13 +23,12 @@ export function draw(g,t,e){
       g.beginPath();g.moveTo(555,566);g.lineTo(760,526);g.lineTo(726,515);g.moveTo(760,526);g.lineTo(739,552);g.stroke();text(g,c.telestrator,654,915,36,yellow,'BroadcastMono','center');
     }
     if(ko){chrome(g,c.ko,654,650,190,'center');text(g,c.koNote,654,919,28,yellow,'BroadcastMono','center');}
-    // Winner card → pet/replay → turn log (HP rows). Holds keep text readable.
+    // LIVE: winner card → pet → HP rows. RESULT: taunt compose → lower turn log (distinct from live).
     const battleCrop = ko
       ? holdPan(t-15,[
-          [{sx:0.00,sy:0.10,sw:0.55,sh:0.31},1.0],
-          [{sx:0.00,sy:0.18,sw:0.55,sh:0.31},1.2],
-          [{sx:0.00,sy:0.55,sw:0.65,sh:0.366},1.0]
-        ],0.8)
+          [{sx:0.00,sy:0.40,sw:0.55,sh:0.31},0.8],
+          [{sx:0.00,sy:0.58,sw:0.65,sh:0.366},2.0]
+        ],0.7)
       : holdPan(Math.max(0,t-4),[
           [{sx:0.00,sy:0.10,sw:0.55,sh:0.31},2.0],
           [{sx:0.00,sy:0.18,sw:0.55,sh:0.31},2.2],
