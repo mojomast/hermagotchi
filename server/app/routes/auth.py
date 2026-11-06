@@ -289,6 +289,7 @@ def start_pairing(
         f"pair_start:{_client_ip(request)}",
         auth.PAIR_START_LIMIT,
         auth.PAIR_START_WINDOW_S,
+        conn=conn,
     )
     if not allowed:
         raise _rate_limited(retry_after_s)
@@ -348,7 +349,9 @@ def approve_pairing(
     limiter = _limiter(request)
     ip_key = f"approve_ip:{_client_ip(request)}"
 
-    if limiter.is_locked(normalized, now) or limiter.is_locked(ip_key, now):
+    if limiter.is_locked(normalized, now, conn=conn) or limiter.is_locked(
+        ip_key, now, conn=conn
+    ):
         raise _rate_limited(auth.pairing_ttl_s())
 
     row = conn.execute(
@@ -360,8 +363,8 @@ def approve_pairing(
         (normalized,),
     ).fetchone()
     if row is None:
-        limiter.record_failure(normalized, now=now)
-        limiter.record_failure(ip_key, now=now)
+        limiter.record_failure(normalized, now=now, conn=conn)
+        limiter.record_failure(ip_key, now=now, conn=conn)
         raise _error(404, "invalid_user_code", "That pairing code is not valid.")
 
     if row["used_at"] is not None:
@@ -382,8 +385,8 @@ def approve_pairing(
                 """,
                 (auth.iso_from_ts(now), account_id, row["id"]),
             )
-    limiter.clear_failures(normalized)
-    limiter.clear_failures(ip_key)
+    limiter.clear_failures(normalized, conn=conn)
+    limiter.clear_failures(ip_key, conn=conn)
 
     return {"approved": True, "device_name": row["device_name"]}
 

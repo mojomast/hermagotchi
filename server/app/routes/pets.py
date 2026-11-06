@@ -15,9 +15,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .. import ASSET_PACK_VERSION, CONTRACTS_VERSION
 from ..db import account_exists, get_current_account_id, get_db, utc_now_iso
+from ..economy import credit
 from ..shop import loadout_for_pet
 
 router = APIRouter(tags=["pets"])
+
+STARTER_BITS = 300
+STARTER_REASON = "economy.starter_grant"
 
 Species = Literal[
     "byteblob",
@@ -204,6 +208,13 @@ def adopt_pet(
                     now,
                     now,
                 ),
+            )
+            credit(
+                conn,
+                account_id,
+                STARTER_BITS,
+                STARTER_REASON,
+                f"{STARTER_REASON}:{account_id}",
             )
     except sqlite3.IntegrityError as exc:
         raise _already_adopted_error() from exc

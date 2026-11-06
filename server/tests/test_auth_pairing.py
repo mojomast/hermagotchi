@@ -360,3 +360,29 @@ def test_pair_start_rate_limit_per_ip(client):
     limited = _start(client)
     assert limited.status_code == 429
     assert limited.json()["retry_after_s"] >= 1
+
+
+def test_approve_failure_lock_is_keyed_by_ip_too(client):
+    _, first = _pair(client, device_name="First")
+    pending = _start(client, new_account=False, device_name="Second").json()
+
+    wrong_codes = ["BBBB-BBBB", "CCCC-CCCC", "DDDD-DDDD", "FFFF-FFFF", "HHHH-HHHH"]
+    wrong_codes = [code for code in wrong_codes if code != pending["user_code"]]
+    assert len(wrong_codes) >= 5
+
+    for code in wrong_codes[:5]:
+        response = client.post(
+            "/v1/auth/pair/approve",
+            headers=_bearer(first),
+            json={"user_code": code},
+        )
+        assert response.status_code == 404
+        assert response.json()["code"] == "invalid_user_code"
+
+    locked = client.post(
+        "/v1/auth/pair/approve",
+        headers=_bearer(first),
+        json={"user_code": pending["user_code"]},
+    )
+    assert locked.status_code == 429
+    assert locked.json()["retry_after_s"] >= 1

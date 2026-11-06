@@ -17,6 +17,35 @@ balance change; clients never submit a price, reward, or balance.
   committed in one write transaction. SQLite uses `BEGIN IMMEDIATE` to serialize
   writers; production multi-worker deployments should use PostgreSQL row locks.
 
+## Starter Bits
+
+Every account receives a one-time **300 Bit** starter grant when it first
+adopts a pet (`POST /v1/pets`). The credit uses ledger reason
+`economy.starter_grant` with source event `economy.starter_grant:<account_id>`,
+so it is idempotent: retries and the once-per-account adopt rule can never
+grant it twice.
+
+Migration `0011_starter_and_rate_limits.sql` backfills the same grant for
+accounts that predate the adopt-time credit. An account is eligible only when
+it has no inventory purchase rows, no existing starter grant, and its wallet
+balance is below 300 Bits. Accounts that already purchased something, or that
+already hold at least 300 Bits, are left untouched.
+
+## Practice rewards
+
+The Teknium practice opponent (battle-2, ratings never change) pays **50 Bits**
+and 15 XP for each of the first **3 rewarded practices per UTC day**. A full
+day of rewarded practice therefore funds the cheapest 150-Bit catalog item on
+its own. The fourth and later practices on the same day still resolve and
+return a replay, but produce no Bits or XP.
+
+## Durable auth rate limits
+
+Migration `0011_starter_and_rate_limits.sql` also adds `auth_rate_hits` and
+`auth_rate_locks`. The auth routes pass their SQLite connection to
+`AuthRateLimiter`, so the pair/start IP window and the 5-failure approve
+lockout survive a new limiter instance and are shared across uvicorn workers.
+
 ## Service API (`server/app/economy/`)
 
 | Helper | Purpose |

@@ -15,6 +15,8 @@ import secrets
 import sqlite3
 import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -241,9 +243,32 @@ def resolve_session(conn, token: str | None) -> str | None:
     return str(row["account_id"])
 
 
+@contextmanager
+def _db_write(conn: sqlite3.Connection) -> Iterator[None]:
+    """Own a SQLite write transaction, or join one already in progress."""
+    started_here = not conn.in_transaction
+    if started_here:
+        conn.execute("BEGIN IMMEDIATE")
+    try:
+        yield
+    except BaseException:
+        if started_here:
+            conn.rollback()
+        raise
+    else:
+        if started_here:
+            conn.commit()
+
+
 @dataclass
 class AuthRateLimiter:
-    """Small in-process limiter. One instance lives on each FastAPI app."""
+    """Auth limiter with an optional SQLite-backed store.
+
+    Pass ``conn`` from a route to persist hits and locks in the shared app
+    database so every uvicorn worker observes the same state. Without ``conn``
+    the limiter keeps the original in-process behaviour (handy for local tests
+    and callers that do not have a database handle).
+    """
 
     hits: dict[str, list[float]] = field(default_factory=dict)
     failures: dict[str, int] = field(default_factory=dict)
@@ -256,8 +281,12 @@ class AuthRateLimiter:
         limit: int,
         window_s: float,
         now: float | None = None,
+        *,
+        conn: sqlite3.Connection | None = None,
     ) -> tuple[bool, int]:
         moment = now_ts() if now is None else now
+        if conn is not None:
+            return self._allow_db(conn, key, limit, window_s, moment)
         with self._lock:
             bucket = [stamp for stamp in self.hits.get(key, []) if stamp > moment - window_s]
             if len(bucket) >= limit:
@@ -269,8 +298,44 @@ class AuthRateLimiter:
             self.hits[key] = bucket
             return True, 0
 
-    def is_locked(self, key: str, now: float | None = None) -> bool:
+    @staticmethod
+    def _allow_db(
+        conn: sqlite3.Connection,
+        key: str,
+        limit: int,
+        window_s: float,
+        moment: float,
+    ) -> tuple[bool, int]:
+        with _db_write(conn):
+            cutoff = moment - window_s
+            conn.execute(
+                "DELETE FROM auth_rate_hits WHERE key = ? AND stamped_at <= ?",
+                (key, cutoff),
+            )
+            rows = conn.execute(
+                "SELECT stamped_at FROM auth_rate_hits WHERE key = ? ORDER BY stamped_at",
+                (key,),
+            ).fetchall()
+            if len(rows) >= limit:
+                oldest = float(rows[0][0])
+                retry = max(1, int(math.ceil(window_s - (moment - oldest))))
+                return False, retry
+            conn.execute(
+                "INSERT INTO auth_rate_hits (key, stamped_at) VALUES (?, ?)",
+                (key, moment),
+            )
+            return True, 0
+
+    def is_locked(
+        self,
+        key: str,
+        now: float | None = None,
+        *,
+        conn: sqlite3.Connection | None = None,
+    ) -> bool:
         moment = now_ts() if now is None else now
+        if conn is not None:
+            return self._is_locked_db(conn, key, moment)
         with self._lock:
             until = self.locks.get(key)
             if until is None:
@@ -281,6 +346,25 @@ class AuthRateLimiter:
                 return False
             return True
 
+    @staticmethod
+    def _is_locked_db(
+        conn: sqlite3.Connection, key: str, moment: float
+    ) -> bool:
+        with _db_write(conn):
+            row = conn.execute(
+                "SELECT until_at FROM auth_rate_locks WHERE key = ?", (key,)
+            ).fetchone()
+            if row is None:
+                return False
+            until = float(row[0])
+            if until <= 0:
+                # A failure counter that has not reached the lock threshold.
+                return False
+            if until <= moment:
+                conn.execute("DELETE FROM auth_rate_locks WHERE key = ?", (key,))
+                return False
+            return True
+
     def record_failure(
         self,
         key: str,
@@ -288,9 +372,12 @@ class AuthRateLimiter:
         limit: int = APPROVE_FAILURE_LIMIT,
         lock_for_s: float | None = None,
         now: float | None = None,
+        conn: sqlite3.Connection | None = None,
     ) -> bool:
         moment = now_ts() if now is None else now
         duration = pairing_ttl_s() if lock_for_s is None else lock_for_s
+        if conn is not None:
+            return self._record_failure_db(conn, key, limit, duration, moment)
         with self._lock:
             count = self.failures.get(key, 0) + 1
             self.failures[key] = count
@@ -299,7 +386,46 @@ class AuthRateLimiter:
                 return True
             return False
 
-    def clear_failures(self, key: str) -> None:
+    @staticmethod
+    def _record_failure_db(
+        conn: sqlite3.Connection,
+        key: str,
+        limit: int,
+        duration: float,
+        moment: float,
+    ) -> bool:
+        with _db_write(conn):
+            row = conn.execute(
+                "SELECT failure_count FROM auth_rate_locks WHERE key = ?", (key,)
+            ).fetchone()
+            count = (int(row[0]) if row is not None else 0) + 1
+            until = 0.0
+            locked = False
+            if count >= limit:
+                until = moment + duration
+                locked = True
+            conn.execute(
+                """
+                INSERT INTO auth_rate_locks (key, until_at, failure_count)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    until_at = excluded.until_at,
+                    failure_count = excluded.failure_count
+                """,
+                (key, until, count),
+            )
+            return locked
+
+    def clear_failures(
+        self,
+        key: str,
+        *,
+        conn: sqlite3.Connection | None = None,
+    ) -> None:
+        if conn is not None:
+            with _db_write(conn):
+                conn.execute("DELETE FROM auth_rate_locks WHERE key = ?", (key,))
+            return
         with self._lock:
             self.failures.pop(key, None)
             self.locks.pop(key, None)
