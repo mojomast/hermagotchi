@@ -53,15 +53,16 @@ Kyle asked: "i want them to be more pixelated. regenerate them entirely please i
 | px3/items/binary_crown, propeller_beanie, syntax_wizard, pixel_shades, gold_monocle, circuit_wings, tiny_jetpack, ember_halo, data_orbit, cozy_scarf, heart_bubble, plush_cushion, royal_ribbon | source/px3_item_{crown,beanie,wizard,shades,monocle,wings,jetpack,aura_flame,aura_orbit,scarf,emote,cushion,ribbon}_v1.jpg |
 | px3/palettes, px3/markings, px3/overlays | procedural |
 
-### NPCs (launch-003) — recognizable pass, 2026-11-05
-Kyle asked to make the Nous characters more recognizable and to raise NPC native resolution slightly (pets stay 32px). Regenerated with `GenerateImage` using **Clawpocalypse title-screen cutouts** as reference images (`assets/cine/title/{don_piedro,nous_girl,teknium,turbofit}.png`) plus matching cinematic intro evidence panels — **not** `assets/heroes/portraits/` and **not** in-game hero sprites. Pipeline: flat green bg, green key, palette-first mode downscale, binary alpha, nearest upscale. NPC native grid is **48×48** (factor 10 → 480 display); pets remain 32×32. Palette budget raised a bit (portrait ~24 colours, bust ~16). Southpaw is still id `npc.southpaw`; visual reference is the Turbofit title cutout. 8 generations total this pass (4 early sprite-ref attempts discarded; 4 title/cine refs kept as v3). Cameos are fictional game characters; flavor lines make no claims about any real person.
+### NPCs (launch-003) — HD cinematic pass, 2026-11-05
+Kyle asked for higher-definition NPCs so faces read, pointing at cinematic portraits. Regenerated with `GenerateImage` using **Clawpocalypse cinematic portraits** as primary refs (`assets/cine/v3/portraits/{don_piedro,nous_girl,teknium,turbofit}.png`, ~512px tall) and title cutouts as secondary. Still **not** `assets/heroes/portraits/` and **not** in-game hero sprites. Southpaw uses `turbofit.png`. Pipeline: flat green bg, edge-flood chroma-green key (protects Teknium teal hair), dark-outfit brighten, palette-first mode downscale (~32 colours), binary alpha, nearest upscale. NPC native grid **128×128** (factor 4 → 512 display); pets remain 32×32. Emits portrait, dialog bust, and 2-frame idle. 4 generations this pass (`*_v4.jpg`). Cameos are fictional game characters; flavor lines make no claims about any real person.
 
-| Output | Source | Reference |
+| Output | Source | Reference (primary) |
 |---|---|---|
-| px3/npcs/don_piedro_portrait.png, don_piedro_idle_{0,1}.png | source/px3_npc_don_piedro_v3.jpg | cine/title/don_piedro.png |
-| px3/npcs/nous_girl_* | source/px3_npc_nous_girl_v3.jpg | cine/title/nous_girl.png |
-| px3/npcs/teknium_* | source/px3_npc_teknium_v3.jpg | cine/title/teknium.png |
-| px3/npcs/southpaw_* | source/px3_npc_southpaw_v3.jpg | cine/title/turbofit.png (Southpaw) |
+| px3/npcs/don_piedro_{portrait,dialog,idle_0,idle_1}.png | source/px3_npc_don_piedro_v4.jpg | cine/v3/portraits/don_piedro.png |
+| px3/npcs/nous_girl_* | source/px3_npc_nous_girl_v4.jpg | cine/v3/portraits/nous_girl.png |
+| px3/npcs/teknium_* | source/px3_npc_teknium_v4.jpg | cine/v3/portraits/teknium.png |
+| px3/npcs/southpaw_* | source/px3_npc_southpaw_v4.jpg | cine/v3/portraits/turbofit.png (Southpaw) |
+
 
 ### launch-003 extra species (7), 2026-11-05
 Kyle asked for 7 more base pets in the same style, for 10 in total. Each is one new generation with no reference image, using the same pipeline (green key, palette-first mode downscale, binary alpha, palette swaps with eyes locked). Anchors are derived automatically from each silhouette.
