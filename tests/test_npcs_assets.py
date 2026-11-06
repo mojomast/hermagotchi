@@ -1,4 +1,4 @@
-"""Smoke checks for launch-003 NPC cameo pack (HD cinematic pass)."""
+"""Smoke checks for launch-003 NPC cameo pack (hand-pixel portraits)."""
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -62,3 +62,14 @@ def test_teknium_hair_has_teal_not_white_dominant():
     white = rgb.min(1) > 220
     assert teal.mean() > 0.08, teal.mean()
     assert teal.mean() > white.mean() * 0.5
+
+def test_hand_pixel_reference_and_palette_bound():
+    import numpy as np
+    for n in NPC["npcs"]:
+        assert "hand-pixel" in n["reference"]
+        assert "not painterly" in n["reference"]
+        assert n["source"].endswith("_v7.jpg")
+        im = np.asarray(Image.open(A / n["portrait"]["path"]))
+        m = im[..., 3] > 128
+        cols = {tuple(c[:3].tolist()) for c in im[m]}
+        assert 8 <= len(cols) <= 24, (n["id"], len(cols))

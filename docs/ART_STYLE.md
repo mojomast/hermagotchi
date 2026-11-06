@@ -20,4 +20,4 @@
 - 10 species: Byteblob, Patchfox, Nullgeist, Kernelcrab, Cachebat, Stacktoise, Daemowl, Shellsnail, Regexopus, Firewyrm. Original three: Byteblob is a boxy visor-face robot-slime. Patchfox is a standing fox with giant ears and a blue chest patch. Nullgeist is a hooded zigzag-hem ghost with mismatched eyes.
 - Palette variants are colour-index swaps. Eyes, the visor, Patchfox's patch and Nullgeist's cyan and X eyes are locked.
 - Files: `assets/px3/**`, `assets/manifest.launch-003.json`, `assets/art_ext.launch-003.json`, `assets/npcs.json`, `scripts/asset_px3*.py`.
-- NPCs (cameos only): native **128×128**, factor 4 (512 display). Cinematic-portrait refs via `scripts/asset_px3_npcs.py` (portrait + dialog bust + idle). Pets stay on the 32 grid.
+- NPCs (cameos only): native **128×128**, factor 4 (512 display). Hand-pixel from cine/v3 portrait refs via `scripts/asset_px3_npcs.py` (fixed palette, BOX grid, portrait + dialog bust + idle). Pets stay on the 32 grid.

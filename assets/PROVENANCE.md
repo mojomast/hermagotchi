@@ -54,7 +54,7 @@ Kyle asked: "i want them to be more pixelated. regenerate them entirely please i
 | px3/palettes, px3/markings, px3/overlays | procedural |
 
 ### NPCs (launch-003) — face readability pass, 2026-11-05
-Kyle: facial features still not pronounced enough on 37f5fa0. Kept magenta key, cine Lab palettes, 128 native. Regenerated with bold-face prompts (`*_v6.jpg`, 4 gens). Pipeline: mild face unsharp, protect high-contrast face pixels during palette remap, selective face outlines, orphan cleanup, Teknium non-goggle red/warm stray removal, Don spoon thicken. Portrait + dialog + idle. Pets stay 32.
+Kyle: facial features still not pronounced enough on 37f5fa0. Kept magenta key, cine Lab palettes, 128 native. Regenerated with bold-face prompts (`*_v6.jpg`, 4 gens). Pipeline: mild face unsharp, protect high-contrast face pixels during palette remap, selective face outlines, orphan cleanup, Teknium non-goggle red/warm stray removal, Don spoon thicken. Portrait + dialog + idle. Pets stay 32. **Superseded by hand-pixel pass below.**
 
 | Output | Source | Reference (primary) |
 |---|---|---|
@@ -62,6 +62,16 @@ Kyle: facial features still not pronounced enough on 37f5fa0. Kept magenta key, 
 | px3/npcs/nous_girl_* | source/px3_npc_nous_girl_v6.jpg | cine/v3/portraits/nous_girl.png |
 | px3/npcs/teknium_* | source/px3_npc_teknium_v6.jpg | cine/v3/portraits/teknium.png |
 | px3/npcs/southpaw_* | source/px3_npc_southpaw_v6.jpg | cine/v3/portraits/turbofit.png |
+
+### NPCs (launch-003) — hand-pixel from scratch, 2026-11-05
+Kyle: prior painterly-then-downscale/remap results looked garbage; create brand-new NPC pixel art authored as pixel art from the start, using cine/v3/portraits as reference (Southpaw = turbofit). Abandoned Lab k-means remap pipeline. Method: GenerateImage SNES/GBA bust prompts on flat grey bg (4 gens → `*_v7.jpg`); per-character fixed hand palette (12–20 colours picked from cine refs); flat-grey edge-flood key (no low-luma key — preserves black bob/vest); palette snap; BOX onto native 128 grid; binary alpha; hole fill; selective 1px outline; light face pixel pass; fringe/orphan scrub. Contract unchanged: portrait + dialog + idle_0/1, native [128,128] factor 4. Pets stay 32. `assets/npc_lines.json` left untouched.
+
+| Output | Source | Reference (primary) |
+|---|---|---|
+| px3/npcs/don_piedro_{portrait,dialog,idle_*} | source/px3_npc_don_piedro_v7.jpg | cine/v3/portraits/don_piedro.png |
+| px3/npcs/nous_girl_* | source/px3_npc_nous_girl_v7.jpg | cine/v3/portraits/nous_girl.png |
+| px3/npcs/teknium_* | source/px3_npc_teknium_v7.jpg | cine/v3/portraits/teknium.png |
+| px3/npcs/southpaw_* | source/px3_npc_southpaw_v7.jpg | cine/v3/portraits/turbofit.png |
 
 
 ### launch-003 extra species (7), 2026-11-05
