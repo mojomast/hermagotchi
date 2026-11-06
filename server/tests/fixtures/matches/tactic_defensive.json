@@ -1,0 +1,10 @@
+{
+  "ruleset_version": "battle-1",
+  "stance": "defensive",
+  "actions": [
+    {"when": {"self_hp_lte_pct": 35}, "move": "recover"},
+    {"when": {"opponent_guarding": true}, "move": "focus"},
+    {"when": {"always": true}, "move": "guard"}
+  ],
+  "emote_id": "emote.shield"
+}

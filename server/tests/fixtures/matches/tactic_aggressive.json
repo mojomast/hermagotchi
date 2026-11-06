@@ -1,0 +1,9 @@
+{
+  "ruleset_version": "battle-1",
+  "stance": "aggressive",
+  "actions": [
+    {"when": {"special_ready": true}, "move": "glitch_pulse"},
+    {"when": {"always": true}, "move": "basic_attack"}
+  ],
+  "emote_id": "emote.sparkle"
+}
