@@ -2166,6 +2166,13 @@ function deriveConnectionStatus(options = {}) {
   const serviceReachable = backendEnabled;
 
   const policy = policyFrom(status, health);
+  // Prefer account chat_settings / me.policy when the bridge policy is still default-off.
+  const mePolicy =
+    status && status.body && status.body.me && status.body.me.policy
+      ? status.body.me.policy
+      : status && status.me && status.me.policy
+        ? status.me.policy
+        : null;
   const policyNetwork = booleanPolicy(policy, ["network_enabled", "networkEnabled"]);
   const networkEnabled =
     policyNetwork === null
@@ -2180,7 +2187,11 @@ function deriveConnectionStatus(options = {}) {
     authenticated: authenticatedFrom(pair, status),
     serviceReachable: serviceReachable,
     serviceConfigured: serviceConfigured(policy, statusOk, healthOk),
-    chatEnabled: booleanPolicy(policy, ["chat_enabled", "chatEnabled"]),
+    chatEnabled: (function () {
+      const fromMe = booleanPolicy(mePolicy, ["chat_enabled", "chatEnabled"]);
+      if (fromMe !== null) return fromMe;
+      return booleanPolicy(policy, ["chat_enabled", "chatEnabled"]);
+    })(),
     autonomyEnabled: booleanPolicy(policy, [
       "autonomy_enabled",
       "autonomyEnabled",
@@ -9953,12 +9964,16 @@ function HermagotchiPane(props = {}) {
             className: "hg-pane__body hg-pane__main",
             role: "tabpanel",
             "aria-label": TAB_LABELS[activeTab],
-            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, chatEnabled: props.chatEnabled === true || props.chat_enabled === true || (connection && connection.chatEnabled === true), initialTab: undefined, onTabChange: undefined })),
           }),
           jsx(LobbyRail, Object.assign({}, props, {
             api: api,
             uiState: effectiveState,
             state: effectiveState,
+            chatEnabled:
+              props.chatEnabled === true ||
+              props.chat_enabled === true ||
+              (connection && connection.chatEnabled === true),
             collapsed: railCollapsed,
             onToggle: toggleLobbyRail,
             width: railWidth,

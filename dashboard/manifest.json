@@ -1,1 +1,10 @@
-{"name": "hermagotchi", "api": "plugin_api.py"}
+{
+  "name": "hermagotchi",
+  "label": "Hermagotchi",
+  "description": "Tamagotchi-meets-battle pets for Hermes — habitat, shop, battles, lobby, and social.",
+  "icon": "Gamepad2",
+  "version": "0.14.0",
+  "tab": { "path": "/hermagotchi", "position": "after:chat" },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}
