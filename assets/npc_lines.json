@@ -180,6 +180,43 @@
             "note": "trimmed from Eat. Quiet moments are rare."
           }
         ],
+        "lobby.social": [
+          {
+            "text": "Welcome to the hub. DMs, friends, challenges, all one signal.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "Your friends are on the wire. Say hi or send a challenge.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "Taunts and mentions live here. Replays keep the receipts.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "Add a friend by name. I'll keep the channel tuned.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "No signal? Refresh the hub. I'll hold the line.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          }
+        ],
         "lobby.moderation": [
           {
             "text": "Boxed in. Breathe first, then strike.",

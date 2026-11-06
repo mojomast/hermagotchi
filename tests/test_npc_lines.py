@@ -25,7 +25,12 @@ def test_npc_lines_schema_and_npcs_ref():
 def test_contexts_cover_required_surfaces():
     required = {
         "npc.don_piedro": {"shop.greet", "shop.purchase", "shop.broke"},
-        "npc.nous_girl": {"lobby.welcome", "lobby.chat", "lobby.moderation"},
+        "npc.nous_girl": {
+            "lobby.welcome",
+            "lobby.chat",
+            "lobby.moderation",
+            "lobby.social",
+        },
         "npc.teknium": {"practice.start", "practice.win", "practice.loss", "practice.tip"},
         "npc.southpaw": {
             "leaderboard.announce",
@@ -55,6 +60,26 @@ def test_southpaw_lobby_upset_lines_are_new_and_mapped():
     assert payload["npc_host"]["id"] == "npc.southpaw"
     assert payload["npc_host"]["name"] == "Southpaw"
     assert payload["npc_host"]["context"] == "lobby.upset"
+    assert payload["npc_host"]["display_only"] is True
+
+
+def test_nous_girl_social_hub_lines_are_new_and_mapped():
+    from npc_lines import SURFACE_DEFAULTS, host_payload
+
+    assert SURFACE_DEFAULTS["lobby.social"] == ("npc.nous_girl", "lobby.social")
+    assert SURFACE_DEFAULTS["social"] == ("npc.nous_girl", "lobby.social")
+    entries = LINES["npcs"]["npc.nous_girl"]["contexts"]["lobby.social"]
+    assert len(entries) >= 3
+    for entry in entries:
+        assert entry["note"] == "new", entry
+        assert entry["original"] is False, entry
+        assert len(entry["text"]) <= MAX, entry["text"]
+        assert "turbofit" not in entry["text"].lower()
+
+    payload = host_payload("lobby.social", seed=5)
+    assert payload["npc_host"]["id"] == "npc.nous_girl"
+    assert payload["npc_host"]["name"] == "Nous Girl"
+    assert payload["npc_host"]["context"] == "lobby.social"
     assert payload["npc_host"]["display_only"] is True
 
 
