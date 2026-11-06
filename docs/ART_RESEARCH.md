@@ -32,4 +32,4 @@ Short notes on the practices this pipeline uses and why.
 - **Safe region.** At a factor of 16, the contract's safe box (x 65..447, y 75..450) works out to native columns and rows 5..27. Bodies are 22–23 native px tall, so we drew larger cosmetics small and enlarge them at render time with the manifest `scale` field (for example auras at ×1.25).
 - **Hand cleanup.** A tiny per-species fixup table restores eye pixels lost at 32px: Patchfox's eye dots and Nullgeist's magenta X eye. Hand-fixing pixels like this is normal pixel-art practice.
 - **Markings.** These are drawn sparsely (2–8 native px) so they don't turn into noise.
-- **NPCs.** True hand-authored pixel maps in `scripts/draw_npcs.py` (64→128 NN). Cine/v3/portraits eyes-only refs for palette/silhouette. No GenerateImage / no v6/v7 snap. Native **128×128** (factor 4). Pets stay 32.
+- **NPCs.** Clawpocalypse `cine/v3/portraits` used directly (Lanczos fit to 512). No gen / no pixel redraw. Native **128×128** factor 4. Pets stay 32.

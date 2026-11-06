@@ -11,7 +11,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/don_piedro_portrait.png",
-        "sha256": "9be751ce2260a690b27a88ac3f441f793a287b8880ed86742d3c6673458eea4e",
+        "sha256": "a7ddd0226de13835b2e752668c62bce7f3a022acebe71b188141b345fbbb813b",
         "native": [
           128,
           128
@@ -20,7 +20,7 @@
       },
       "dialog": {
         "path": "px3/npcs/don_piedro_dialog.png",
-        "sha256": "db826ba844690d77a6a1c1200aa49bdf293de8cd7136c10e055a797075d36a62",
+        "sha256": "f73153ff616f1296e75eeea99acb8da8da7bd8d484903a138511c47efefcee6b",
         "native": [
           128,
           128
@@ -32,11 +32,11 @@
         "frames": [
           {
             "path": "px3/npcs/don_piedro_idle_0.png",
-            "sha256": "9be751ce2260a690b27a88ac3f441f793a287b8880ed86742d3c6673458eea4e"
+            "sha256": "a7ddd0226de13835b2e752668c62bce7f3a022acebe71b188141b345fbbb813b"
           },
           {
             "path": "px3/npcs/don_piedro_idle_1.png",
-            "sha256": "1c50e87ddaa01de35ab90cf949d20f4a6017a10c96a5cd1e8fede959832643c2"
+            "sha256": "5d3ee098b68f4a91f976704d0f906d7bfb0b654149d4a85c0cbb9111e072c0ce"
           }
         ],
         "frame_ms": 500
@@ -48,8 +48,8 @@
         "No refunds, but I'll stir your Bits with my lucky spoon.",
         "That scarf? It's you. It's absolutely you."
       ],
-      "source": "scripts/draw_npcs.py#don_piedro",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/don_piedro.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
+      "source": "source/cine_v3_don_piedro.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/don_piedro.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -60,7 +60,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/nous_girl_portrait.png",
-        "sha256": "035b7ad5b63cbee83c69a1cf102b38ade4a5af2c95d8e124d8fa4c212df0cdfb",
+        "sha256": "d488d0866574568f7d14ff49dbbdfeef979f339dba4792c1a48d495717b1a199",
         "native": [
           128,
           128
@@ -69,7 +69,7 @@
       },
       "dialog": {
         "path": "px3/npcs/nous_girl_dialog.png",
-        "sha256": "f889c275b0ff44d72762b08a4fa0b25a9b6c40d4440c26fd6a1c9d76163a0631",
+        "sha256": "6ceaeec8cb4ce8c4a2d991187f0851f76acd70a9fa7d36f32be94b0198851520",
         "native": [
           128,
           128
@@ -81,11 +81,11 @@
         "frames": [
           {
             "path": "px3/npcs/nous_girl_idle_0.png",
-            "sha256": "035b7ad5b63cbee83c69a1cf102b38ade4a5af2c95d8e124d8fa4c212df0cdfb"
+            "sha256": "d488d0866574568f7d14ff49dbbdfeef979f339dba4792c1a48d495717b1a199"
           },
           {
             "path": "px3/npcs/nous_girl_idle_1.png",
-            "sha256": "c0f77573ad98caf59a47229b5452e98064ce81e9e34d968ecba9645a6db58171"
+            "sha256": "f1246dbadb975a771b6fed4529512c09339e5eca83dda140ae5f6a0f5b88fb38"
           }
         ],
         "frame_ms": 500
@@ -97,8 +97,8 @@
         "New challenger in the lobby. Say hi!",
         "Signal clear. Chat on."
       ],
-      "source": "scripts/draw_npcs.py#nous_girl",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/nous_girl.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
+      "source": "source/cine_v3_nous_girl.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/nous_girl.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -109,7 +109,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/teknium_portrait.png",
-        "sha256": "e6fefb0fef9a1f493048299c1d4d7887f9b4cb9ae184b8d327f4a8c42aeb7d8b",
+        "sha256": "5e11466537ea0474026bfc21f3d8699abd471bd77eb25789d48829ede96a6990",
         "native": [
           128,
           128
@@ -118,7 +118,7 @@
       },
       "dialog": {
         "path": "px3/npcs/teknium_dialog.png",
-        "sha256": "4ba5af8bd645a975b3808ead0687f9f1df17deffd132782b761af34e9aa72f64",
+        "sha256": "32dfa96c62df64767fe15ec380d64e932d6bcf4db3c1206d33fdfb378fcc2cd9",
         "native": [
           128,
           128
@@ -130,11 +130,11 @@
         "frames": [
           {
             "path": "px3/npcs/teknium_idle_0.png",
-            "sha256": "e6fefb0fef9a1f493048299c1d4d7887f9b4cb9ae184b8d327f4a8c42aeb7d8b"
+            "sha256": "5e11466537ea0474026bfc21f3d8699abd471bd77eb25789d48829ede96a6990"
           },
           {
             "path": "px3/npcs/teknium_idle_1.png",
-            "sha256": "e6fefb0fef9a1f493048299c1d4d7887f9b4cb9ae184b8d327f4a8c42aeb7d8b"
+            "sha256": "0dcc6d08bc1a82ce67eade0da775a4b0976d60f8bbbd57033f22384e11cd35be"
           }
         ],
         "frame_ms": 500
@@ -146,8 +146,8 @@
         "Blade's charged. Let's run another seed.",
         "Status effects stack less than you think. Test it."
       ],
-      "source": "scripts/draw_npcs.py#teknium",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/teknium.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
+      "source": "source/cine_v3_teknium.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/teknium.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -158,7 +158,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/southpaw_portrait.png",
-        "sha256": "a3a9346592f8dc36dd511021f1c9c92a074ff64adc7e566d1b0f4cedc9a08b9b",
+        "sha256": "4412e030884014885053dfe61b1da5a74b9ba5fa4121363767c566fef0961952",
         "native": [
           128,
           128
@@ -167,7 +167,7 @@
       },
       "dialog": {
         "path": "px3/npcs/southpaw_dialog.png",
-        "sha256": "65b6e647f026a1403480739553f34ea44c097d1cc8d377de6d036d6048f1f9e6",
+        "sha256": "b8e4eca0d06f86f819a362b16fe0df1aee1c78eaf46cd3b62c645497a0a7eeb2",
         "native": [
           128,
           128
@@ -179,11 +179,11 @@
         "frames": [
           {
             "path": "px3/npcs/southpaw_idle_0.png",
-            "sha256": "a3a9346592f8dc36dd511021f1c9c92a074ff64adc7e566d1b0f4cedc9a08b9b"
+            "sha256": "4412e030884014885053dfe61b1da5a74b9ba5fa4121363767c566fef0961952"
           },
           {
             "path": "px3/npcs/southpaw_idle_1.png",
-            "sha256": "5fabdb0d78efd0160a1721c1fad04668a5df2a7f126df16934eb2fb1d0abd892"
+            "sha256": "c180d2866b965f0104bf3e92afefb4d26284d8442a676aa04e9423c20a76c2c6"
           }
         ],
         "frame_ms": 500
@@ -195,8 +195,8 @@
         "Top of the board gets the loudest riff.",
         "Encore! Season standings updated."
       ],
-      "source": "scripts/draw_npcs.py#southpaw",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/turbofit.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
+      "source": "source/cine_v3_southpaw.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/turbofit.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     }
   ]

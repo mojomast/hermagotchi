@@ -101,3 +101,11 @@ Kyle asked for 7 more base pets in the same style, for 10 in total. Each is one 
 | px3/species/regexopus_body.png | source/px3_regexopus_v1.jpg |
 | px3/species/firewyrm_body.png | source/px3_firewyrm_v1.jpg |
 | px3/palettes/{species}_*.png, px3/markings/{species}_*.png | procedural |
+
+### NPCs (launch-003) — clawpocalypse cine v3 direct, 2026-11-05
+Kyle: "just use the portraits from the game instead". No GenerateImage, no pixel redraw. Lanczos-fit `assets/cine/v3/portraits/{don_piedro,nous_girl,teknium,turbofit}.png` into 512 (native 128×4) portrait / dialog bust / idle (+2px bob). `lines_ref: npc_lines.json` kept. `scripts/draw_npcs.py` left in tree unused.
+
+| Output | Source | Reference |
+|---|---|---|
+| px3/npcs/* | source/cine_v3_{don_piedro,nous_girl,teknium,southpaw}.png | clawpocalypse cine v3 portrait |
+
