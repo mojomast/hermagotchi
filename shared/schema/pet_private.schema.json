@@ -43,7 +43,14 @@
       "enum": [
         "byteblob",
         "patchfox",
-        "nullgeist"
+        "nullgeist",
+        "kernelcrab",
+        "cachebat",
+        "stacktoise",
+        "daemowl",
+        "shellsnail",
+        "regexopus",
+        "firewyrm"
       ]
     },
     "appearance_seed": {
@@ -155,6 +162,18 @@
     "revision": {
       "type": "integer",
       "minimum": 1
+    },
+    "loadout": {
+      "type": "object",
+      "description": "Equipped cosmetics keyed by slot; values are item payloads or ids.",
+      "additionalProperties": true
+    },
+    "equipment": {
+      "type": "object",
+      "description": "Compact slot -> item id map for previews.",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   },
   "$defs": {
@@ -177,7 +196,14 @@
           "enum": [
             "byteblob",
             "patchfox",
-            "nullgeist"
+            "nullgeist",
+            "kernelcrab",
+            "cachebat",
+            "stacktoise",
+            "daemowl",
+            "shellsnail",
+            "regexopus",
+            "firewyrm"
           ]
         },
         "seed": {

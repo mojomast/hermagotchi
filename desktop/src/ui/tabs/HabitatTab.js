@@ -92,7 +92,8 @@ function StubHabitat(props) {
             className: "hg-pet-card__art",
             role: "img",
             "aria-label": "Pet preview placeholder",
-            children: "?",
+            "data-empty": "true",
+            children: "",
           }),
           jsxs("div", {
             className: "hg-pet-card__meta",
@@ -188,7 +189,7 @@ export function HabitatTab(props = {}) {
       const fromPet = loadoutFromPet(pet);
       if (Object.keys(fromPet).length) {
         setLoadout(function (previous) {
-          return Object.assign({}, fromPet, previous);
+          return Object.assign({}, previous, fromPet);
         });
       }
     },

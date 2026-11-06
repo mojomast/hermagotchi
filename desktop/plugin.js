@@ -1499,7 +1499,7 @@ function PetPreview(props = {}) {
       "aria-label": props.label || "Pet preview",
       "data-preview-empty": "true",
       style: { width: props.size || "100%", height: props.size || "100%" },
-      children: "?",
+      children: "",
     });
   }
 
@@ -3416,7 +3416,8 @@ function StubHabitat(props) {
             className: "hg-pet-card__art",
             role: "img",
             "aria-label": "Pet preview placeholder",
-            children: "?",
+            "data-empty": "true",
+            children: "",
           }),
           jsxs("div", {
             className: "hg-pet-card__meta",
@@ -3512,7 +3513,7 @@ function HabitatTab(props = {}) {
       const fromPet = loadoutFromPet(pet);
       if (Object.keys(fromPet).length) {
         setLoadout(function (previous) {
-          return Object.assign({}, fromPet, previous);
+          return Object.assign({}, previous, fromPet);
         });
       }
     },

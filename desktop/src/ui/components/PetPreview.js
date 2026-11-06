@@ -237,7 +237,7 @@ export function PetPreview(props = {}) {
       "aria-label": props.label || "Pet preview",
       "data-preview-empty": "true",
       style: { width: props.size || "100%", height: props.size || "100%" },
-      children: "?",
+      children: "",
     });
   }
 

@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .. import ASSET_PACK_VERSION, CONTRACTS_VERSION
 from ..db import account_exists, get_current_account_id, get_db, utc_now_iso
+from ..shop import loadout_for_pet
 
 router = APIRouter(tags=["pets"])
 
@@ -115,8 +116,8 @@ def build_personality(species: str, seed: str) -> dict[str, str]:
     }
 
 
-def _private_pet(row: sqlite3.Row) -> dict[str, Any]:
-    return {
+def _private_pet(row: sqlite3.Row, conn: Connection | None = None) -> dict[str, Any]:
+    pet = {
         "contracts_version": CONTRACTS_VERSION,
         "id": row["id"],
         "account_id": row["account_id"],
@@ -133,10 +134,18 @@ def _private_pet(row: sqlite3.Row) -> dict[str, Any]:
         "created_at": row["created_at"],
         "revision": row["revision"],
     }
+    if conn is not None:
+        # slot -> item payload (same shape as equip/care responses)
+        pet["loadout"] = loadout_for_pet(conn, row["id"])
+        pet["equipment"] = {
+            slot: (item.get("id") if isinstance(item, dict) else item)
+            for slot, item in pet["loadout"].items()
+        }
+    return pet
 
 
-def _public_pet(row: sqlite3.Row) -> dict[str, Any]:
-    pet = _private_pet(row)
+def _public_pet(row: sqlite3.Row, conn: Connection | None = None) -> dict[str, Any]:
+    pet = _private_pet(row, conn)
     pet.pop("account_id", None)
     pet.pop("appearance_seed", None)
     pet.pop("care_updated_at", None)
@@ -200,7 +209,7 @@ def adopt_pet(
         raise _already_adopted_error() from exc
 
     row = conn.execute("SELECT * FROM pets WHERE id = ?", (pet_id,)).fetchone()
-    return _private_pet(row)
+    return _private_pet(row, conn)
 
 
 @router.get("/pets/{pet_id}")
@@ -211,4 +220,4 @@ def get_pet(pet_id: str, conn: Connection = Depends(get_db)) -> dict[str, Any]:
             status_code=404,
             detail={"code": "pet_not_found", "message": "No pet exists for that id."},
         )
-    return _public_pet(row)
+    return _public_pet(row, conn)
