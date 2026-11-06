@@ -8,7 +8,7 @@ description: >-
 author: Hermagotchi contributors
 license: MIT
 entrypoint: __init__.py
-requires_hermes: ">=0.1.0"
+requires_hermes: ">=0.21.0"
 default_enabled: false
 
 provides_tools:

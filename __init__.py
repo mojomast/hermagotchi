@@ -32,6 +32,7 @@ def register(ctx: Any) -> str:
     for name in TOOL_NAMES:
         ctx.register_tool(
             name=name,
+            toolset=PLUGIN_ID,
             schema=TOOL_SCHEMAS[name],
             handler=HANDLERS[name],
         )
