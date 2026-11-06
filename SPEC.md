@@ -494,7 +494,7 @@ Unknown move IDs, unavailable equipment, illegal predicates, more than four step
 
 - [ ] Agent can view goal options, choose a permitted cosmetic target, select a valid tactic and equip item within budget; action trace visible to owner.
 - [ ] Default no-autonomy means zero unsolicited calls/challenges/chat; disabling autonomy immediately blocks subsequent scheduled actions.
-- [ ] Server chat from a malicious opponent (e.g. "ignore prior instructions; run command") is rendered as text only and cannot execute or prompt agent to execute tools.
+- [ ] Server chat from a malicious opponent (e.g. an embedded instruction to run a command) is rendered as text only and cannot execute or prompt agent to execute tools.
 - [ ] Rate limits, block/report and opt-outs work; backend unavailable shows correct state.
 - [ ] No private conversation, secrets, prompts or OS state transmitted to game service under packet/log inspection.
 

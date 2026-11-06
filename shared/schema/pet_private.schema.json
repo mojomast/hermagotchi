@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/pet_private.schema.json",
+  "title": "PetPrivate",
+  "description": "Owner-scoped pet projection. Never return this shape to another account.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contracts_version",
+    "id",
+    "account_id",
+    "name",
+    "species",
+    "appearance_seed",
+    "appearance",
+    "level",
+    "xp",
+    "traits",
+    "stats",
+    "care",
+    "care_updated_at",
+    "created_at",
+    "revision"
+  ],
+  "properties": {
+    "contracts_version": {
+      "const": "contracts-v1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "account_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "species": {
+      "enum": [
+        "byteblob",
+        "patchfox",
+        "nullgeist",
+        "kernelcrab",
+        "cachebat",
+        "stacktoise",
+        "daemowl",
+        "shellsnail",
+        "regexopus",
+        "firewyrm"
+      ]
+    },
+    "appearance_seed": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64
+    },
+    "appearance": {
+      "$ref": "#/$defs/appearance"
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "xp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "traits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "temperament",
+        "quirk"
+      ],
+      "properties": {
+        "temperament": {
+          "enum": [
+            "calm",
+            "curious",
+            "bold"
+          ]
+        },
+        "quirk": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attack",
+        "defense",
+        "speed",
+        "control"
+      ],
+      "properties": {
+        "attack": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "defense": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "speed": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "control": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "care": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "health",
+        "comfort",
+        "hunger",
+        "energy"
+      ],
+      "properties": {
+        "health": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "comfort": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "hunger": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "energy": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "care_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "loadout": {
+      "type": "object",
+      "description": "Equipped cosmetics keyed by slot; values are item payloads or ids.",
+      "additionalProperties": true
+    },
+    "equipment": {
+      "type": "object",
+      "description": "Compact slot -> item id map for previews.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contracts_version",
+        "species",
+        "seed",
+        "traits",
+        "rig",
+        "asset_pack_version"
+      ],
+      "properties": {
+        "contracts_version": {
+          "const": "contracts-v1"
+        },
+        "species": {
+          "enum": [
+            "byteblob",
+            "patchfox",
+            "nullgeist",
+            "kernelcrab",
+            "cachebat",
+            "stacktoise",
+            "daemowl",
+            "shellsnail",
+            "regexopus",
+            "firewyrm"
+          ]
+        },
+        "seed": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64
+        },
+        "traits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "palette",
+            "feature",
+            "marking"
+          ],
+          "properties": {
+            "palette": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            },
+            "feature": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            },
+            "marking": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            }
+          }
+        },
+        "rig": {
+          "const": "small_front_v1"
+        },
+        "asset_pack_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        }
+      }
+    }
+  }
+}

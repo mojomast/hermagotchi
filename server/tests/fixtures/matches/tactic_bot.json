@@ -1,0 +1,9 @@
+{
+  "ruleset_version": "battle-1",
+  "stance": "balanced",
+  "actions": [
+    {"when": {"self_hp_lte_pct": 40}, "move": "guard"},
+    {"when": {"special_ready": true}, "move": "glitch_pulse"},
+    {"when": {"always": true}, "move": "basic_attack"}
+  ]
+}

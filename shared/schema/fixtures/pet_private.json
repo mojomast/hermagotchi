@@ -1,0 +1,41 @@
+{
+  "contracts_version": "contracts-v1",
+  "id": "11111111-1111-4111-8111-111111111111",
+  "account_id": "00000000-0000-4000-8000-0000000000a1",
+  "name": "Nibbles",
+  "species": "byteblob",
+  "appearance_seed": "0123456789abcdef0123456789abcdef",
+  "appearance": {
+    "contracts_version": "contracts-v1",
+    "species": "byteblob",
+    "seed": "0123456789abcdef0123456789abcdef",
+    "traits": {
+      "palette": "palette_03",
+      "feature": "crown_nub",
+      "marking": "dorsal_stripe"
+    },
+    "rig": "small_front_v1",
+    "asset_pack_version": "launch-001"
+  },
+  "level": 1,
+  "xp": 0,
+  "traits": {
+    "temperament": "curious",
+    "quirk": "hums when calculating"
+  },
+  "stats": {
+    "attack": 6,
+    "defense": 8,
+    "speed": 5,
+    "control": 7
+  },
+  "care": {
+    "health": 100,
+    "comfort": 100,
+    "hunger": 100,
+    "energy": 100
+  },
+  "care_updated_at": "2026-11-06T14:00:00Z",
+  "created_at": "2026-11-06T14:00:00Z",
+  "revision": 1
+}

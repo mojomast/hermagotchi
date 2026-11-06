@@ -1,0 +1,12 @@
+{
+  "contracts_version": "contracts-v1",
+  "species": "byteblob",
+  "seed": "0123456789abcdef0123456789abcdef",
+  "traits": {
+    "palette": "palette_03",
+    "feature": "crown_nub",
+    "marking": "dorsal_stripe"
+  },
+  "rig": "small_front_v1",
+  "asset_pack_version": "launch-001"
+}

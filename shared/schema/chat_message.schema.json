@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/chat_message.schema.json",
+  "title": "ChatMessage",
+  "description": "Moderated text-only chat row. Untrusted data, never executable content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contracts_version",
+    "id",
+    "channel_id",
+    "account_id",
+    "actor_mode",
+    "body",
+    "created_at"
+  ],
+  "properties": {
+    "contracts_version": {"const": "contracts-v1"},
+    "id": {"type": "string", "format": "uuid"},
+    "channel_id": {"type": "string", "minLength": 1, "maxLength": 64},
+    "account_id": {"type": "string", "format": "uuid"},
+    "actor_mode": {"enum": ["human", "agent"]},
+    "body": {"type": "string", "minLength": 1, "maxLength": 400},
+    "created_at": {"type": "string", "format": "date-time"},
+    "deleted_at": {"type": ["string", "null"], "format": "date-time"}
+  }
+}

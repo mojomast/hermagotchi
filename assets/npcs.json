@@ -1,0 +1,203 @@
+{
+  "schema": "hermagotchi-npcs-v1",
+  "asset_pack_id": "launch-003",
+  "lines_ref": "npc_lines.json",
+  "npcs": [
+    {
+      "id": "npc.don_piedro",
+      "name": "Don Piedro",
+      "role": "Cosmetics shopkeeper. Carries a big spoon and is Hermes' #1 fan.",
+      "ui_surface": "shop",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/don_piedro_portrait.png",
+        "sha256": "a7ddd0226de13835b2e752668c62bce7f3a022acebe71b188141b345fbbb813b",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4
+      },
+      "dialog": {
+        "path": "px3/npcs/don_piedro_dialog.png",
+        "sha256": "f73153ff616f1296e75eeea99acb8da8da7bd8d484903a138511c47efefcee6b",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4,
+        "notes": "Bust crop for dialog boxes"
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/don_piedro_idle_0.png",
+            "sha256": "a7ddd0226de13835b2e752668c62bce7f3a022acebe71b188141b345fbbb813b"
+          },
+          {
+            "path": "px3/npcs/don_piedro_idle_1.png",
+            "sha256": "5d3ee098b68f4a91f976704d0f906d7bfb0b654149d4a85c0cbb9111e072c0ce"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "Fresh hats! Still warm from the forge... I mean the oven.",
+        "Every pet deserves a crown. Some deserve two.",
+        "Hermes shops here. Probably. In spirit.",
+        "No refunds, but I'll stir your Bits with my lucky spoon.",
+        "That scarf? It's you. It's absolutely you."
+      ],
+      "source": "source/cine_v3_don_piedro.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/don_piedro.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    },
+    {
+      "id": "npc.nous_girl",
+      "name": "Nous Girl",
+      "role": "Lobby and chat host who posts moderation notices. Carries an audio cable.",
+      "ui_surface": "lobby",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/nous_girl_portrait.png",
+        "sha256": "d488d0866574568f7d14ff49dbbdfeef979f339dba4792c1a48d495717b1a199",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4
+      },
+      "dialog": {
+        "path": "px3/npcs/nous_girl_dialog.png",
+        "sha256": "6ceaeec8cb4ce8c4a2d991187f0851f76acd70a9fa7d36f32be94b0198851520",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4,
+        "notes": "Bust crop for dialog boxes"
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/nous_girl_idle_0.png",
+            "sha256": "d488d0866574568f7d14ff49dbbdfeef979f339dba4792c1a48d495717b1a199"
+          },
+          {
+            "path": "px3/npcs/nous_girl_idle_1.png",
+            "sha256": "f1246dbadb975a771b6fed4529512c09339e5eca83dda140ae5f6a0f5b88fb38"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "Plugged in! Lobby's live.",
+        "Keep it friendly. Cable's long, patience is short.",
+        "Heads up: that message got muted. Be kind, try again.",
+        "New challenger in the lobby. Say hi!",
+        "Signal clear. Chat on."
+      ],
+      "source": "source/cine_v3_nous_girl.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/nous_girl.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    },
+    {
+      "id": "npc.teknium",
+      "name": "Teknium",
+      "role": "Trainer for bot practice who explains combat rules. Carries an energy blade.",
+      "ui_surface": "practice",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/teknium_portrait.png",
+        "sha256": "5e11466537ea0474026bfc21f3d8699abd471bd77eb25789d48829ede96a6990",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4
+      },
+      "dialog": {
+        "path": "px3/npcs/teknium_dialog.png",
+        "sha256": "32dfa96c62df64767fe15ec380d64e932d6bcf4db3c1206d33fdfb378fcc2cd9",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4,
+        "notes": "Bust crop for dialog boxes"
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/teknium_idle_0.png",
+            "sha256": "5e11466537ea0474026bfc21f3d8699abd471bd77eb25789d48829ede96a6990"
+          },
+          {
+            "path": "px3/npcs/teknium_idle_1.png",
+            "sha256": "0dcc6d08bc1a82ce67eade0da775a4b0976d60f8bbbd57033f22384e11cd35be"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "Practice bouts don't touch your rating. Swing freely.",
+        "Six rounds, one pet each. Read the cooldowns.",
+        "Your agent picks the move. You pick the policy.",
+        "Blade's charged. Let's run another seed.",
+        "Status effects stack less than you think. Test it."
+      ],
+      "source": "source/cine_v3_teknium.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/teknium.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    },
+    {
+      "id": "npc.southpaw",
+      "name": "Southpaw",
+      "role": "Arena announcer for the leaderboard and bounties. Carries an axe-shaped guitar.",
+      "ui_surface": "leaderboard",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/southpaw_portrait.png",
+        "sha256": "4412e030884014885053dfe61b1da5a74b9ba5fa4121363767c566fef0961952",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4
+      },
+      "dialog": {
+        "path": "px3/npcs/southpaw_dialog.png",
+        "sha256": "b8e4eca0d06f86f819a362b16fe0df1aee1c78eaf46cd3b62c645497a0a7eeb2",
+        "native": [
+          128,
+          128
+        ],
+        "factor": 4,
+        "notes": "Bust crop for dialog boxes"
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/southpaw_idle_0.png",
+            "sha256": "4412e030884014885053dfe61b1da5a74b9ba5fa4121363767c566fef0961952"
+          },
+          {
+            "path": "px3/npcs/southpaw_idle_1.png",
+            "sha256": "c180d2866b965f0104bf3e92afefb4d26284d8442a676aa04e9423c20a76c2c6"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "LADIES, GENTS AND AGENTS... the leaderboard!",
+        "New bounty dropped. Shred it before it expires!",
+        "That win streak? Pure distortion.",
+        "Top of the board gets the loudest riff.",
+        "Encore! Season standings updated."
+      ],
+      "source": "source/cine_v3_southpaw.png",
+      "reference": "clawpocalypse cine v3 portrait assets/cine/v3/portraits/turbofit.png \u2014 direct Lanczos fit (no GenerateImage, no pixel redraw)",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    }
+  ]
+}

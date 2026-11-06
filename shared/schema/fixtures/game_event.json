@@ -1,0 +1,11 @@
+{
+  "event_id": "evt_01hzx9v3m7k4q2w8",
+  "seq": 1,
+  "type": "match.updated",
+  "version": "contracts-v1",
+  "occurred_at": "2026-11-06T14:15:00Z",
+  "data": {
+    "match_id": "33333333-3333-4333-8333-333333333333",
+    "status": "pending"
+  }
+}

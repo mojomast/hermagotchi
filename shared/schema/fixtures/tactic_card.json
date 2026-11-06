@@ -1,0 +1,11 @@
+{
+  "ruleset_version": "battle-1",
+  "stance": "control",
+  "actions": [
+    {"when": {"self_hp_lte_pct": 30}, "move": "guard"},
+    {"when": {"special_ready": true}, "move": "glitch_pulse"},
+    {"when": {"opponent_guarding": true}, "move": "focus"},
+    {"when": {"always": true}, "move": "basic_attack"}
+  ],
+  "emote_id": "emote.sparkle"
+}

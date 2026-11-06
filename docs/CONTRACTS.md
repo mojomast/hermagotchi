@@ -270,3 +270,84 @@ python3 scripts/asset_validate.py assets/manifest.json
 ```
 
 Bees: test-first on assigned files; leave changes **uncommitted** in the sandbox (launcher collects `git diff HEAD`).
+
+---
+
+## Auth (contracts-v1 addendum)
+
+`HERMAGOTCHI_AUTH_MODE=dev|production` (default `dev`; the VPS must set
+`production`). Production ignores `X-Account-Id` completely and accepts only
+`Authorization: Bearer <access_token>` resolved against the sessions table. Dev
+tries the session token first, then falls back to the existing UUID stub.
+
+Tokens are 256-bit URL-safe secrets with prefixes `hga_` (access), `hgr_`
+(refresh), `hgd_` (device code). Only SHA-256 hex digests are stored. User codes
+are 8 characters from `BCDFGHJKLMNPQRSTVWXZ23456789`, displayed `XXXX-XXXX`, and
+normalized by uppercasing and removing `-`/spaces. Default TTLs: pairing 600 s,
+access 3600 s, refresh 30 days; poll interval 5 s.
+
+All endpoints are under `/v1`, return JSON, and use the standard error envelope
+`{code, message, retry_after_s, correlation_id}`.
+
+| Method | Path | Auth | Result |
+|---|---|---|---|
+| POST | `/v1/auth/pair/start` | none | `201 {"device_code","user_code","expires_at","interval_s":5,"new_account"}` |
+| POST | `/v1/auth/pair/approve` | Bearer session (dev UUID stub allowed in dev) | `200 {"approved":true,"device_name"}` |
+| POST | `/v1/auth/pair/token` | none | `200 {"access_token","refresh_token","token_type":"Bearer","expires_in","refresh_expires_in","account_id","device_id"}` |
+| POST | `/v1/auth/refresh` | none | same token shape; rotates both tokens |
+| GET | `/v1/auth/devices` | Bearer | `{"devices":[{"device_id","device_name","created_at","last_seen_at","current","revoked"}]}` |
+| POST | `/v1/auth/devices/{device_id}/revoke` | Bearer | `{"revoked":true}` |
+| POST | `/v1/auth/logout` | Bearer | revokes the current device |
+
+Pair start body: `{"device_name": str<=64, "new_account": bool=false,
+"public_handle": str<=32 optional}`. `new_account=true` auto-approves the first
+device and token exchange creates a fresh account; `new_account=false` requires
+an already-paired device to approve the user code. Approve body: `{"user_code"}`;
+unknown/wrong → `404 invalid_user_code`, expired → `400 expired_token`, already
+used → `409 already_used`. Token errors: `400 authorization_pending`,
+`400 expired_token`, `400 invalid_grant` (unknown, already exchanged, or replay),
+`429 slow_down`. Refresh reuse of an old token → `401 invalid_grant` and revokes
+the device. Cross-account device revoke → `404`.
+
+Limits are in-process: pair/start 10/minute/IP; five failed approvals lock the
+user code/attempt source; polling faster than the interval returns `429` with
+`retry_after_s`.
+
+---
+
+## Pet animation (px3 strips + desktop contract)
+
+**Owner:** art bee (strips + manifest). **Consumer:** pane bee (`desktop/src/ui/*`) via the standalone module in `desktop/src/anim/` — pane code must not be edited by the art bee.
+
+### States
+
+| State | Frames | FPS | Loop | Motion |
+|---|---|---|---|---|
+| `idle` | 4 | 6 | yes | 1px bob + blink (daemowl blinks all three eyes) |
+| `happy` | 4 | 8 | yes | hop / bounce |
+| `eat` | 3 | 6 | yes | chomp |
+| `sleep` | 3 | 3 | yes | eyes closed + Zz |
+| `hurt` | 3 | 10 | no | flash + recoil |
+| `attack` | 4 | 10 | no | wind-up + lunge |
+
+### Asset layout
+
+- Strip path: `assets/px3/anims/{species}_{palette}_{state}.png` (horizontal, native 32×32 frames, ×16 nearest for delivery).
+- Manifest: `assets/manifest.launch-003.json` → top-level `animations` (version, states, `clip_meta`, `clips[]` with `fps`, `loop`, `sha256`, per-frame `anchor_delta`).
+- Art ext mirror: `assets/art_ext.launch-003.json` → `animations.clips` (compose reads this).
+- Generator: `scripts/draw_anims.py` (hand transforms from palette sprites; **no** GenerateImage).
+
+### Cosmetics follow
+
+Each frame carries `anchor_delta: [dx, dy]` in native pixels. Compose applies that delta to head/face/back/front/hand anchors when parenting cosmetics. Aura items keep their own 2-frame cycle (time-based), independent of bob.
+
+### Desktop wiring
+
+1. Import `desktop/src/anim/petAnimPlayer.js` + `petAnimContract.json`.
+2. Map pet/battle UI state → anim state with `resolveAnimState(petState)` (see `state_from_pet` in the contract).
+3. `findClip(manifest.animations.clips, { species, palette, state })`.
+4. `createPlayer(clip)` → `tick(dt)` → `frameIndex`, `anchorDelta`, `auraFrame`, `sourceRect()`.
+5. Draw strip frame; offset equipped cosmetics by `anchorDelta`.
+
+Reduced-motion: prefer `idle` frame 0 only when the host accessibility flag is set.
+

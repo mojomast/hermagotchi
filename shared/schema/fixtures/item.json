@@ -1,0 +1,12 @@
+{
+  "contracts_version": "contracts-v1",
+  "id": "hat.binary_crown",
+  "name": "Binary Crown",
+  "slot": "head",
+  "rarity": "legendary",
+  "price_bits": 2000,
+  "asset_id": "hat.binary_crown",
+  "compatible_rigs": ["small_front_v1"],
+  "catalog_version": "launch-001",
+  "active": true
+}

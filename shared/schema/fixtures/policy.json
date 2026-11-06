@@ -1,0 +1,10 @@
+{
+  "contracts_version": "contracts-v1",
+  "mode": "human",
+  "network_enabled": false,
+  "autonomy_enabled": false,
+  "chat_enabled": false,
+  "autonomous_battles_per_day": 3,
+  "agent_chat_messages_per_day": 2,
+  "llm_decisions_per_day": 4
+}

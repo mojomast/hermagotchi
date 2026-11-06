@@ -1,0 +1,22 @@
+name: hermagotchi
+repo: https://github.com/mojomast/hermagotchi
+sha: REPLACE_WITH_40_CHAR_SHA
+description: "Co-op virtual pets with deterministic async battles, earned Bits, goals, cosmetics, leaderboards and moderated social play."
+maintainer: mojomast
+tier: community
+category: games
+requires_hermes: ">=0.1.0"
+version: 0.1.0
+capabilities:
+  provides_tools:
+    - hermagotchi_status
+    - hermagotchi_pet
+    - hermagotchi_goals
+    - hermagotchi_challenge
+    - hermagotchi_battle
+    - hermagotchi_shop
+    - hermagotchi_social
+    - hermagotchi_meta
+  hooks: []
+  middleware: []
+requires_env: []

@@ -1,0 +1,39 @@
+{
+  "schema": "hermagotchi-pet-anim-contract-v1",
+  "native_size": 32,
+  "pixel_factor": 16,
+  "strip_layout": "horizontal",
+  "strip_path_template": "px3/anims/{species}_{palette}_{state}.png",
+  "clip_id_template": "{species}.{palette}.{state}",
+  "states": ["idle", "happy", "eat", "sleep", "hurt", "attack"],
+  "state_from_pet": {
+    "idle": "idle",
+    "play": "happy",
+    "feed": "eat",
+    "rest": "sleep",
+    "hurt": "hurt",
+    "hit": "hurt",
+    "attack": "attack",
+    "battle_attack": "attack",
+    "battle_hit": "hurt",
+    "win": "happy",
+    "lose": "sleep"
+  },
+  "clip_meta": {
+    "idle":   {"fps": 6,  "loop": true,  "frame_count": 4},
+    "happy":  {"fps": 8,  "loop": true,  "frame_count": 4},
+    "eat":    {"fps": 6,  "loop": true,  "frame_count": 3},
+    "sleep":  {"fps": 3,  "loop": true,  "frame_count": 3},
+    "hurt":   {"fps": 10, "loop": false, "frame_count": 3},
+    "attack": {"fps": 10, "loop": false, "frame_count": 4}
+  },
+  "cosmetics": {
+    "follow_anchor_delta": ["head", "face", "back", "front", "hand", "neck"],
+    "aura_frame_cycle": 2,
+    "note": "Apply clip.frames[i].anchor_delta to head/face/back/hand anchors each frame; aura items keep their own 2-frame strip cycle keyed by time, not bob."
+  },
+  "manifest_pointer": {
+    "asset_manifest": "assets/manifest.launch-003.json#animations",
+    "art_ext": "assets/art_ext.launch-003.json#animations"
+  }
+}
