@@ -72,3 +72,10 @@ change is **report-only**. `docs/SMOKE_W10.md` is the only file added.
   artifacts (`hermagotchi.db`), and the two `docs/evidence/*.log` files written by
   `scripts/hermes_check.sh`.
 - No commit, tag, or push was performed; this report is left uncommitted.
+
+## Post-smoke tip advance
+
+After this smoke run, coordinator merges advanced `feat/hackathon` to
+`bee24b6b464f97d3cf0a37e589140dc8ef9ba1df` (DOC README/CHANGELOG + pet loadout
+schema glue). Re-smoke was not required; schema o200k remained 933 and
+`node scripts/build_desktop.mjs --check` stayed green on the newer tip.
