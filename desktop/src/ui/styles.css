@@ -663,6 +663,19 @@
   padding: 4px 8px;
 }
 
+.hg-badge--legendary {
+  border-color: #f2b544;
+  color: #ffd479;
+  background: rgba(242, 181, 68, 0.12);
+}
+
+.hg-badge--mythic {
+  border-color: #c77dff;
+  color: #e7c2ff;
+  background: rgba(199, 125, 255, 0.16);
+  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);
+}
+
 .hg-shop-card--equipped .hg-badge--equipped {
   border-color: var(--hg-accent);
   color: var(--hg-accent-strong);

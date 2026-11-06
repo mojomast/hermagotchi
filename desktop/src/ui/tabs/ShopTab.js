@@ -5,11 +5,13 @@ import { NpcHostBanner } from "../components/NpcHostBanner.js";
 import { PetPreview } from "../components/PetPreview.js";
 import { extractPetId } from "../logic/habitat.js";
 import {
+  compareItemsByPrice,
   groupCatalogBySlot,
   itemAvailability,
   itemThumbUrl,
   manifestFromCatalog,
   normaliseWallet,
+  RARITY_LABELS,
   readEnvelope,
 } from "../logic/shop.js";
 
@@ -134,6 +136,16 @@ function itemInitial(name) {
   return text ? text.slice(0, 1).toUpperCase() : "?";
 }
 
+function RarityBadge(props) {
+  const rarity = String((props.item && props.item.rarity) || "").toLowerCase();
+  if (rarity !== "legendary" && rarity !== "mythic") return null;
+  return jsx("span", {
+    className: "hg-badge hg-badge--" + rarity,
+    "data-rarity": rarity,
+    children: RARITY_LABELS[rarity] || rarity,
+  });
+}
+
 function ShopCard(props) {
   const item = props.item;
   const availability = props.availability;
@@ -222,6 +234,7 @@ function ShopCard(props) {
       jsxs("div", {
         className: "hg-shop-card__badges",
         children: [
+          jsx(RarityBadge, { item }, "rarity"),
           item.owned
             ? jsx("span", { className: "hg-badge", children: "Owned" })
             : null,
@@ -420,15 +433,17 @@ export function ShopTab(props = {}) {
   }));
   const allItems = groups.reduce((items, group) => items.concat(group.items), []);
   const needle = query.trim().toLowerCase();
-  const visibleItems = allItems.filter(function (item) {
-    if (filter !== "all" && item.slot !== filter) return false;
-    if (!needle) return true;
-    return (
-      item.name.toLowerCase().includes(needle) ||
-      item.id.toLowerCase().includes(needle) ||
-      item.slot.toLowerCase().includes(needle)
-    );
-  });
+  const visibleItems = allItems
+    .filter(function (item) {
+      if (filter !== "all" && item.slot !== filter) return false;
+      if (!needle) return true;
+      return (
+        item.name.toLowerCase().includes(needle) ||
+        item.id.toLowerCase().includes(needle) ||
+        item.slot.toLowerCase().includes(needle)
+      );
+    })
+    .sort(compareItemsByPrice);
 
   async function buy(item) {
     setBusy("buy:" + item.id);

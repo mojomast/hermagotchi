@@ -41,6 +41,21 @@ export const SLOT_Z = Object.freeze({
   title: 50,
 });
 
+export const RARITY_LABELS = Object.freeze({
+  common: "Common",
+  uncommon: "Uncommon",
+  rare: "Rare",
+  epic: "Epic",
+  legendary: "Legendary",
+  mythic: "Mythic",
+});
+
+export function compareItemsByPrice(a, b) {
+  const price = number(a && a.priceBits) - number(b && b.priceBits);
+  if (price !== 0) return price;
+  return String(a && a.id).localeCompare(String(b && b.id));
+}
+
 function number(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -79,7 +94,7 @@ export function itemView(item) {
     name: String(item.name || item.id),
     slot,
     slotLabel: SLOT_LABELS[slot] || slot,
-    rarity: String(item.rarity || "common"),
+    rarity: String(item.rarity || "common").toLowerCase(),
     priceBits: Math.max(0, Math.round(number(item.price_bits, number(item.priceBits, 0)))),
     assetId: String(item.asset_id || item.assetId || item.id),
     assetUrl: item.asset_url || item.assetUrl || "",
@@ -160,7 +175,7 @@ export function groupCatalogBySlot(catalog) {
     .map(([slot, items]) => ({
       slot,
       label: SLOT_LABELS[slot] || slot,
-      items: items.slice().sort((a, b) => a.id.localeCompare(b.id)),
+      items: items.slice().sort(compareItemsByPrice),
     }))
     .sort((a, b) => {
       const rank = slotRank(a.slot) - slotRank(b.slot);

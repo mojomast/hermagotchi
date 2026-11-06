@@ -15,9 +15,49 @@ RARITY_PRICE = {
     "common": 150,
     "uncommon": 350,
     "rare": 700,
-    "epic": 1200,
-    "legendary": 2000,
+    "epic": {
+        "aura.spark_aura": 3000,
+        "aura.ember_halo": 3200,
+        "face.stack_trace": 3400,
+        "hat.bloom_filter": 3600,
+        "hat.lambda_tiara": 3800,
+        "front.usb_sword": 4000,
+        "aura.flame_wall": 4200,
+        "back.tiny_jetpack": 4400,
+        "back.webhook_wings": 4600,
+        "aura.starfield": 4800,
+        "title.pixel_pilot": 5000,
+    },
+    "legendary": {
+        "face.laser_focus": 12000,
+        "back.glider_cloak": 14000,
+        "hat.cron_crown": 16000,
+        "front.pixel_blade": 18000,
+        "aura.rainbow_arc": 22000,
+        "hat.binary_crown": 25000,
+    },
+    "mythic": {
+        "aura.mythic_prism": 50000,
+        "hat.mythic_sovereign": 52000,
+        "back.mythic_parallax": 48000,
+        "title.mythic_overclock": 55000,
+    },
 }
+
+MYTHIC_IDS = {
+    "aura.mythic_prism",
+    "hat.mythic_sovereign",
+    "back.mythic_parallax",
+    "title.mythic_overclock",
+}
+
+
+def expected_price(item):
+    price = RARITY_PRICE[item["rarity"]]
+    if isinstance(price, dict):
+        return price[item["id"]]
+    return price
+
 
 CROWN = "hat.binary_crown"
 WIZARD_HAT = "hat.wizard_hat"
@@ -81,6 +121,7 @@ def test_catalog_lists_seeded_items_with_contract_shape(
 
     ids = {item["id"] for item in body["items"]}
     assert CROWN in ids
+    assert MYTHIC_IDS <= ids
 
     slots = {item["slot"] for item in body["items"]}
     assert {"head", "face", "back", "aura", "emote"} <= slots
@@ -88,8 +129,12 @@ def test_catalog_lists_seeded_items_with_contract_shape(
     for item in body["items"]:
         validate_contract("Item", item)
         assert item["active"] is True
-        assert item["price_bits"] == RARITY_PRICE[item["rarity"]]
+        assert item["price_bits"] == expected_price(item)
         assert "small_front_v1" in item["compatible_rigs"]
+
+    assert {
+        item["id"] for item in body["items"] if item["rarity"] == "mythic"
+    } == MYTHIC_IDS
 
 
 def test_catalog_requires_authentication(client):
@@ -291,7 +336,7 @@ def test_equip_places_owned_item_in_its_slot(
     app, client, auth_headers_a, account_a, validate_contract
 ):
     pet = _adopt(client, auth_headers_a)
-    _credit(app, account_a, 2500, "seed:equip")
+    _credit(app, account_a, 25000, "seed:equip")
     _buy(client, auth_headers_a, CROWN, "equip-buy")
 
     response = _equip(client, auth_headers_a, pet["id"], CROWN, "equip-once")
@@ -383,7 +428,7 @@ def test_equip_requires_pet_ownership(
     conn = connect(_db_path(client))
     try:
         seed_account(conn, "00000000-0000-4000-8000-0000000000b2")
-        credit(conn, "00000000-0000-4000-8000-0000000000b2", 2500, "test.grant", "seed:other")
+        credit(conn, "00000000-0000-4000-8000-0000000000b2", 25000, "test.grant", "seed:other")
     finally:
         conn.close()
     bought = _buy(client, auth_headers_b, CROWN, "other-buy")
@@ -399,7 +444,7 @@ def test_equip_replaces_previous_item_in_same_slot(
     app, client, auth_headers_a, account_a
 ):
     pet = _adopt(client, auth_headers_a)
-    _credit(app, account_a, 3000, "seed:replace")
+    _credit(app, account_a, 25700, "seed:replace")
     _buy(client, auth_headers_a, WIZARD_HAT, "replace-1")
     _buy(client, auth_headers_a, CROWN, "replace-2")
 
