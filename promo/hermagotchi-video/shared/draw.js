@@ -55,7 +55,8 @@ export function bars(g){
 export function npc(g,env,name,x,y,size=256){
   box(g,x,y,size,size,'#e2c49c');image(g,env.images[`assets/px3/npcs/${name}_portrait.png`],x,y,size,size);
 }
-/** Cover-draw a slot frame. Optional crop is {sx,sy,sw,sh} in 0–1 image fractions. */
+/** Cover-draw a slot frame. Optional crop is {sx,sy,sw,sh} in 0–1 image fractions.
+ *  Cropped inserts left/top-align so LTR UI (pet, tables, chat) is not centered into padding. */
 export function slot(g,env,id,x,y,w,h,crop){
   box(g,x-6,y-6,w+12,h+12,'#b9ae9a');box(g,x,y,w,h,'#161523');
   const img=env.slotFrames[id];if(!img)return;
@@ -65,7 +66,7 @@ export function slot(g,env,id,x,y,w,h,crop){
     const sx=clamp(crop.sx)*img.width,sy=clamp(crop.sy)*img.height;
     const sw=Math.max(1,clamp(crop.sw)*img.width),sh=Math.max(1,clamp(crop.sh)*img.height);
     const scale=Math.max(w/sw,h/sh);const dw=sw*scale,dh=sh*scale;
-    image(g,img,sx,sy,sw,sh,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+    image(g,img,sx,sy,sw,sh,x,y,dw,dh);
   }else{
     const scale=Math.min(w/img.width,h/img.height);const iw=img.width*scale,ih=img.height*scale;
     image(g,img,x+(w-iw)/2,y+(h-ih)/2,iw,ih);
@@ -76,4 +77,22 @@ export function slot(g,env,id,x,y,w,h,crop){
 export function lerpCrop(a,b,p){
   const e=ease(clamp(p));
   return {sx:a.sx+(b.sx-a.sx)*e,sy:a.sy+(b.sy-a.sy)*e,sw:a.sw+(b.sw-a.sw)*e,sh:a.sh+(b.sh-a.sh)*e};
+}
+
+/** Piecewise Ken Burns: each step is [crop, holdSeconds]; pans take panSeconds between holds. */
+export function holdPan(t, steps, panSeconds=1.2){
+  if(!steps||!steps.length)return null;
+  let elapsed=0;
+  for(let i=0;i<steps.length;i++){
+    const hold=steps[i][1];
+    if(t < elapsed+hold) return steps[i][0];
+    elapsed += hold;
+    if(i < steps.length-1){
+      if(t < elapsed+panSeconds){
+        return lerpCrop(steps[i][0], steps[i+1][0], (t-elapsed)/panSeconds);
+      }
+      elapsed += panSeconds;
+    }
+  }
+  return steps[steps.length-1][0];
 }
