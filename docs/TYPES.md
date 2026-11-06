@@ -20,10 +20,10 @@ Balance eval: `evals/type_balance.py`.
 |---|---|---|
 | Start with equal advantages / disadvantages (RPS loops) | [r/gamedesign type-chart thread](https://www.reddit.com/r/gamedesign/comments/4zacn0/designing_type_effectiveness_chart_in_my/); [GameDev.SE — organize type advantages](https://gamedev.stackexchange.com/questions/207045/how-should-i-organize-the-type-advantages-and-disadvantages-for-my-monster-catch) | Symmetric 5-cycle: each type beats 2, loses to 2 |
 | Odd-\(n\) tournaments are the only perfectly fair pure RPS | [Rock, Papers, Scissors and beyond (molab)](https://molab.marimo.io/notebooks/nb_5AqxB9MfasrxQ8SjVmAbsH) | \(n=5\), \(k=(n-1)/2=2\) |
-| Row/column sums should match for chart fairness | [Pokémon VG Type Info](https://pokemonaaah.net/research/vg/typeinfo/); matrix advice in the gamedesign thread | Every type has offensive score \(2\cdot\frac{3}{2}+2\cdot\frac{2}{3}+1=5\) and the same defensive score |
+| Row/column sums should match for chart fairness | [Pokémon VG Type Info](https://pokemonaaah.net/research/vg/typeinfo/); matrix advice in the gamedesign thread | Every type has equal offensive/defensive chart score |
 | Simulate meta convergence toward uniform Nash | GameDev.SE spreadsheet / mobility model; [Julien et al., balancing zero-sum games](https://www.cs.cornell.edu/~ajul/zerosum/zerosum.pdf) | `evals/type_balance.py` runs seeded real-engine battles |
 | Pokémon main series: SE \(2\times\), NVE \(0.5\times\), STAB \(1.5\times\) | [Bulbapedia Damage](https://bulbapedia.bulbagarden.net/wiki/Damage); [STAB](https://bulbapedia.bulbagarden.net/wiki/Same-type_attack_bonus); [Pokémon DB type chart](https://pokemondb.net/type) | Baseline reference — too swingy for 6 rounds |
-| Shorter / mobile formats often use milder SE/STAB | [Pokémon GO discussion of 1.25× SE/STAB](https://www.reddit.com/r/pokemongo/comments/58hlsr/super_effectivestab_balance_is_killing_diversity/) | We use SE \(5/4\), NVE \(4/5\), STAB \(5/4\) |
+| Shorter formats + seeded variance softens hard counters | [Pokémon GO milder SE/STAB](https://www.reddit.com/r/pokemongo/comments/58hlsr/super_effectivestab_balance_is_killing_diversity/); Kyle ask 2026-11-05 | SE/STAB \(17/16\) + flat \(\pm 5\) seed variance → ~61% SE wins |
 | Keep overlapping loops; avoid isolated triangles | r/gamedesign + JourneyMon type-chart devlog | One fully connected pentagon, not five isolated pairs |
 | Species rarity / role still matter even if the chart is fair | r/gamedesign | Species stats stay on the shared budget; types alone are balanced in the eval |
 
@@ -39,7 +39,7 @@ Clockwise order (attacker beats the next two):
 | **kernel** | Syscalls, privilege, OS / hardware core | `rootkit` — +1 focus stat | Privilege, panic, syscall | `syscall_spike`, `privilege_escalation`, `kernel_panic` |
 | **payload** | Inject, overflow, offensive code | `zero_day` — first damaging hit +1 raw | Shellcode, smash, ROP | `shellcode`, `buffer_smash`, `rop_chain` |
 | **firewall** | Block, quarantine, perimeter policy | `hardened` — first incoming hit −1 dmg (min 1) | Drop, quarantine, TLS | `packet_drop`, `quarantine`, `tls_handshake` |
-| **glitch** | Corrupt, desync, undefined behaviour | `undefined` — while HP ≤ 50%, +1 attack | Segfault, heap, UB | `segfault_pulse`, `heap_spray`, `undefined_behavior` |
+| **glitch** | Corrupt, desync, undefined behaviour | `undefined` — while HP ≤ 30%, +1 attack | Segfault, heap, UB | `segfault_pulse`, `heap_spray`, `undefined_behavior` |
 
 ### Matchup rationale (theme)
 
@@ -55,11 +55,11 @@ Rows = attack type, columns = defender type. Values are damage multipliers.
 
 | atk \ def | signal | kernel | payload | firewall | glitch |
 |---|---:|---:|---:|---:|---:|
-| **signal** | 1 | **5/4** | **5/4** | 4/5 | 4/5 |
-| **kernel** | 4/5 | 1 | **5/4** | **5/4** | 4/5 |
-| **payload** | 4/5 | 4/5 | 1 | **5/4** | **5/4** |
-| **firewall** | **5/4** | 4/5 | 4/5 | 1 | **5/4** |
-| **glitch** | **5/4** | **5/4** | 4/5 | 4/5 | 1 |
+| **signal** | 1 | **17/16** | **17/16** | 16/17 | 16/17 |
+| **kernel** | 16/17 | 1 | **17/16** | **17/16** | 16/17 |
+| **payload** | 16/17 | 16/17 | 1 | **17/16** | **17/16** |
+| **firewall** | **17/16** | 16/17 | 16/17 | 1 | **17/16** |
+| **glitch** | **17/16** | **17/16** | 16/17 | 16/17 | 1 |
 
 Mirror property: if A is SE vs B then B is NVE vs A (and vice versa). Same-type is always neutral \(1\times\) before STAB.
 
@@ -67,12 +67,13 @@ Mirror property: if A is SE vs B then B is NVE vs A (and vice versa). Same-type 
 
 | Modifier | Fraction | Decimal | Notes |
 |---|---|---:|---|
-| Super-effective | \(5/4\) | 1.25 | Mild (short 6-round format) |
-| Not very effective | \(4/5\) | 0.80 | Milder than Pokémon \(0.5\times\) |
+| Super-effective | \(17/16\) | 1.0625 | Mild; pairs with flat variance |
+| Not very effective | \(16/17\) | ≈0.941 | Mild |
 | Neutral | \(1/1\) | 1.0 | |
-| STAB | \(5/4\) | 1.25 | Applied when move type == attacker type |
-| SE + STAB | \(25/16\) | 1.5625 | |
-| NVE + STAB | \(1/1\) | 1.0 | Resisted STAB lands as neutral — coverage stays viable |
+| STAB | \(17/16\) | 1.0625 | Applied when move type == attacker type |
+| SE + STAB | \(289/256\) | ≈1.129 | |
+| NVE + STAB | \(1/1\) | 1.0 | Resisted STAB lands as neutral |
+| Damage variance (`battle-2`) | flat ±5 | — | Seeded per hit from battle RNG stream |
 
 Formula (battle-2 attacks only):
 
@@ -82,6 +83,7 @@ damage = guard_reduce(raw)
 damage = max(1, damage * type_num // type_den)
 damage = max(1, damage * stab_num // stab_den)   # if STAB
 damage = max(1, damage - 1)                      # if firewall hardened pending
+damage = max(1, damage + variance)               # variance in [-5, +5] from seed
 ```
 
 ## Move typing in `battle-2`
@@ -117,18 +119,23 @@ Launch-003 ships **10** playable species (2 per type). Starter combat budgets fo
 
 ## Balance targets
 
-From `evals/type_balance.py` (equalised species = `byteblob` stats, forced types, mirrored stance cards, many seeds):
+From `evals/type_balance.py` (equalised `byteblob` chassis, forced types, **varied**
+tactic decks/stances, many seeds):
 
-| Metric | Target |
-|---|---|
-| Per-type overall win rate (A+B aggregated) | \(50\% \pm 3\%\) |
-| SE pairwise under identical tactics | SE attacker wins \(\ge 90\%\) (hard counter; engine has no damage RNG) |
-| Mirror matchup (same type) side-A win rate | \(45\%\)–\(55\%\) |
-| Chart row/column score equality | exact |
+| Metric | Target | Measured (120 seeds / 3000 battles) |
+|---|---|---|
+| Per-type overall win rate | \(50\% \pm 3\%\) | signal 48.2, kernel 49.4, payload 50.5, firewall 50.4, glitch 51.5 |
+| SE pairwise A-win | \(60\%\)–\(70\%\) | **60.9%** |
+| Mirror matchup A-win | \(45\%\)–\(55\%\) | **50.0%** |
+| Chart row/column score equality | exact | exact |
 
-Passives are intentionally small so the chart, not the passive, drives the SE edge.
-With equal stats and identical cards the advantageous type *should* nearly always
-win the pairwise; balance is the flat overall meta, not a soft 60% SE rate.
+### Softening hard counters (Kyle-approved, 2026-11-05)
+
+`battle-1` stays byte-identical (no damage variance). `battle-2` draws a
+deterministic flat modifier in \([-5,+5]\) per attack from the committed seed
+stream (same RNG as initiative), stored on the event as
+`status_delta.damage_variance`. Mild \(17/16\) SE/STAB plus varied decks keep
+type advantage meaningful without 100% SE lockouts.
 
 ## Ruleset versioning
 

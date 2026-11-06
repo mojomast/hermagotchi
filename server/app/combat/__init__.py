@@ -26,6 +26,7 @@ from .ruleset import (
 )
 from .types import (
     ALL_SPECIES_TYPES,
+    DAMAGE_VARIANCE_FLAT,
     MOVE_TYPE_OVERRIDE,
     NVE,
     PLANNED_SPECIES_TYPES,
@@ -55,6 +56,7 @@ __all__ = [
     "ALLOWED_PREDICATES",
     "ALLOWED_STANCES",
     "ALL_SPECIES_TYPES",
+    "DAMAGE_VARIANCE_FLAT",
     "BASE_HP",
     "BATTLE_1",
     "BATTLE_1_VERSION",

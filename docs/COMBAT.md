@@ -295,7 +295,7 @@ rating code is part of this slice.
 `battle-2` extends the same species stats, stances, moves, and round structure
 with a five-type pentagon chart, STAB, and one passive per type. `battle-1`
 inputs and golden replays are unchanged — type fields on pets are ignored under
-`battle-1`. See [`TYPES.md`](./TYPES.md) for the chart, species mapping, and
-balance targets. Opt into types by passing `ruleset="battle-2"` (and matching
+`battle-1`. See [`TYPES.md`](./TYPES.md) for the chart, species mapping, balance
+targets, and seeded flat damage variance (`status_delta.damage_variance`). Opt into types by passing `ruleset="battle-2"` (and matching
 tactic `ruleset_version`).
 

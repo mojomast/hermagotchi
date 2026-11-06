@@ -14,6 +14,7 @@ from .ruleset import (
     STANCES,
 )
 from .types import (
+    DAMAGE_VARIANCE_FLAT,
     STAB,
     apply_multiplier,
     effectiveness,
@@ -165,7 +166,7 @@ def _effective_attack(fighter, ruleset_version):
     if (
         ruleset_version == BATTLE_2_VERSION
         and fighter.pet_type == "glitch"
-        and fighter.hp * 2 <= fighter.max_hp
+        and fighter.hp * 10 <= 3 * fighter.max_hp
     ):
         attack = fighter.base_attack + 1
     return attack
@@ -275,6 +276,15 @@ def _apply_move(round_number, actor, defender, move, fallback, rng, ruleset_vers
         else:
             status_firewall = False
 
+        variance_delta = 0
+        if ruleset_version == BATTLE_2_VERSION:
+            # Deterministic: next draw from the committed seed stream.
+            # Inclusive flat band: [-DAMAGE_VARIANCE_FLAT, +DAMAGE_VARIANCE_FLAT].
+            variance_delta = (
+                rng.below(2 * DAMAGE_VARIANCE_FLAT + 1) - DAMAGE_VARIANCE_FLAT
+            )
+            damage = max(1, damage + variance_delta)
+
         defender.hp = max(0, defender.hp - damage)
         actor.damage_dealt += damage
         status = {
@@ -290,6 +300,7 @@ def _apply_move(round_number, actor, defender, move, fallback, rng, ruleset_vers
             status["move_type"] = move_type
             status["type_multiplier"] = [type_mult[0], type_mult[1]]
             status["stab_multiplier"] = [stab_mult[0], stab_mult[1]]
+            status["damage_variance"] = variance_delta
             if status_payload:
                 status["passive"] = "zero_day"
             if status_firewall:

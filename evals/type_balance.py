@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Seeded type-balance simulation for Hermagotchi battle-2.
 
-Holds species/stats equal (byteblob body) and forces types so the chart +
-passives are isolated from species asymmetry. Uses the real combat engine.
+Uses the real combat engine with:
+  - equalised chassis (byteblob body + forced type) for chart fairness, AND
+  - varied tactic cards / stances so play-style noise interacts with variance.
 
-Under identical tactic cards the engine is deterministic, so a super-effective
-matchup is a near-hard counter (A-win ≈ 100%). Balance is judged by:
-  - each type's overall win rate ≈ 50% (no dominant type across the meta)
-  - SE directionality (SE attacker wins the pairwise)
-  - mirrors near 50%
+Targets (docs/TYPES.md):
+  - each type overall win rate within 50% ± 3%
+  - SE matchups: attacker wins 60–70%
+  - mirrors: 45–55%
 
 Usage:
   python3 evals/type_balance.py
-  python3 evals/type_balance.py --seeds 200 --json
+  python3 evals/type_balance.py --seeds 120 --json
 """
 
 from __future__ import annotations
@@ -36,20 +36,47 @@ from server.app.combat import (  # noqa: E402
 
 OVERALL_LO = 0.47
 OVERALL_HI = 0.53
-SE_DIR_LO = 0.90  # SE attacker should win the pairwise under equal tactics
+SE_LO = 0.60
+SE_HI = 0.70
 MIRROR_LO = 0.45
 MIRROR_HI = 0.55
 
+STANCES = ("balanced", "aggressive", "defensive", "control")
 
-def _card(stance: str = "balanced") -> dict:
-    return {
-        "ruleset_version": BATTLE_2_VERSION,
-        "stance": stance,
-        "actions": [
+
+def _deck(kind: str, stance: str) -> dict:
+    """Varied tactic cards so underdogs can steal games via play-style."""
+    actions = {
+        "strike": [
+            {"when": {"always": True}, "move": "basic_attack"},
+        ],
+        "special": [
             {"when": {"special_ready": True}, "move": "glitch_pulse"},
             {"when": {"always": True}, "move": "basic_attack"},
         ],
+        "pierce": [
+            {"when": {"opponent_guarding": True}, "move": "quick_strike"},
+            {"when": {"always": True}, "move": "basic_attack"},
+        ],
+        "turtle": [
+            {"when": {"self_hp_lte_pct": 40}, "move": "recover"},
+            {"when": {"self_hp_lte_pct": 70}, "move": "guard"},
+            {"when": {"always": True}, "move": "basic_attack"},
+        ],
+        "focus_spike": [
+            {"when": {"special_ready": True}, "move": "glitch_pulse"},
+            {"when": {"opponent_guarding": True}, "move": "focus"},
+            {"when": {"always": True}, "move": "basic_attack"},
+        ],
+    }[kind]
+    return {
+        "ruleset_version": BATTLE_2_VERSION,
+        "stance": stance,
+        "actions": actions,
     }
+
+
+DECK_KINDS = ("strike", "special", "pierce", "turtle", "focus_spike")
 
 
 def _pet(type_id: str) -> dict:
@@ -58,27 +85,30 @@ def _pet(type_id: str) -> dict:
 
 def _is_se(attacker: str, defender: str) -> bool:
     num, den = TYPE_CHART[attacker][defender]
-    return num * den > den * den  # num/den > 1 without floats: num > den
+    return num > den
 
 
 def run(seeds: int, base_seed: int = 10_000) -> dict:
-    stances = ("balanced", "aggressive", "defensive", "control")
     wins = defaultdict(int)
     games = defaultdict(int)
     matchup = defaultdict(lambda: {"a_wins": 0, "games": 0})
 
     for i in range(seeds):
         seed = base_seed + i
-        stance_a = stances[i % len(stances)]
-        stance_b = stances[(i // len(stances)) % len(stances)]
+        stance_a = STANCES[i % len(STANCES)]
+        stance_b = STANCES[(i // 2) % len(STANCES)]
+        deck_a = DECK_KINDS[i % len(DECK_KINDS)]
+        deck_b = DECK_KINDS[(i // 3) % len(DECK_KINDS)]
+        card_a = _deck(deck_a, stance_a)
+        card_b = _deck(deck_b, stance_b)
         for atype in TYPE_ORDER:
             for btype in TYPE_ORDER:
                 replay = resolve_match(
                     BATTLE_2_VERSION,
                     _pet(atype),
                     _pet(btype),
-                    _card(stance_a),
-                    _card(stance_b),
+                    card_a,
+                    card_b,
                     seed,
                 )
                 key = f"{atype}>{btype}"
@@ -113,6 +143,7 @@ def run(seeds: int, base_seed: int = 10_000) -> dict:
         "ruleset": BATTLE_2_VERSION,
         "seeds": seeds,
         "battles": seeds * len(TYPE_ORDER) * len(TYPE_ORDER),
+        "deck_kinds": list(DECK_KINDS),
         "overall_win_rate": overall,
         "matchup_a_win_rate": matchup_rates,
         "se_matchup_mean": sum(se_rates) / len(se_rates) if se_rates else 0.0,
@@ -121,7 +152,7 @@ def run(seeds: int, base_seed: int = 10_000) -> dict:
         ),
         "targets": {
             "overall": [OVERALL_LO, OVERALL_HI],
-            "se_direction": [SE_DIR_LO, 1.0],
+            "se_matchup": [SE_LO, SE_HI],
             "mirror": [MIRROR_LO, MIRROR_HI],
         },
     }
@@ -132,10 +163,9 @@ def run(seeds: int, base_seed: int = 10_000) -> dict:
             failures.append(
                 f"overall[{t}]={rate:.4f} outside {OVERALL_LO}-{OVERALL_HI}"
             )
-    if report["se_matchup_mean"] < SE_DIR_LO:
+    if not (SE_LO <= report["se_matchup_mean"] <= SE_HI):
         failures.append(
-            f"se_mean={report['se_matchup_mean']:.4f} below {SE_DIR_LO} "
-            "(SE attacker should win pairwise under equal tactics)"
+            f"se_mean={report['se_matchup_mean']:.4f} outside {SE_LO}-{SE_HI}"
         )
     if not (MIRROR_LO <= report["mirror_matchup_mean"] <= MIRROR_HI):
         failures.append(
@@ -149,7 +179,7 @@ def run(seeds: int, base_seed: int = 10_000) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--seeds", type=int, default=80)
+    parser.add_argument("--seeds", type=int, default=100)
     parser.add_argument("--base-seed", type=int, default=10_000)
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -159,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(
             f"battle-2 type balance — {report['battles']} battles "
-            f"({report['seeds']} seeds × 5×5)"
+            f"({report['seeds']} seeds × 5×5, varied decks/stances)"
         )
         print("overall win rates:")
         for t in TYPE_ORDER:

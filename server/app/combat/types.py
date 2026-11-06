@@ -12,13 +12,19 @@ TYPE_ORDER = ("signal", "kernel", "payload", "firewall", "glitch")
 TYPES = frozenset(TYPE_ORDER)
 
 # Attacker -> defender -> multiplier as (numerator, denominator) for integer math.
-# Sized for a 6-round / 100 HP format (milder than Pokémon main-series 2×/½).
-# SE 5/4 + STAB 5/4 = 25/16 ≈ 1.56×; NVE 4/5 + STAB 5/4 = 1× (resisted STAB
-# lands as neutral — coverage stays meaningful).
-SE = (5, 4)
-NVE = (4, 5)
+# Sized for a 6-round / 100 HP format with seeded flat damage variance so
+# type advantage matters without hard-countering (target ~60–70% SE win rate).
+# SE 17/16 + STAB 17/16 ≈ 1.13×; NVE 16/17 + STAB 17/16 = 1×.
+SE = (17, 16)
+NVE = (16, 17)
 NEUTRAL = (1, 1)
-STAB = (5, 4)
+STAB = (17, 16)
+
+# battle-2 only: each attack adds a seeded integer delta in
+# [-DAMAGE_VARIANCE_FLAT, +DAMAGE_VARIANCE_FLAT] after type/STAB.
+# Flat noise softens hard counters without the percent-roll feedback loop
+# that can amplify an already-SE hit. battle-1 never consumes this roll.
+DAMAGE_VARIANCE_FLAT = 5
 
 TYPE_CHART: dict[str, dict[str, tuple[int, int]]] = {}
 for i, atk in enumerate(TYPE_ORDER):
@@ -53,7 +59,7 @@ TYPE_PASSIVES = {
     },
     "glitch": {
         "id": "undefined",
-        "summary": "While HP ≤ 50%, +1 attack.",
+        "summary": "While HP ≤ 30%, +1 attack.",
     },
 }
 

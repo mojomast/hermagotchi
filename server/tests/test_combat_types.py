@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 from server.app.combat import (
     BATTLE_1_VERSION,
     BATTLE_2_VERSION,
+    DAMAGE_VARIANCE_FLAT,
     NVE,
     RULESET_VERSION,
     SE,
@@ -131,7 +132,7 @@ def test_battle_1_ignores_type_override():
 
 
 def test_battle_2_applies_type_multiplier_and_stab():
-    # Equal chassis; SE+STAB should out-damage NVE+STAB.
+    # Equal chassis; event records SE+STAB multipliers (winner may vary with variance).
     se = resolve_match(
         BATTLE_2_VERSION,
         pet("byteblob", "signal"),
@@ -140,11 +141,11 @@ def test_battle_2_applies_type_multiplier_and_stab():
         card(BATTLE_2_VERSION),
         99,
     )
-    assert se.winner == "a"
     hit = next(e for e in se.events if e["move"] == "basic_attack" and e["actor"] == "a")
     assert hit["status_delta"]["move_type"] == "signal"
     assert hit["status_delta"]["type_multiplier"] == [SE[0], SE[1]]
     assert hit["status_delta"]["stab_multiplier"] == [STAB[0], STAB[1]]
+    assert "damage_variance" in hit["status_delta"]
 
 
 def test_battle_2_defaults_type_from_species():
@@ -208,3 +209,79 @@ def test_battle_2_deterministic_across_seeds_sample():
         )
         assert a.replay_hash == b.replay_hash
         assert a.to_dict() == b.to_dict()
+
+
+def test_battle_2_damage_variance_is_seeded_and_bounded():
+    from server.app.combat import DAMAGE_VARIANCE_FLAT
+
+    card = {
+        "ruleset_version": BATTLE_2_VERSION,
+        "stance": "balanced",
+        "actions": [{"when": {"always": True}, "move": "basic_attack"}],
+    }
+    a = resolve_match(
+        BATTLE_2_VERSION,
+        pet("byteblob", "signal"),
+        pet("byteblob", "kernel"),
+        card,
+        card,
+        12345,
+    )
+    b = resolve_match(
+        BATTLE_2_VERSION,
+        pet("byteblob", "signal"),
+        pet("byteblob", "kernel"),
+        card,
+        card,
+        12345,
+    )
+    assert a.replay_hash == b.replay_hash
+    assert a.to_dict() == b.to_dict()
+    variances = [
+        e["status_delta"]["damage_variance"]
+        for e in a.events
+        if e["move"] == "basic_attack"
+    ]
+    assert variances
+    assert all(-DAMAGE_VARIANCE_FLAT <= v <= DAMAGE_VARIANCE_FLAT for v in variances)
+    # Different seed should usually diverge (almost always with variance).
+    c = resolve_match(
+        BATTLE_2_VERSION,
+        pet("byteblob", "signal"),
+        pet("byteblob", "kernel"),
+        card,
+        card,
+        99999,
+    )
+    assert c.replay_hash != a.replay_hash
+
+
+def test_battle_1_still_has_no_damage_variance_field():
+    replay = resolve_match(
+        BATTLE_1_VERSION,
+        pet("byteblob"),
+        pet("patchfox"),
+        None,
+        None,
+        7,
+    )
+    for event in replay.events:
+        if event["move"] in {"basic_attack", "quick_strike", "glitch_pulse"}:
+            assert "damage_variance" not in event["status_delta"]
+
+
+def test_type_balance_eval_meets_soft_counter_targets():
+    import sys
+    from pathlib import Path as P
+
+    root = P(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from evals.type_balance import run
+
+    report = run(seeds=80, base_seed=10_000)
+    assert report["ok"], report["failures"]
+    assert 0.60 <= report["se_matchup_mean"] <= 0.70
+    assert 0.45 <= report["mirror_matchup_mean"] <= 0.55
+    for rate in report["overall_win_rate"].values():
+        assert 0.47 <= rate <= 0.53
