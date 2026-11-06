@@ -40,3 +40,25 @@ def test_npc_pngs_match_manifest():
             import numpy as np
             alphas = set(np.asarray(im)[..., 3].ravel().tolist())
             assert alphas <= {0, 255}, (rel, alphas)
+
+def test_npc_no_green_fringe_on_nous_and_don():
+    import numpy as np
+    from scipy import ndimage
+    for key in ("nous_girl", "don_piedro", "southpaw"):
+        im = np.asarray(Image.open(A / f"px3/npcs/{key}_portrait.png"))
+        m = im[..., 3] > 128
+        edge = m & ~ndimage.binary_erosion(m, iterations=2)
+        gdom = (im[..., 1].astype(int) - np.maximum(im[..., 0], im[..., 2])) > 25
+        assert (edge & gdom).sum() == 0, key
+
+def test_teknium_hair_has_teal_not_white_dominant():
+    import numpy as np
+    im = np.asarray(Image.open(A / "px3/npcs/teknium_portrait.png"))
+    # top-center crop ~ hair
+    crop = im[40:220, 160:360]
+    m = crop[..., 3] > 128
+    rgb = crop[m, :3].astype(float)
+    teal = (rgb[:, 1] > 90) & (rgb[:, 2] > 70) & (rgb[:, 0] < 160) & ((rgb[:, 1] + rgb[:, 2]) / 2 > rgb[:, 0] + 20)
+    white = rgb.min(1) > 220
+    assert teal.mean() > 0.08, teal.mean()
+    assert teal.mean() > white.mean() * 0.5
