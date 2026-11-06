@@ -26,7 +26,9 @@ function ChatOffStub(props) {
     className: "hg-chat",
     "data-tab": "chat",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "chat" }),
       jsxs("div", {
         className: "hg-card",
@@ -276,7 +278,9 @@ function ChatLive(props) {
     "data-tab": "chat",
     "data-chat-mode": "live",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       notice
         ? jsx(NpcHostBanner, {
             surface: "chat.moderation",

@@ -38,8 +38,11 @@ function stripStyle(url, clip, frameIndex) {
     Number(clip && clip.frame_count) ||
       (clip && Array.isArray(clip.frames) ? clip.frames.length : 1)
   );
-  const position =
-    count > 1 ? (Math.max(0, frameIndex) / (count - 1)) * 100 : 0;
+  const countSafe = Math.max(1, count);
+  const pos =
+    countSafe > 1
+      ? (Math.max(0, Math.min(frameIndex, countSafe - 1)) / (countSafe - 1)) * 100
+      : 0;
   return {
     position: "absolute",
     inset: "0",
@@ -47,8 +50,8 @@ function stripStyle(url, clip, frameIndex) {
     height: "100%",
     backgroundImage: "url(" + JSON.stringify(url) + ")",
     backgroundRepeat: "no-repeat",
-    backgroundSize: count * 100 + "% 100%",
-    backgroundPosition: String(position) + "% 0%",
+    backgroundSize: String(countSafe * 100) + "% 100%",
+    backgroundPosition: String(pos) + "% 0%",
     imageRendering: "pixelated",
     zIndex: "0",
     pointerEvents: "none",
@@ -205,7 +208,7 @@ export function PetPreview(props = {}) {
       role: "img",
       "aria-label": props.label || "Pet preview",
       "data-preview-empty": "true",
-      style: { width: props.size || "256px", height: props.size || "256px" },
+      style: { width: props.size || "100%", height: props.size || "100%" },
       children: "?",
     });
   }
@@ -213,7 +216,7 @@ export function PetPreview(props = {}) {
   const label =
     props.label ||
     (pet && pet.name ? pet.name + " preview" : "Pet preview");
-  const spriteSize = props.size || "256px";
+  const spriteSize = props.size || "100%";
   const anchors = followAnchors();
   const numericSize = parseFloat(spriteSize);
   const nativeSize = Number(contract && contract.native_size) || 32;

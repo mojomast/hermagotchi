@@ -279,8 +279,8 @@ const UI_STATES = Object.freeze({
 
 const UI_STATE_COPY = Object.freeze({
   ready: {
-    label: "Ready",
-    detail: "Local sources loaded. Live data appears when the backend and network are enabled.",
+    label: "Live",
+    detail: "Paired and connected to the game service.",
     action: "",
   },
   backend_disabled: {
@@ -331,9 +331,14 @@ function StateNotice(props = {}) {
   const copy = UI_STATE_COPY[state] || UI_STATE_COPY.ready;
 
   if (state === UI_STATES.READY) {
+    // Compact live badge — tabs should skip rendering this to avoid a duplicate.
+    if (props.compact === false) {
+      return null;
+    }
     return jsx("p", {
       className: "hg-state hg-state--ready",
       "data-ui-state": state,
+      "data-live": "true",
       children: copy.detail,
     });
   }
@@ -1070,8 +1075,11 @@ function stripStyle(url, clip, frameIndex) {
     Number(clip && clip.frame_count) ||
       (clip && Array.isArray(clip.frames) ? clip.frames.length : 1)
   );
-  const position =
-    count > 1 ? (Math.max(0, frameIndex) / (count - 1)) * 100 : 0;
+  const countSafe = Math.max(1, count);
+  const pos =
+    countSafe > 1
+      ? (Math.max(0, Math.min(frameIndex, countSafe - 1)) / (countSafe - 1)) * 100
+      : 0;
   return {
     position: "absolute",
     inset: "0",
@@ -1079,8 +1087,8 @@ function stripStyle(url, clip, frameIndex) {
     height: "100%",
     backgroundImage: "url(" + JSON.stringify(url) + ")",
     backgroundRepeat: "no-repeat",
-    backgroundSize: count * 100 + "% 100%",
-    backgroundPosition: String(position) + "% 0%",
+    backgroundSize: String(countSafe * 100) + "% 100%",
+    backgroundPosition: String(pos) + "% 0%",
     imageRendering: "pixelated",
     zIndex: "0",
     pointerEvents: "none",
@@ -1237,7 +1245,7 @@ function PetPreview(props = {}) {
       role: "img",
       "aria-label": props.label || "Pet preview",
       "data-preview-empty": "true",
-      style: { width: props.size || "256px", height: props.size || "256px" },
+      style: { width: props.size || "100%", height: props.size || "100%" },
       children: "?",
     });
   }
@@ -1245,7 +1253,7 @@ function PetPreview(props = {}) {
   const label =
     props.label ||
     (pet && pet.name ? pet.name + " preview" : "Pet preview");
-  const spriteSize = props.size || "256px";
+  const spriteSize = props.size || "100%";
   const anchors = followAnchors();
   const numericSize = parseFloat(spriteSize);
   const nativeSize = Number(contract && contract.native_size) || 32;
@@ -1821,7 +1829,9 @@ function StubBattle(props) {
     className: "hg-battle",
     "data-tab": "battle",
     children: [
-      jsx(StateNotice, { state: props.state }),
+      props.state && props.state !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.state })
+        : null,
       jsx(NpcHostBanner, {
         surface: "battle",
         assetBaseUrl: props.assetBaseUrl,
@@ -2019,7 +2029,9 @@ function BattleTab(props = {}) {
     className: "hg-battle",
     "data-tab": "battle",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, {
         surface: "battle",
         assetBaseUrl: assetBaseUrl,
@@ -2133,7 +2145,7 @@ function BattleTab(props = {}) {
                 : null,
               previewPet
                 ? jsx("div", {
-                    className: "hg-pet-card__art",
+                    className: "hg-pet-card__art hg-battle-preview",
                     "data-battle-anim-state": previewAnimState,
                     children: jsx(PetPreview, {
                       pet: previewPet,
@@ -2453,7 +2465,9 @@ function ChatOffStub(props) {
     className: "hg-chat",
     "data-tab": "chat",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "chat" }),
       jsxs("div", {
         className: "hg-card",
@@ -2703,7 +2717,9 @@ function ChatLive(props) {
     "data-tab": "chat",
     "data-chat-mode": "live",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       notice
         ? jsx(NpcHostBanner, {
             surface: "chat.moderation",
@@ -3120,7 +3136,9 @@ function StubHabitat(props) {
     className: "hg-habitat",
     "data-tab": "habitat",
     children: [
-      jsx(StateNotice, { state: props.uiState }),
+      props.uiState && props.uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.uiState })
+        : null,
       jsx(NpcHostBanner, {
         surface: "habitat",
         assetBaseUrl: props.assetBaseUrl,
@@ -3391,7 +3409,9 @@ function HabitatTab(props = {}) {
     className: "hg-habitat",
     "data-tab": "habitat",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, {
         surface: "habitat",
         assetBaseUrl: assetBaseUrl,
@@ -3915,7 +3935,9 @@ function LeaderboardTab(props = {}) {
     className: "hg-leaderboard",
     "data-tab": "leaderboard",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "leaderboard" }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
@@ -4572,7 +4594,9 @@ function SettingsStub(props) {
     className: "hg-settings",
     "data-tab": "settings",
     children: [
-      jsx(StateNotice, { state: props.uiState }),
+      props.uiState && props.uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "settings" }),
       jsxs("div", {
         className: "hg-card",
@@ -5091,7 +5115,9 @@ function StubShop(props) {
     className: "hg-shop",
     "data-tab": "shop",
     children: [
-      jsx(StateNotice, { state: props.uiState }),
+      props.uiState && props.uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "shop" }),
       jsxs("div", {
         className: "hg-card",
@@ -5167,8 +5193,9 @@ function itemThumbPath(item, manifest) {
   if (item.assetUrl) {
     return String(item.assetUrl);
   }
-  // Prefer an empty thumb over a guessed path that 404s for launch-001-only ids.
-  return "";
+  const id = String((item && (item.assetId || item.id)) || "");
+  const shortName = id.includes(".") ? id.slice(id.lastIndexOf(".") + 1) : id;
+  return shortName ? "px3/items/" + shortName + ".png" : "";
 }
 
 function joinShopAssetUrl(assetBase, relativePath) {
@@ -5192,16 +5219,22 @@ function ShopCard(props) {
   const busy = props.busy;
   const thumb = props.thumb;
   const equipped = availability.equipped;
+  const selected = Boolean(props.selected);
 
   return jsxs("article", {
     className:
       "hg-shop-card" +
       (item.owned ? " hg-shop-card--owned" : "") +
-      (equipped ? " hg-shop-card--equipped" : ""),
+      (equipped ? " hg-shop-card--equipped" : "") +
+      (selected ? " hg-shop-card--selected" : ""),
     "data-item-id": item.id,
     "data-slot": item.slot,
     "data-owned": item.owned ? "true" : "false",
     "data-equipped": equipped ? "true" : "false",
+    "data-selected": selected ? "true" : "false",
+    onClick: function () {
+      if (typeof props.onSelect === "function") props.onSelect(item);
+    },
     children: [
       jsx("div", {
         className: "hg-shop-card__thumb",
@@ -5304,6 +5337,7 @@ function ShopTab(props = {}) {
   );
   const [pet, setPet] = useState(props.pet || null);
   const [loadout, setLoadout] = useState(props.loadout || {});
+  const [selectedItem, setSelectedItem] = useState(null);
   const [owned, setOwned] = useState(new Set());
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -5526,7 +5560,9 @@ function ShopTab(props = {}) {
     className: "hg-shop",
     "data-tab": "shop",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "shop" }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
@@ -5555,14 +5591,22 @@ function ShopTab(props = {}) {
         className: "hg-card",
         children: [
           jsx("h3", { children: "Pet preview" }),
-          jsx(PetPreview, {
-            pet,
-            loadout,
-            catalog,
-            manifest,
-            assetBaseUrl: props.assetBaseUrl || assetBase,
-            label: (pet && pet.name ? pet.name : "Pet") + " loadout preview",
-          }),
+          jsx("div", {
+              className: "hg-shop-preview",
+              children: jsx(PetPreview, {
+              pet,
+              loadout: (function () {
+                if (!selectedItem) return loadout;
+                const next = Object.assign({}, loadout || {});
+                next[selectedItem.slot] = selectedItem.id;
+                return next;
+              })(),
+              catalog,
+              manifest,
+              assetBaseUrl: props.assetBaseUrl || assetBase,
+              label: (pet && pet.name ? pet.name : "Pet") + " loadout preview",
+            }),
+            }),
         ],
       }),
       jsxs("div", {
@@ -5647,6 +5691,8 @@ function ShopTab(props = {}) {
                       busy,
                       petId,
                       thumb: itemThumbUrl(assetBase, item, manifest),
+                      selected: selectedItem && selectedItem.id === item.id,
+                      onSelect: setSelectedItem,
                       onBuy: buy,
                       onEquip: equip,
                       onUnequip: unequip,
@@ -6248,7 +6294,7 @@ const __m25 = (function () {
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  height: auto;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 1px dashed var(--hg-border);\n  background: #0d1020;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 160px;\n  height: 160px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 1px dashed var(--hg-border);\n  background: #0d1020;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;

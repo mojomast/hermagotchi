@@ -152,7 +152,9 @@ function SettingsStub(props) {
     className: "hg-settings",
     "data-tab": "settings",
     children: [
-      jsx(StateNotice, { state: props.uiState }),
+      props.uiState && props.uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "settings" }),
       jsxs("div", {
         className: "hg-card",

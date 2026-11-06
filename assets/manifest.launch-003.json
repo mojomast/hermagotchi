@@ -460,151 +460,6 @@
   },
   "assets": [
     {
-      "id": "hat.binary_crown",
-      "slot": "head",
-      "path": "px3/items/binary_crown.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 30,
-      "anchor": "head",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Chunky gold crown with a red gem. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "05c557a503702c9e3b020a3e23625e13ec47125ba9efda9f7e9b8efc120cf9f1",
-      "occludes": [
-        "ear_base"
-      ]
-    },
-    {
-      "id": "hat.propeller_beanie",
-      "slot": "head",
-      "path": "px3/items/propeller_beanie.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 30,
-      "anchor": "head",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Red/yellow propeller cap. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "7e297ad722a3b2aef2d1f2f9bbf9fd7aa8d4205d59b4e1bce2796690d17a8e9c",
-      "occludes": [
-        "ear_base"
-      ]
-    },
-    {
-      "id": "hat.syntax_wizard",
-      "slot": "head",
-      "path": "px3/items/syntax_wizard.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 30,
-      "anchor": "head",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Blue wizard hat with star dots. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "b7331b5a510eb6af8331f08775842b201c59e50fbc987240488f833a37582b86",
-      "occludes": [
-        "ear_base"
-      ]
-    },
-    {
-      "id": "face.pixel_shades",
-      "slot": "face",
-      "path": "px3/items/pixel_shades.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 20,
-      "anchor": "face",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Black shades with glints. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "6da1b562a836ac67401e1c41259c9a09d189e41453c44cee9cdcb3ef188b4913"
-    },
-    {
-      "id": "face.gold_monocle",
-      "slot": "face",
-      "path": "px3/items/gold_monocle.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 20,
-      "anchor": "face",
-      "offset_px": [
-        48,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Gold monocle on a stalk. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "93f85ab46785c804d231850240aa641a7b3894ac0deedbbd13237ab11ef34b84"
-    },
-    {
-      "id": "back.circuit_wings",
-      "slot": "back",
-      "path": "px3/items/circuit_wings.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": -10,
-      "anchor": "back",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Blocky cyan robot wings. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "cf99f6554c78e68ba31718924ee67a7b45052b3c317b65dbe358ac337f105e53"
-    },
-    {
-      "id": "back.tiny_jetpack",
-      "slot": "back",
-      "path": "px3/items/tiny_jetpack.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": -10,
-      "anchor": "back",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.0,
-      "notes": "Wide twin-tank jetpack. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "0c93796ba5543dea12b35172fdab8ffdc0bbf6b5e5ad97cf08e2728282c3601c"
-    },
-    {
-      "id": "aura.ember_halo",
-      "slot": "aura",
-      "path": "px3/items/ember_halo.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": -30,
-      "anchor": "face",
-      "offset_px": [
-        0,
-        0
-      ],
-      "scale": 1.25,
-      "notes": "Magenta pixel flame ring. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "4a694b890a20e3eab3776e04df67d12ec8f2afa47a2998c51c6f0378bcae6eb7"
-    },
-    {
       "id": "aura.data_orbit",
       "slot": "aura",
       "path": "px3/items/data_orbit.png",
@@ -622,72 +477,21 @@
       "sha256": "4fa9b77f84a0fc7604ce1eea16642334523571b796fba5bdc4528b312e8aab50"
     },
     {
-      "id": "front.cozy_scarf",
-      "slot": "front",
-      "path": "px3/items/cozy_scarf.png",
+      "id": "aura.ember_halo",
+      "slot": "aura",
+      "path": "px3/items/ember_halo.png",
       "rig_families": [
         "small_front_v1"
       ],
-      "z": 40,
-      "anchor": "front",
+      "z": -30,
+      "anchor": "face",
       "offset_px": [
         0,
         0
       ],
-      "scale": 1.0,
-      "notes": "Red striped scarf. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "f5735888e1b700b36aeb6909ac7818de069f537fd33b09d9a32a95fddfce9f32"
-    },
-    {
-      "id": "emote.heart_bubble",
-      "slot": "emote",
-      "path": "px3/items/heart_bubble.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 50,
-      "anchor": "head",
-      "offset_px": [
-        128,
-        -48
-      ],
-      "scale": 1.0,
-      "notes": "Heart speech-bubble emote. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "c98d3a5d539b15cdee710103f34f9224445b55a200889cf9cd65d4e759cc9e8f"
-    },
-    {
-      "id": "habitat.plush_cushion",
-      "slot": "habitat",
-      "path": "px3/items/plush_cushion.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": -20,
-      "anchor": "ground",
-      "offset_px": [
-        0,
-        -16
-      ],
-      "scale": 1.0,
-      "notes": "Mustard floor cushion. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "0197b93f17eb3dd2fbf6fd11f27d3f1418b96a8a6e0585762e94efaed2996bd7"
-    },
-    {
-      "id": "title.royal_ribbon",
-      "slot": "title",
-      "path": "px3/items/royal_ribbon.png",
-      "rig_families": [
-        "small_front_v1"
-      ],
-      "z": 50,
-      "anchor": "ground",
-      "offset_px": [
-        0,
-        32
-      ],
-      "scale": 1.0,
-      "notes": "Blank purple ribbon (client draws text). 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "4b7acf2ccb85a7acf25a983b22abae022c89a64f047414e9d6bef6a4fdca75fe"
+      "scale": 1.25,
+      "notes": "Magenta pixel flame ring. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "4a694b890a20e3eab3776e04df67d12ec8f2afa47a2998c51c6f0378bcae6eb7"
     },
     {
       "id": "aura.flame_wall",
@@ -826,6 +630,23 @@
       "sha256": "fce7d988ce4050d04448bf1b4b99eb96060ac87687bf320652907911c071fa5d"
     },
     {
+      "id": "aura.spark_aura",
+      "slot": "aura",
+      "path": "px3/items/spark_aura.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "61c77fca6aa1dc36f88706360dbc377bea9495c3c206127ba6e98481a4cf5526"
+    },
+    {
       "id": "aura.spark_trail",
       "slot": "aura",
       "path": "px3/items/spark_trail.png",
@@ -945,6 +766,40 @@
       "sha256": "63b9cbafbab1f491991da7cb56ec69ba82cbcb91ac7445c8b79188f1d24300aa"
     },
     {
+      "id": "back.circuit_cape",
+      "slot": "back",
+      "path": "px3/items/circuit_cape.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "58ad1990ea8463b96fd85ed79723b53910709d0948ccde2daf4fb1d55f35c617"
+    },
+    {
+      "id": "back.circuit_wings",
+      "slot": "back",
+      "path": "px3/items/circuit_wings.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Blocky cyan robot wings. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "cf99f6554c78e68ba31718924ee67a7b45052b3c317b65dbe358ac337f105e53"
+    },
+    {
       "id": "back.docker_whale",
       "slot": "back",
       "path": "px3/items/docker_whale.png",
@@ -1013,6 +868,23 @@
       "sha256": "7c509201183d8ab002bb7e08e1e42af235936eb106806c8f5773bb74f432ec96"
     },
     {
+      "id": "back.tiny_jetpack",
+      "slot": "back",
+      "path": "px3/items/tiny_jetpack.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Wide twin-tank jetpack. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "0c93796ba5543dea12b35172fdab8ffdc0bbf6b5e5ad97cf08e2728282c3601c"
+    },
+    {
       "id": "back.webhook_wings",
       "slot": "back",
       "path": "px3/items/webhook_wings.png",
@@ -1030,6 +902,40 @@
       "sha256": "4b4533517902fc298c24dc123ad9ebf2b535e7afc4b053e115c1d92a655c7ca3"
     },
     {
+      "id": "emote.heart_bubble",
+      "slot": "emote",
+      "path": "px3/items/heart_bubble.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 50,
+      "anchor": "head",
+      "offset_px": [
+        128,
+        -48
+      ],
+      "scale": 1.0,
+      "notes": "Heart speech-bubble emote. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "c98d3a5d539b15cdee710103f34f9224445b55a200889cf9cd65d4e759cc9e8f"
+    },
+    {
+      "id": "emote.sparkle",
+      "slot": "emote",
+      "path": "px3/items/sparkle.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 50,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "1d773bd58e51a30b8c4c4f4551cc3190e9a92d9c69b9b713977da020ffee096e"
+    },
+    {
       "id": "face.bug_eye",
       "slot": "face",
       "path": "px3/items/bug_eye.png",
@@ -1045,6 +951,23 @@
       "scale": 1.0,
       "notes": "Bug-Eye Goggles. Hand-authored 32-grid cosmetic.",
       "sha256": "beebb5294cad9a25112092354a3fe1a591c0c174a99b1a94663bb68312f50bcf"
+    },
+    {
+      "id": "face.gold_monocle",
+      "slot": "face",
+      "path": "px3/items/gold_monocle.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        48,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Gold monocle on a stalk. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "93f85ab46785c804d231850240aa641a7b3894ac0deedbbd13237ab11ef34b84"
     },
     {
       "id": "face.happy_path",
@@ -1149,6 +1072,23 @@
       "sha256": "b7f9f82e3abdecd8d04d740df7a45c3d2a29ec01afcc3530009730dd8ed2eecb"
     },
     {
+      "id": "face.pixel_shades",
+      "slot": "face",
+      "path": "px3/items/pixel_shades.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Black shades with glints. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "6da1b562a836ac67401e1c41259c9a09d189e41453c44cee9cdcb3ef188b4913"
+    },
+    {
       "id": "face.privacy_mask",
       "slot": "face",
       "path": "px3/items/privacy_mask.png",
@@ -1181,6 +1121,23 @@
       "scale": 1.0,
       "notes": "Regex Rims. Hand-authored 32-grid cosmetic.",
       "sha256": "ef8ac1ffa16d5949360f83d73bb388017f1f7a77518d325de737e0b7d57aff5d"
+    },
+    {
+      "id": "face.scan_visor",
+      "slot": "face",
+      "path": "px3/items/scan_visor.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "c7378be61faf10dbb24c6299a7afacf0c33b91656b7b31df02bbe57deadeb1ec"
     },
     {
       "id": "face.stack_trace",
@@ -1319,6 +1276,23 @@
       "sha256": "6609009615c24a893391a5a59c1a0ad3cd2d16deeefa4d940bc9bf5c90a78a34"
     },
     {
+      "id": "front.cozy_scarf",
+      "slot": "front",
+      "path": "px3/items/cozy_scarf.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Red striped scarf. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "f5735888e1b700b36aeb6909ac7818de069f537fd33b09d9a32a95fddfce9f32"
+    },
+    {
       "id": "front.flag",
       "slot": "front",
       "path": "px3/items/flag.png",
@@ -1385,6 +1359,23 @@
       "scale": 1.0,
       "notes": "Uptime Medal. Hand-authored 32-grid cosmetic.",
       "sha256": "5edc1940955375f20397c4280f0b765f10f462dd0a4211f08cb7dc72e401ccd3"
+    },
+    {
+      "id": "front.pixel_badge",
+      "slot": "front",
+      "path": "px3/items/pixel_badge.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "10778c46af5fb3f462642e8c03a3f53eec142d51b2abebb2315d12192c8c790d"
     },
     {
       "id": "front.pixel_blade",
@@ -1504,6 +1495,60 @@
       "scale": 1.0,
       "notes": "USB Sword. Hand-authored 32-grid cosmetic.",
       "sha256": "e31a15f7511503351c8ff1acd3339f8d98c3f72b7aceed6a9a942b019998d551"
+    },
+    {
+      "id": "habitat.glow_moss",
+      "slot": "habitat",
+      "path": "px3/items/glow_moss.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -20,
+      "anchor": "ground",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "54ae52adb6adb1c86adaa168c2566dabc175eae0dfcdeb3593f64b1e2d3ac834"
+    },
+    {
+      "id": "habitat.plush_cushion",
+      "slot": "habitat",
+      "path": "px3/items/plush_cushion.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -20,
+      "anchor": "ground",
+      "offset_px": [
+        0,
+        -16
+      ],
+      "scale": 1.0,
+      "notes": "Mustard floor cushion. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "0197b93f17eb3dd2fbf6fd11f27d3f1418b96a8a6e0585762e94efaed2996bd7"
+    },
+    {
+      "id": "hat.binary_crown",
+      "slot": "head",
+      "path": "px3/items/binary_crown.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Chunky gold crown with a red gem. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "05c557a503702c9e3b020a3e23625e13ec47125ba9efda9f7e9b8efc120cf9f1",
+      "occludes": [
+        "ear_base"
+      ]
     },
     {
       "id": "hat.bloom_filter",
@@ -1686,6 +1731,26 @@
       ]
     },
     {
+      "id": "hat.propeller_beanie",
+      "slot": "head",
+      "path": "px3/items/propeller_beanie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Red/yellow propeller cap. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "7e297ad722a3b2aef2d1f2f9bbf9fd7aa8d4205d59b4e1bce2796690d17a8e9c",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
       "id": "hat.rss_antenna",
       "slot": "head",
       "path": "px3/items/rss_antenna.png",
@@ -1726,6 +1791,26 @@
       ]
     },
     {
+      "id": "hat.syntax_wizard",
+      "slot": "head",
+      "path": "px3/items/syntax_wizard.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Blue wizard hat with star dots. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "b7331b5a510eb6af8331f08775842b201c59e50fbc987240488f833a37582b86",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
       "id": "hat.topo_beanie",
       "slot": "head",
       "path": "px3/items/topo_beanie.png",
@@ -1744,6 +1829,57 @@
       "occludes": [
         "ear_base"
       ]
+    },
+    {
+      "id": "hat.wizard_hat",
+      "slot": "head",
+      "path": "px3/items/wizard_hat.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "2c1b3b761edaeafeec60cac16a82d05a939b4fb2510d8e5acd229f3ac13ebeac"
+    },
+    {
+      "id": "title.pixel_pilot",
+      "slot": "title",
+      "path": "px3/items/pixel_pilot.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 50,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "f2d06c5e4de11898f30adcb9056a009c4e071c35e1e65da52efcfc2ed7cd14f7"
+    },
+    {
+      "id": "title.royal_ribbon",
+      "slot": "title",
+      "path": "px3/items/royal_ribbon.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 50,
+      "anchor": "ground",
+      "offset_px": [
+        0,
+        32
+      ],
+      "scale": 1.0,
+      "notes": "Blank purple ribbon (client draws text). 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "4b7acf2ccb85a7acf25a983b22abae022c89a64f047414e9d6bef6a4fdca75fe"
     }
   ],
   "animations": {

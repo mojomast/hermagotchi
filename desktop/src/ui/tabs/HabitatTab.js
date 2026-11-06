@@ -77,7 +77,9 @@ function StubHabitat(props) {
     className: "hg-habitat",
     "data-tab": "habitat",
     children: [
-      jsx(StateNotice, { state: props.uiState }),
+      props.uiState && props.uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.uiState })
+        : null,
       jsx(NpcHostBanner, {
         surface: "habitat",
         assetBaseUrl: props.assetBaseUrl,
@@ -348,7 +350,9 @@ export function HabitatTab(props = {}) {
     className: "hg-habitat",
     "data-tab": "habitat",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, {
         surface: "habitat",
         assetBaseUrl: assetBaseUrl,

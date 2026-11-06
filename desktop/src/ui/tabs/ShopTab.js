@@ -67,7 +67,9 @@ function StubShop(props) {
     className: "hg-shop",
     "data-tab": "shop",
     children: [
-      jsx(StateNotice, { state: props.uiState }),
+      props.uiState && props.uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "shop" }),
       jsxs("div", {
         className: "hg-card",
@@ -143,8 +145,9 @@ function itemThumbPath(item, manifest) {
   if (item.assetUrl) {
     return String(item.assetUrl);
   }
-  // Prefer an empty thumb over a guessed path that 404s for launch-001-only ids.
-  return "";
+  const id = String((item && (item.assetId || item.id)) || "");
+  const shortName = id.includes(".") ? id.slice(id.lastIndexOf(".") + 1) : id;
+  return shortName ? "px3/items/" + shortName + ".png" : "";
 }
 
 function joinShopAssetUrl(assetBase, relativePath) {
@@ -168,16 +171,22 @@ function ShopCard(props) {
   const busy = props.busy;
   const thumb = props.thumb;
   const equipped = availability.equipped;
+  const selected = Boolean(props.selected);
 
   return jsxs("article", {
     className:
       "hg-shop-card" +
       (item.owned ? " hg-shop-card--owned" : "") +
-      (equipped ? " hg-shop-card--equipped" : ""),
+      (equipped ? " hg-shop-card--equipped" : "") +
+      (selected ? " hg-shop-card--selected" : ""),
     "data-item-id": item.id,
     "data-slot": item.slot,
     "data-owned": item.owned ? "true" : "false",
     "data-equipped": equipped ? "true" : "false",
+    "data-selected": selected ? "true" : "false",
+    onClick: function () {
+      if (typeof props.onSelect === "function") props.onSelect(item);
+    },
     children: [
       jsx("div", {
         className: "hg-shop-card__thumb",
@@ -280,6 +289,7 @@ export function ShopTab(props = {}) {
   );
   const [pet, setPet] = useState(props.pet || null);
   const [loadout, setLoadout] = useState(props.loadout || {});
+  const [selectedItem, setSelectedItem] = useState(null);
   const [owned, setOwned] = useState(new Set());
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -502,7 +512,9 @@ export function ShopTab(props = {}) {
     className: "hg-shop",
     "data-tab": "shop",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "shop" }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
@@ -531,14 +543,22 @@ export function ShopTab(props = {}) {
         className: "hg-card",
         children: [
           jsx("h3", { children: "Pet preview" }),
-          jsx(PetPreview, {
-            pet,
-            loadout,
-            catalog,
-            manifest,
-            assetBaseUrl: props.assetBaseUrl || assetBase,
-            label: (pet && pet.name ? pet.name : "Pet") + " loadout preview",
-          }),
+          jsx("div", {
+              className: "hg-shop-preview",
+              children: jsx(PetPreview, {
+              pet,
+              loadout: (function () {
+                if (!selectedItem) return loadout;
+                const next = Object.assign({}, loadout || {});
+                next[selectedItem.slot] = selectedItem.id;
+                return next;
+              })(),
+              catalog,
+              manifest,
+              assetBaseUrl: props.assetBaseUrl || assetBase,
+              label: (pet && pet.name ? pet.name : "Pet") + " loadout preview",
+            }),
+            }),
         ],
       }),
       jsxs("div", {
@@ -623,6 +643,8 @@ export function ShopTab(props = {}) {
                       busy,
                       petId,
                       thumb: itemThumbUrl(assetBase, item, manifest),
+                      selected: selectedItem && selectedItem.id === item.id,
+                      onSelect: setSelectedItem,
                       onBuy: buy,
                       onEquip: equip,
                       onUnequip: unequip,

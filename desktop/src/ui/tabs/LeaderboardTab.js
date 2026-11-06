@@ -210,7 +210,9 @@ export function LeaderboardTab(props = {}) {
     className: "hg-leaderboard",
     "data-tab": "leaderboard",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, { surface: "leaderboard" }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })

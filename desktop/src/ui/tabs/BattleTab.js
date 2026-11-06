@@ -94,7 +94,9 @@ function StubBattle(props) {
     className: "hg-battle",
     "data-tab": "battle",
     children: [
-      jsx(StateNotice, { state: props.state }),
+      props.state && props.state !== UI_STATES.READY
+        ? jsx(StateNotice, { state: props.state })
+        : null,
       jsx(NpcHostBanner, {
         surface: "battle",
         assetBaseUrl: props.assetBaseUrl,
@@ -292,7 +294,9 @@ export function BattleTab(props = {}) {
     className: "hg-battle",
     "data-tab": "battle",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
       jsx(NpcHostBanner, {
         surface: "battle",
         assetBaseUrl: assetBaseUrl,
@@ -406,7 +410,7 @@ export function BattleTab(props = {}) {
                 : null,
               previewPet
                 ? jsx("div", {
-                    className: "hg-pet-card__art",
+                    className: "hg-pet-card__art hg-battle-preview",
                     "data-battle-anim-state": previewAnimState,
                     children: jsx(PetPreview, {
                       pet: previewPet,

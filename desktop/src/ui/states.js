@@ -10,8 +10,8 @@ export const UI_STATES = Object.freeze({
 
 export const UI_STATE_COPY = Object.freeze({
   ready: {
-    label: "Ready",
-    detail: "Local sources loaded. Live data appears when the backend and network are enabled.",
+    label: "Live",
+    detail: "Paired and connected to the game service.",
     action: "",
   },
   backend_disabled: {
@@ -62,9 +62,14 @@ export function StateNotice(props = {}) {
   const copy = UI_STATE_COPY[state] || UI_STATE_COPY.ready;
 
   if (state === UI_STATES.READY) {
+    // Compact live badge — tabs should skip rendering this to avoid a duplicate.
+    if (props.compact === false) {
+      return null;
+    }
     return jsx("p", {
       className: "hg-state hg-state--ready",
       "data-ui-state": state,
+      "data-live": "true",
       children: copy.detail,
     });
   }

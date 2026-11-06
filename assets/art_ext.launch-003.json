@@ -7382,6 +7382,694 @@
           "sha256": "0f4e654e02a1393df0f21fdcf7c0ac9a72ebe2f7d42af5e0e2132f9eb6820394"
         }
       ]
+    },
+    "hat.wizard_hat": {
+      "slot": "head",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "face.scan_visor": {
+      "slot": "face",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "back.circuit_cape": {
+      "slot": "back",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -2,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "front.pixel_badge": {
+      "slot": "front",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "aura.spark_aura": {
+      "slot": "aura",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "emote.sparkle": {
+      "slot": "emote",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "habitat.glow_moss": {
+      "slot": "habitat",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
+    },
+    "title.pixel_pilot": {
+      "slot": "title",
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "source": "hand-drawn-w9-glue"
     }
   },
   "animations": {

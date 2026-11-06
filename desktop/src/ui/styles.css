@@ -358,12 +358,48 @@
 .hg-pet-card__art {
   width: 96px;
   height: 96px;
+  flex: 0 0 96px;
   display: grid;
   place-items: center;
   border: 2px dashed var(--hg-border-bright);
   background: var(--hg-bg-sunken);
   color: var(--hg-muted);
   font-size: 2rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.hg-pet-card__art .hg-sprite,
+.hg-shop-preview .hg-sprite,
+.hg-battle-preview .hg-sprite {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+.hg-shop-preview {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--hg-border-bright);
+  background: var(--hg-bg-sunken);
+  overflow: hidden;
+  position: relative;
+}
+
+.hg-battle-preview {
+  width: 128px;
+  height: 128px;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--hg-border-bright);
+  background: var(--hg-bg-sunken);
+  overflow: hidden;
+  position: relative;
 }
 
 .hg-pet-card__meta {
@@ -391,7 +427,9 @@
   image-rendering: crisp-edges;
   image-rendering: pixelated;
   max-width: 100%;
-  height: auto;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
 .hg-sprite img,
@@ -474,6 +512,11 @@
   border: 2px solid var(--hg-border);
   background: var(--hg-bg-sunken);
   padding: 8px;
+}
+
+.hg-shop-card--selected {
+  border-color: var(--hg-accent, #5dffb0);
+  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);
 }
 
 .hg-shop-card--equipped {
