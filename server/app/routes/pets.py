@@ -18,18 +18,43 @@ from ..db import account_exists, get_current_account_id, get_db, utc_now_iso
 
 router = APIRouter(tags=["pets"])
 
-Species = Literal["byteblob", "patchfox", "nullgeist"]
+Species = Literal[
+    "byteblob",
+    "patchfox",
+    "nullgeist",
+    "kernelcrab",
+    "cachebat",
+    "stacktoise",
+    "daemowl",
+    "shellsnail",
+    "regexopus",
+    "firewyrm",
+]
 
 SPECIES_STATS: dict[str, dict[str, int]] = {
     "byteblob": {"attack": 6, "defense": 8, "speed": 5, "control": 7},
     "patchfox": {"attack": 7, "defense": 5, "speed": 8, "control": 6},
     "nullgeist": {"attack": 6, "defense": 6, "speed": 6, "control": 9},
+    "kernelcrab": {"attack": 5, "defense": 8, "speed": 3, "control": 4},
+    "cachebat": {"attack": 6, "defense": 3, "speed": 8, "control": 3},
+    "stacktoise": {"attack": 4, "defense": 9, "speed": 2, "control": 5},
+    "daemowl": {"attack": 5, "defense": 4, "speed": 6, "control": 5},
+    "shellsnail": {"attack": 6, "defense": 5, "speed": 3, "control": 6},
+    "regexopus": {"attack": 5, "defense": 3, "speed": 6, "control": 6},
+    "firewyrm": {"attack": 8, "defense": 4, "speed": 5, "control": 3},
 }
 PALETTES = ["palette_01", "palette_02", "palette_03", "palette_04", "palette_05", "palette_06"]
 FEATURES = {
     "byteblob": ["crown_nub", "bubble_antenna", "seam_glow"],
     "patchfox": ["split_ear", "patch_tail", "wire_whisker"],
     "nullgeist": ["signal_horn", "phase_veil", "static_wisp"],
+    "kernelcrab": ["claw_chip", "shell_plate", "stalk_eyes"],
+    "cachebat": ["jagged_wing", "echo_ear", "fang_glint"],
+    "stacktoise": ["stack_shell", "slow_step", "ridge_spike"],
+    "daemowl": ["horn_tuft", "bark_mask", "blink_lid"],
+    "shellsnail": ["spiral_shell", "eye_stalk", "slime_trail"],
+    "regexopus": ["tentacle_curl", "pattern_skin", "ink_jet"],
+    "firewyrm": ["ember_horn", "scale_ridge", "tail_flame"],
 }
 MARKINGS = ["dorsal_stripe", "cheek_dots", "banded_limb", "hex_speckle"]
 TEMPERAMENTS = ["calm", "curious", "bold"]

@@ -76,7 +76,7 @@ def test_catalog_lists_seeded_items_with_contract_shape(
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["contracts_version"] == "contracts-v1"
-    assert body["catalog_version"] == "launch-001"
+    assert body["catalog_version"] == "launch-003"
     assert len(body["items"]) >= 5
 
     ids = {item["id"] for item in body["items"]}
@@ -352,7 +352,7 @@ def test_equip_rejects_incompatible_rig(
                 150,
                 "head.wrong_rig",
                 json.dumps(["other_rig_v2"]),
-                "launch-001",
+                "launch-003",
             ),
         )
         conn.execute(

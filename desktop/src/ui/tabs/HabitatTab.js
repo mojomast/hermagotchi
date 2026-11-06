@@ -3,6 +3,7 @@ import { jsx, jsxs } from "react/jsx-runtime";
 import { CareMeter } from "../components/CareMeter.js";
 import { NpcHostBanner } from "../components/NpcHostBanner.js";
 import { PetPreview } from "../components/PetPreview.js";
+import { joinAssetUrl } from "../logic/assets.js";
 import { StateNotice, UI_STATES } from "../states.js";
 import {
   CARE_ACTIONS,
@@ -301,6 +302,11 @@ export function HabitatTab(props = {}) {
   }
 
   const view = habitatView({ pet, me, goal });
+  const speciesThumbPath = "px3/species/" + species + "_body.png";
+  const speciesThumbUrl =
+    api.assets && typeof api.assets.url === "function"
+      ? api.assets.url(speciesThumbPath)
+      : joinAssetUrl(assetBaseUrl, speciesThumbPath);
 
   async function adopt(event) {
     if (event && typeof event.preventDefault === "function") event.preventDefault();
@@ -413,20 +419,41 @@ export function HabitatTab(props = {}) {
                 htmlFor: "hg-adopt-species",
                 children: "Species",
               }),
-              jsx(
-                "select",
-                {
-                  id: "hg-adopt-species",
-                  className: "hg-input",
-                  value: species,
-                  onChange: function (event) {
-                    setSpecies(event.target.value);
-                  },
-                  children: SPECIES.map((value) =>
-                    jsx("option", { value, children: SPECIES_LABELS[value] || value }, value)
+              jsxs("div", {
+                className: "hg-row hg-adopt-species",
+                children: [
+                  jsx(
+                    "select",
+                    {
+                      id: "hg-adopt-species",
+                      className: "hg-input",
+                      value: species,
+                      onChange: function (event) {
+                        setSpecies(event.target.value);
+                      },
+                      children: SPECIES.map((value) =>
+                        jsx(
+                          "option",
+                          { value, children: SPECIES_LABELS[value] || value },
+                          value
+                        )
+                      ),
+                    }
                   ),
-                }
-              ),
+                  speciesThumbUrl
+                    ? jsx("img", {
+                        className: "hg-adopt-species__thumb",
+                        src: speciesThumbUrl,
+                        alt: (SPECIES_LABELS[species] || species) + " body",
+                        width: 48,
+                        height: 48,
+                        loading: "lazy",
+                        decoding: "async",
+                        draggable: "false",
+                      })
+                    : null,
+                ],
+              }),
               jsx("label", {
                 className: "hg-label",
                 htmlFor: "hg-adopt-name",

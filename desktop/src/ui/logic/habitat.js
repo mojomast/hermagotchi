@@ -3,12 +3,30 @@
  * be exercised directly with `node --test`.
  */
 
-export const SPECIES = Object.freeze(["byteblob", "patchfox", "nullgeist"]);
+export const SPECIES = Object.freeze([
+  "byteblob",
+  "patchfox",
+  "nullgeist",
+  "kernelcrab",
+  "cachebat",
+  "stacktoise",
+  "daemowl",
+  "shellsnail",
+  "regexopus",
+  "firewyrm",
+]);
 
 export const SPECIES_LABELS = Object.freeze({
   byteblob: "Byteblob",
   patchfox: "Patchfox",
   nullgeist: "Nullgeist",
+  kernelcrab: "Kernelcrab",
+  cachebat: "Cachebat",
+  stacktoise: "Stacktoise",
+  daemowl: "Daemowl",
+  shellsnail: "Shellsnail",
+  regexopus: "Regexopus",
+  firewyrm: "Firewyrm",
 });
 
 export const CARE_ACTIONS = Object.freeze(["feed", "play", "rest"]);

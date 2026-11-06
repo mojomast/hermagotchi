@@ -45,6 +45,13 @@ def build_app() -> FastAPI:
     return app
 
 
+def test_default_manifest_file_is_launch_003() -> None:
+    data = json.loads((ROOT / "assets" / "manifest.json").read_text(encoding="utf-8"))
+    assert data["asset_pack_id"] == "launch-003"
+    assert len(data["species"]) == 10
+    assert len(data["assets"]) == 81
+
+
 def test_manifest_returns_the_best_on_disk_pack_as_raw_json() -> None:
     client = TestClient(build_app())
 
@@ -61,7 +68,7 @@ def test_manifest_returns_the_best_on_disk_pack_as_raw_json() -> None:
 
 
 def test_manifest_prefers_launch_003_then_falls_back(tmp_path: Path, monkeypatch) -> None:
-    fallback = {"asset_pack_id": "launch-001", "species": {}, "assets": []}
+    fallback = {"asset_pack_id": "launch-002", "species": {}, "assets": []}
     preferred = {"asset_pack_id": "launch-003", "species": {}, "assets": []}
     (tmp_path / "manifest.json").write_text(json.dumps(fallback), encoding="utf-8")
     monkeypatch.setattr(plugin_api, "_assets_dir", lambda: tmp_path)
@@ -69,7 +76,7 @@ def test_manifest_prefers_launch_003_then_falls_back(tmp_path: Path, monkeypatch
 
     first = client.get(f"{PREFIX}/assets/manifest")
     assert first.status_code == 200
-    assert first.json()["asset_pack_id"] == "launch-001"
+    assert first.json()["asset_pack_id"] == "launch-002"
 
     (tmp_path / "manifest.launch-003.json").write_text(
         json.dumps(preferred), encoding="utf-8"

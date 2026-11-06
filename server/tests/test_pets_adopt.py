@@ -31,7 +31,7 @@ def test_adopt_creates_private_pet_for_owner(client, auth_headers_a, account_a, 
     assert body["appearance"]["species"] == "byteblob"
     assert body["appearance_seed"] == body["appearance"]["seed"]
     assert body["appearance"]["seed"]
-    assert body["appearance"]["asset_pack_version"] == "launch-001"
+    assert body["appearance"]["asset_pack_version"] == "launch-003"
     assert body["care_updated_at"].endswith("Z")
 
 
@@ -61,8 +61,22 @@ def test_two_accounts_each_adopt_once(client, auth_headers_a, auth_headers_b):
     assert pet_a.json()["id"] != pet_b.json()["id"]
 
 
-@pytest.mark.parametrize("species", ["byteblob", "patchfox", "nullgeist"])
-def test_all_three_species_are_adoptable(client, auth_headers_a, species):
+@pytest.mark.parametrize(
+    "species",
+    [
+        "byteblob",
+        "patchfox",
+        "nullgeist",
+        "kernelcrab",
+        "cachebat",
+        "stacktoise",
+        "daemowl",
+        "shellsnail",
+        "regexopus",
+        "firewyrm",
+    ],
+)
+def test_all_ten_species_are_adoptable(client, auth_headers_a, species):
     response = _adopt(client, auth_headers_a, species=species)
 
     assert response.status_code == 201

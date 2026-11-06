@@ -5,6 +5,7 @@ import {
   CARE_ACTIONS,
   CARE_METERS,
   SPECIES,
+  SPECIES_LABELS,
   applyCareAction,
   buildAdoptRequest,
   careMeters,
@@ -103,11 +104,40 @@ test("goalLabel renders a safe display string or the empty copy", () => {
   assert.equal(goalLabel({ type: "rank", target_id: "silver" }), "Rank: silver");
 });
 
+test("SPECIES exposes all ten launch-003 species with labels", () => {
+  const expected = [
+    "byteblob",
+    "patchfox",
+    "nullgeist",
+    "kernelcrab",
+    "cachebat",
+    "stacktoise",
+    "daemowl",
+    "shellsnail",
+    "regexopus",
+    "firewyrm",
+  ];
+  assert.equal(SPECIES.length, 10);
+  assert.deepEqual([...SPECIES], expected);
+  assert.equal(new Set(SPECIES).size, 10);
+  for (const id of expected) {
+    assert.equal(SPECIES_LABELS[id], id.charAt(0).toUpperCase() + id.slice(1));
+  }
+});
+
 test("buildAdoptRequest only sends allowlisted species and modes", () => {
   assert.deepEqual(buildAdoptRequest({ species: "nullgeist", name: "  Wisp  " }), {
     species: "nullgeist",
     mode: "human",
     name: "Wisp",
+  });
+  assert.deepEqual(buildAdoptRequest({ species: "firewyrm" }), {
+    species: "firewyrm",
+    mode: "human",
+  });
+  assert.deepEqual(buildAdoptRequest({ species: "regexopus", mode: "coop" }), {
+    species: "regexopus",
+    mode: "coop",
   });
   assert.deepEqual(buildAdoptRequest({ species: "dragon", mode: "nope" }), {
     species: SPECIES[0],
