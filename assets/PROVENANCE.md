@@ -112,3 +112,5 @@ Kyle: "just use the portraits from the game instead". No GenerateImage, no pixel
 ### Daemowl third eye, 2026-11-05
 Kyle: "can you give daemowl three eyes please". Hand-pixel edit on native 32 grid of `px3/species/daemowl_body.png` — amber forehead eye with outline, pupil, highlight matching existing eyes. Palettes regenerated via `palette_swap`. Wired into `scripts/asset_px3_build.py` (`daemowl_third_eye`) so rebuilds keep it. No GenerateImage. Blink is a client transform on the base sprite (all three eyes move together).
 
+Follow-up: filled brow notch and facial-disc pad so the third eye is embedded in feather colours with no surrounding transparent gaps (body + palettes; build script updated).
+
