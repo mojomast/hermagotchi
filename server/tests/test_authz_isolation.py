@@ -89,7 +89,7 @@ def test_user_b_cannot_mutate_a_pet_or_grant_inventory_to_a(
     app, client, auth_headers_a, auth_headers_b, account_a, account_b
 ):
     pet_a = _adopt(client, auth_headers_a, "patchfox", "Ash")
-    _credit(app, account_b, 2500, "isolation:pet:b")
+    _credit(app, account_b, 30000, "isolation:pet:b")
 
     bought = _buy(client, auth_headers_b, CROWN, "isolation:buy:b")
     assert bought.status_code == 201, bought.text

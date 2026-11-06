@@ -830,6 +830,21 @@ const SLOT_Z = Object.freeze({
   title: 50,
 });
 
+const RARITY_LABELS = Object.freeze({
+  common: "Common",
+  uncommon: "Uncommon",
+  rare: "Rare",
+  epic: "Epic",
+  legendary: "Legendary",
+  mythic: "Mythic",
+});
+
+function compareItemsByPrice(a, b) {
+  const price = number(a && a.priceBits) - number(b && b.priceBits);
+  if (price !== 0) return price;
+  return String(a && a.id).localeCompare(String(b && b.id));
+}
+
 function number(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -868,7 +883,7 @@ function itemView(item) {
     name: String(item.name || item.id),
     slot,
     slotLabel: SLOT_LABELS[slot] || slot,
-    rarity: String(item.rarity || "common"),
+    rarity: String(item.rarity || "common").toLowerCase(),
     priceBits: Math.max(0, Math.round(number(item.price_bits, number(item.priceBits, 0)))),
     assetId: String(item.asset_id || item.assetId || item.id),
     assetUrl: item.asset_url || item.assetUrl || "",
@@ -949,7 +964,7 @@ function groupCatalogBySlot(catalog) {
     .map(([slot, items]) => ({
       slot,
       label: SLOT_LABELS[slot] || slot,
-      items: items.slice().sort((a, b) => a.id.localeCompare(b.id)),
+      items: items.slice().sort(compareItemsByPrice),
     }))
     .sort((a, b) => {
       const rank = slotRank(a.slot) - slotRank(b.slot);
@@ -1173,7 +1188,7 @@ function itemAvailability(options = {}) {
   };
 }
 
-  return { "joinAssetUrl": joinAssetUrl, "SLOT_ORDER": SLOT_ORDER, "SLOT_LABELS": SLOT_LABELS, "SLOT_Z": SLOT_Z, "readEnvelope": readEnvelope, "catalogItems": catalogItems, "itemView": itemView, "SHOP_THUMB_DIR": SHOP_THUMB_DIR, "SHOP_THUMB_SUFFIX": SHOP_THUMB_SUFFIX, "itemThumbPath": itemThumbPath, "itemThumbUrl": itemThumbUrl, "groupCatalogBySlot": groupCatalogBySlot, "normaliseWallet": normaliseWallet, "manifestFromCatalog": manifestFromCatalog, "buildPreviewLayers": buildPreviewLayers, "mergeLoadout": mergeLoadout, "removeFromLoadout": removeFromLoadout, "loadoutItemId": loadoutItemId, "itemAvailability": itemAvailability };
+  return { "joinAssetUrl": joinAssetUrl, "SLOT_ORDER": SLOT_ORDER, "SLOT_LABELS": SLOT_LABELS, "SLOT_Z": SLOT_Z, "RARITY_LABELS": RARITY_LABELS, "compareItemsByPrice": compareItemsByPrice, "readEnvelope": readEnvelope, "catalogItems": catalogItems, "itemView": itemView, "SHOP_THUMB_DIR": SHOP_THUMB_DIR, "SHOP_THUMB_SUFFIX": SHOP_THUMB_SUFFIX, "itemThumbPath": itemThumbPath, "itemThumbUrl": itemThumbUrl, "groupCatalogBySlot": groupCatalogBySlot, "normaliseWallet": normaliseWallet, "manifestFromCatalog": manifestFromCatalog, "buildPreviewLayers": buildPreviewLayers, "mergeLoadout": mergeLoadout, "removeFromLoadout": removeFromLoadout, "loadoutItemId": loadoutItemId, "itemAvailability": itemAvailability };
 })();
 
 // desktop/src/anim/petAnimContract.json
@@ -1819,6 +1834,52 @@ function eventEffectiveness(event = {}) {
   };
 }
 
+const REWARD_CAP_NOTICES = Object.freeze({
+  "practice.daily_cap": "Daily cap reached",
+  "practice.weekly_cap": "Weekly practice cap reached",
+  "pvp.daily_cap": "Daily cap reached",
+  "pvp.opponent_daily_cap": "Opponent daily cap reached",
+});
+
+function _rewardSources(source) {
+  if (!source || typeof source !== "object") return [];
+  const sources = [source];
+  if (Array.isArray(source.rewards)) sources.push(...source.rewards);
+  if (source.match && typeof source.match === "object") {
+    sources.push(source.match);
+    if (Array.isArray(source.match.rewards)) sources.push(...source.match.rewards);
+  }
+  if (source.replay && typeof source.replay === "object") {
+    sources.push(source.replay);
+    if (Array.isArray(source.replay.rewards)) {
+      sources.push(...source.replay.rewards);
+    }
+  }
+  return sources;
+}
+
+/** Return the machine reward-cap reason from a match/reward payload, if any. */
+function rewardCapReason(source) {
+  if (Array.isArray(source)) source = { rewards: source };
+  for (const item of _rewardSources(source)) {
+    if (!item || typeof item !== "object") continue;
+    const reason = item.reward_reason;
+    if (typeof reason === "string" && reason) return reason;
+    const status = item.reward_status;
+    if (typeof status === "string" && status in REWARD_CAP_NOTICES) {
+      return status;
+    }
+  }
+  return null;
+}
+
+/** Plain-language cap notice for the battle result UI. */
+function rewardCapNotice(source) {
+  const reason = rewardCapReason(source);
+  if (!reason) return "";
+  return REWARD_CAP_NOTICES[reason] || "Reward cap reached";
+}
+
 function moveLabel(move) {
   return MOVE_LABELS[move] || String(move || "Move").replace(/_/g, " ");
 }
@@ -1949,7 +2010,7 @@ function replaySummary(replay = {}, participants = {}) {
   return battleSummary({}, replay, participants);
 }
 
-  return { "TYPE_ORDER": TYPE_ORDER, "EFFECTIVENESS": EFFECTIVENESS, "EFFECTIVENESS_TEXT": EFFECTIVENESS_TEXT, "typeMultiplier": typeMultiplier, "multiplierValue": multiplierValue, "effectivenessLabel": effectivenessLabel, "effectivenessText": effectivenessText, "effectivenessForTypes": effectivenessForTypes, "eventEffectiveness": eventEffectiveness, "moveLabel": moveLabel, "battleParticipantsFromMatch": battleParticipantsFromMatch, "formatTurnLog": formatTurnLog, "battleSummary": battleSummary, "replaySummary": replaySummary };
+  return { "TYPE_ORDER": TYPE_ORDER, "EFFECTIVENESS": EFFECTIVENESS, "EFFECTIVENESS_TEXT": EFFECTIVENESS_TEXT, "typeMultiplier": typeMultiplier, "multiplierValue": multiplierValue, "effectivenessLabel": effectivenessLabel, "effectivenessText": effectivenessText, "effectivenessForTypes": effectivenessForTypes, "eventEffectiveness": eventEffectiveness, "REWARD_CAP_NOTICES": REWARD_CAP_NOTICES, "rewardCapReason": rewardCapReason, "rewardCapNotice": rewardCapNotice, "moveLabel": moveLabel, "battleParticipantsFromMatch": battleParticipantsFromMatch, "formatTurnLog": formatTurnLog, "battleSummary": battleSummary, "replaySummary": replaySummary };
 })();
 
 // desktop/src/ui/components/TurnLog.js
@@ -2076,6 +2137,8 @@ const __m12 = (function () {
   const TurnLog = __m11["TurnLog"];
   const battleParticipantsFromMatch = __m10["battleParticipantsFromMatch"];
   const battleSummary = __m10["battleSummary"];
+  const rewardCapNotice = __m10["rewardCapNotice"];
+  const rewardCapReason = __m10["rewardCapReason"];
 
 const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 const PRACTICE_BOT_NAME = "Teknium";
@@ -2360,6 +2423,8 @@ function BattleTab(props = {}) {
   const previewPet = props.pet || (practiceMatch && practiceMatch.pet) || null;
   const previewLoadout = props.loadout || {};
   const previewAnimState = battleAnimState(replay);
+  const capNotice = rewardCapNotice(practice);
+  const capReason = rewardCapReason(practice);
 
   return jsxs("section", {
     className: "hg-battle",
@@ -2376,6 +2441,14 @@ function BattleTab(props = {}) {
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
       notice ? jsx("p", { className: "hg-muted", children: notice }) : null,
+      capNotice
+        ? jsx("p", {
+            className: "hg-muted",
+            role: "status",
+            "data-reward-cap": capReason || "",
+            children: capNotice,
+          })
+        : null,
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -5460,11 +5533,13 @@ const __m22 = (function () {
   const NpcHostBanner = __m4["NpcHostBanner"];
   const PetPreview = __m9["PetPreview"];
   const extractPetId = __m16["extractPetId"];
+  const compareItemsByPrice = __m6["compareItemsByPrice"];
   const groupCatalogBySlot = __m6["groupCatalogBySlot"];
   const itemAvailability = __m6["itemAvailability"];
   const itemThumbUrl = __m6["itemThumbUrl"];
   const manifestFromCatalog = __m6["manifestFromCatalog"];
   const normaliseWallet = __m6["normaliseWallet"];
+  const RARITY_LABELS = __m6["RARITY_LABELS"];
   const readEnvelope = __m6["readEnvelope"];
 
 const SLOT_MARKS = Object.freeze({
@@ -5588,6 +5663,16 @@ function itemInitial(name) {
   return text ? text.slice(0, 1).toUpperCase() : "?";
 }
 
+function RarityBadge(props) {
+  const rarity = String((props.item && props.item.rarity) || "").toLowerCase();
+  if (rarity !== "legendary" && rarity !== "mythic") return null;
+  return jsx("span", {
+    className: "hg-badge hg-badge--" + rarity,
+    "data-rarity": rarity,
+    children: RARITY_LABELS[rarity] || rarity,
+  });
+}
+
 function ShopCard(props) {
   const item = props.item;
   const availability = props.availability;
@@ -5676,6 +5761,7 @@ function ShopCard(props) {
       jsxs("div", {
         className: "hg-shop-card__badges",
         children: [
+          jsx(RarityBadge, { item }, "rarity"),
           item.owned
             ? jsx("span", { className: "hg-badge", children: "Owned" })
             : null,
@@ -5874,15 +5960,17 @@ function ShopTab(props = {}) {
   }));
   const allItems = groups.reduce((items, group) => items.concat(group.items), []);
   const needle = query.trim().toLowerCase();
-  const visibleItems = allItems.filter(function (item) {
-    if (filter !== "all" && item.slot !== filter) return false;
-    if (!needle) return true;
-    return (
-      item.name.toLowerCase().includes(needle) ||
-      item.id.toLowerCase().includes(needle) ||
-      item.slot.toLowerCase().includes(needle)
-    );
-  });
+  const visibleItems = allItems
+    .filter(function (item) {
+      if (filter !== "all" && item.slot !== filter) return false;
+      if (!needle) return true;
+      return (
+        item.name.toLowerCase().includes(needle) ||
+        item.id.toLowerCase().includes(needle) ||
+        item.slot.toLowerCase().includes(needle)
+      );
+    })
+    .sort(compareItemsByPrice);
 
   async function buy(item) {
     setBusy("buy:" + item.id);
@@ -6776,7 +6864,7 @@ const __m27 = (function () {
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;

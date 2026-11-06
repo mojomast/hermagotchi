@@ -9,13 +9,13 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 - Ask the owner before anything destructive or irreversible: deleting app data, changing firewall/SSH, or rebooting.
 - Do **not** free disk space yourself (no apt clean, journal vacuum, docker/pip cache wipes, or deleting old backups). The owner handles disk cleanup.
 - Don't modify application source beyond `git fetch` + checkout of the pinned SHA.
-- Keep a log of every change at `/root/hermagotchi-deploy-notes.md` (no secret values).
+- Keep a log of every change at `/root/hermagotchi-deploy-notes.md` (no secret values). If that notes file is missing, discover the checkout path, env file, DB path, and service name from the `hermagotchi.service` systemd unit (`systemctl cat hermagotchi` / `WorkingDirectory=` / `EnvironmentFile=`) and from nginx site config instead of guessing.
 
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
 - Branch: `feat/hackathon`
-- **Deploy tip SHA (full):** `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`
-- Prior rollback SHA: `12b0217` (full `12b0217666c7303971de423436c6adca4c0b70a7`) — use the full SHA recorded in prior deploy notes if available.
+- **Deploy tip SHA (full):** `TIP_PLACEHOLDER`
+- Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — previous W11 tip; use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
 1. Run `df -h /` and `df -h /var` (and the filesystem that holds `/opt/hermagotchi` and `/var/lib/hermagotchi` if different).
@@ -89,6 +89,7 @@ before enabling (default should remain on for production once introduced).
 
 Forward-only migration added on this tip:
 - server/app/migrations/0011_starter_and_rate_limits.sql
+- server/app/migrations/0012_economy_reprice_mythic.sql (epic/legendary reprice + mythic rarity)
   - one-time 300 Bit economy.starter_grant for eligible pre-existing accounts
   - auth_rate_hits / auth_rate_locks tables (approve lockout + pair/start limits durable across workers)
 

@@ -58,7 +58,7 @@ def _credit(app, account_id, amount, source_event_id):
 
 
 def _buy_and_equip(client, app, headers, account_id, pet_id, item_id="hat.binary_crown"):
-    _credit(app, account_id, 2500, f"seed:{pet_id}")
+    _credit(app, account_id, 30000, f"seed:{pet_id}")
     bought = client.post(
         "/v1/shop/purchases",
         headers=headers,
