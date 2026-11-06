@@ -273,6 +273,16 @@ function parseModule(root, file) {
     body: "",
     deps: [],
   };
+  if (absolute.endsWith(".json")) {
+    // ESM JSON modules expose the parsed value as the default export.
+    // Do not treat the JSON text as a JS module body (a bare `{...}` is a block).
+    const raw = readFileSync(absolute, "utf8");
+    JSON.parse(raw); // fail fast on invalid JSON
+    moduleInfo.body = `const __json = ${raw.trim()};`;
+    moduleInfo.localExports.set("default", "__json");
+    moduleInfo.isJson = true;
+    return moduleInfo;
+  }
   splitModuleSource(readFileSync(absolute, "utf8"), moduleInfo);
   return moduleInfo;
 }

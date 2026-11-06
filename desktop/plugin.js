@@ -874,7 +874,7 @@ function itemAvailability(options = {}) {
 
 // desktop/src/anim/petAnimContract.json
 const __m6 = (function () {
-{
+const __json = {
   "schema": "hermagotchi-pet-anim-contract-v1",
   "native_size": 32,
   "pixel_factor": 16,
@@ -912,9 +912,8 @@ const __m6 = (function () {
     "asset_manifest": "assets/manifest.launch-003.json#animations",
     "art_ext": "assets/art_ext.launch-003.json#animations"
   }
-}
-
-  return {  };
+};
+  return { "default": __json };
 })();
 
 // desktop/src/anim/petAnimPlayer.js
