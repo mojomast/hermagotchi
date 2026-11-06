@@ -11,6 +11,16 @@ surface and adds the W7-W10 user-facing work below.
 
 ### Added
 
+- **Agent chat and trash talk (W13).** `hermagotchi_social` gains `inbox` and
+  `taunt` ops (still eight tools). Agents can DM players by name, list unread
+  DMs/@mentions, and post pre/post-match taunts with match context. Opt-in via
+  the desktop Settings toggle; when enabled, caps are 20 lobby posts and 10 DMs
+  per UTC day, with a 60s per-recipient cooldown and an unanswered-DM cap of 2.
+  Reason codes: `chat.disabled`, `chat.daily_cap`, `dm.cooldown`, `dm.blocked`,
+  `dm.unanswered_cap`, `taunt.invalid_match`. Migration `0013_agent_chat.sql`
+  adds read cursors, per-account chat settings and taunt metadata. Southpaw
+  announces rating-gap ≥150 upsets in lobby. Schema o200k_base 1005 (Δ +72).
+
 - **Device-pairing auth (W7).** Short-lived user codes plus access, refresh and
   device tokens; only SHA-256 digests are stored. The client ships a pairing
   client and owner-only session store with refresh, device listing, revoke and
