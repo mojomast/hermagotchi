@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 import sys
@@ -74,3 +75,120 @@ def test_dressed_pet_layers_without_crash():
     for sp in SPECIES:
         im = render_pet(sp, loadout=lo, native=True)
         assert np.asarray(im)[..., 3].sum() > 0
+
+
+# ---------- launch-003 fit contract (W10-X) ----------
+
+COMPOSE_SNAPSHOT = ROOT / "desktop" / "src" / "ui" / "logic" / "composeAnchors.json"
+PIXEL_FACTOR = EXT["pixel_factor"]
+BODY_CENTER = (16, 16)
+FACE_EYE_EXCLUDE = {"face.happy_path", "face.pixel_mustache", "face.privacy_mask"}
+
+_bbox_cache: dict[str, tuple[float, float, float, float]] = {}
+
+
+def _content_bbox(rel: str):
+    """Native-grid content bounds of a 512px (32x16) cosmetic layer."""
+    if rel not in _bbox_cache:
+        arr = np.asarray(Image.open(ROOT / "assets" / rel).convert("RGBA"))
+        ys, xs = np.where(arr[..., 3] > 8)
+        assert len(xs), rel
+        _bbox_cache[rel] = (
+            xs.min() / PIXEL_FACTOR,
+            ys.min() / PIXEL_FACTOR,
+            xs.max() / PIXEL_FACTOR,
+            ys.max() / PIXEL_FACTOR,
+        )
+    return _bbox_cache[rel]
+
+
+def _placed(item, species):
+    """Return (content bbox, center) in native 32-grid coordinates, mirroring _item()."""
+    sp = EXT["species"][species]
+    asset = next(a for a in ASSETS if a["id"] == item)
+    ax, ay = sp["anchors_native"][asset["anchor"]]
+    dx, dy, sm = EXT["items"][item]["per_species"][species]["transform_native"]
+    k = asset["scale"] * sp["item_scale"] * sm
+    cx = ax + asset["offset_px"][0] // PIXEL_FACTOR + dx
+    cy = ay + asset["offset_px"][1] // PIXEL_FACTOR + dy
+    x0, y0, x1, y1 = _content_bbox(asset["path"])
+    bbox = (
+        cx + (x0 - 16) * k,
+        cy + (y0 - 16) * k,
+        cx + (x1 - 16) * k,
+        cy + (y1 - 16) * k,
+    )
+    return bbox, (cx, cy), k
+
+
+def test_compose_snapshot_matches_art_ext():
+    data = json.loads(COMPOSE_SNAPSHOT.read_text())
+    assert data["asset_pack_id"] == EXT["asset_pack_id"]
+    assert data["native_size"] == N
+    for sp in SPECIES:
+        assert data["species"][sp]["anchors_native"] == EXT["species"][sp]["anchors_native"]
+        assert data["species"][sp]["item_scale"] == EXT["species"][sp]["item_scale"]
+    for item in EXT["items"]:
+        for sp in SPECIES:
+            assert data["items"][item]["per_species"][sp] == list(
+                EXT["items"][item]["per_species"][sp]["transform_native"]
+            )
+
+
+@pytest.mark.parametrize("sp", SPECIES)
+def test_head_items_sit_above_the_face(sp):
+    sp_data = EXT["species"][sp]
+    head_y = sp_data["anchors_native"]["head"][1]
+    face_y = sp_data["anchors_native"]["face"][1]
+    for asset in ASSETS:
+        if asset["slot"] != "head":
+            continue
+        (_, top, _, bottom), _, _ = _placed(asset["id"], sp)
+        assert bottom <= face_y, (sp, asset["id"], bottom, face_y)
+        assert bottom >= head_y - 1, (sp, asset["id"], bottom, head_y)
+        assert bottom <= head_y + 2.5, (sp, asset["id"], bottom, head_y)
+        assert top >= -0.001, (sp, asset["id"], top)
+
+
+@pytest.mark.parametrize("sp", SPECIES)
+def test_eye_band_face_items_cover_the_face_anchor(sp):
+    face_y = EXT["species"][sp]["anchors_native"]["face"][1]
+    for asset in ASSETS:
+        if asset["slot"] != "face" or asset["id"] in FACE_EYE_EXCLUDE:
+            continue
+        (_, top, _, bottom), _, _ = _placed(asset["id"], sp)
+        center = (top + bottom) / 2
+        assert abs(center - face_y) <= 3, (sp, asset["id"], center, face_y)
+
+
+@pytest.mark.parametrize("sp", SPECIES)
+def test_back_items_wrap_the_shoulders(sp):
+    back_y = EXT["species"][sp]["anchors_native"]["back"][1]
+    for asset in ASSETS:
+        if asset["slot"] != "back":
+            continue
+        (_, top, _, bottom), _, _ = _placed(asset["id"], sp)
+        center = (top + bottom) / 2
+        assert abs(center - back_y) <= 2, (sp, asset["id"], center, back_y)
+
+
+@pytest.mark.parametrize("sp", SPECIES)
+def test_hand_props_centre_on_the_hand_anchor(sp):
+    hand_y = EXT["species"][sp]["anchors_native"]["hand"][1]
+    hand_x = EXT["species"][sp]["anchors_native"]["hand"][0]
+    for asset in ASSETS:
+        if asset["slot"] != "front" or asset["anchor"] != "hand":
+            continue
+        (left, top, right, bottom), _, _ = _placed(asset["id"], sp)
+        assert abs((top + bottom) / 2 - hand_y) <= 2, (sp, asset["id"])
+        assert abs((left + right) / 2 - hand_x) <= 3, (sp, asset["id"])
+
+
+@pytest.mark.parametrize("sp", SPECIES)
+def test_auras_surround_the_body_centre(sp):
+    for asset in ASSETS:
+        if asset["slot"] != "aura":
+            continue
+        (left, top, right, bottom), _, _ = _placed(asset["id"], sp)
+        assert abs((left + right) / 2 - BODY_CENTER[0]) <= 1.5, (sp, asset["id"])
+        assert abs((top + bottom) / 2 - BODY_CENTER[1]) <= 1.5, (sp, asset["id"])

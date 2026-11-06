@@ -4,6 +4,7 @@
  */
 
 import { joinAssetUrl, speciesBodyPath } from "./assets.js";
+import { composeItem, DEFAULT_NATIVE_SIZE } from "./compose.js";
 
 export { joinAssetUrl };
 
@@ -184,6 +185,11 @@ export function buildPreviewLayers(options = {}) {
   }
   const assetMap = manifestAssetMap(manifest);
   const layers = [];
+  const nativeSize = Math.max(
+    1,
+    number(options.nativeSize, DEFAULT_NATIVE_SIZE)
+  );
+  const displaySize = Math.max(1, number(options.displaySize, nativeSize));
 
   const species = pet && pet.species ? String(pet.species) : "";
   const speciesPath = speciesBodyPath(manifest, pet);
@@ -234,6 +240,17 @@ export function buildPreviewLayers(options = {}) {
       (manifestAsset && manifestAsset.path) ||
       "";
 
+    const composed =
+      species && manifestAsset
+        ? composeItem({
+            species,
+            itemId: manifestAsset.id || assetId || itemId,
+            manifestAsset,
+            nativeSize,
+            displaySize,
+          })
+        : null;
+
     layers.push({
       kind: "item",
       id: itemId,
@@ -244,19 +261,27 @@ export function buildPreviewLayers(options = {}) {
         itemId,
       url: joinAssetUrl(baseUrl, assetUrl),
       z: zFor(slot, manifestAsset),
-      scale: number(
-        valueObject.scale != null
-          ? valueObject.scale
-          : manifestAsset && manifestAsset.scale,
-        1
-      ),
-      offsetPx:
-        valueObject.offset_px ||
-        valueObject.offsetPx ||
-        (manifestAsset && manifestAsset.offset_px) ||
-        [0, 0],
+      scale: composed
+        ? composed.scale
+        : number(
+            valueObject.scale != null
+              ? valueObject.scale
+              : manifestAsset && manifestAsset.scale,
+            1
+          ),
+      offsetPx: composed
+        ? composed.offsetPx
+        : valueObject.offset_px ||
+          valueObject.offsetPx ||
+          (manifestAsset && manifestAsset.offset_px) ||
+          [0, 0],
+      offsetPercent: composed ? composed.offsetPercent : null,
       anchor:
-        valueObject.anchor || (manifestAsset && manifestAsset.anchor) || "body",
+        (composed && composed.anchor) ||
+        valueObject.anchor ||
+        (manifestAsset && manifestAsset.anchor) ||
+        "body",
+      compose: composed,
     });
   }
 

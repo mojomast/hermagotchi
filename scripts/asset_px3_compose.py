@@ -117,6 +117,55 @@ def seeded_look(seed):
     lo = {s: r.choice(by[s]) for s in SLOTS if s in by and r.random() < (0.35 if s in ("emote", "title") else 0.55)}
     return dict(species=sp, appearance_seed=seed, palette=pal, marking=mk, loadout=lo)
 
+FIT_GRID_ITEMS = [
+    ("head", "hat.bloom_filter"),
+    ("face", "face.hex_specs"),
+    ("back", "back.circuit_wings"),
+    ("front", "front.pointer_wand"),
+    ("aura", "aura.ping_pulse"),
+]
+
+
+def render_fit_grid(out=A / "preview" / "cosmetics_fit_grid_v2.png", cell=160,
+                    species=None, items=None):
+    """Render all species x one representative cosmetic per slot.
+
+    Writes a labelled PNG grid with native-nearest upscaling so hat / face /
+    back / hand / aura anchor fit is easy to review. Used by W10-X.
+    """
+    species = list(species or sorted(EXT["species"]))
+    items = list(items or FIT_GRID_ITEMS)
+    label_w = 96
+    header_h = 28
+    footer_h = 18
+    width = label_w + cell * len(items)
+    height = header_h + cell * len(species) + footer_h
+    sheet = Image.new("RGB", (width, height), (236, 232, 245))
+    draw = ImageDraw.Draw(sheet)
+    for col, (slot, iid) in enumerate(items):
+        x = label_w + col * cell + 4
+        draw.text((x, 8), f"{slot}: {iid}", fill=(40, 40, 60))
+    for row, sp in enumerate(species):
+        y = header_h + row * cell
+        draw.text((6, y + cell // 2 - 6), sp, fill=(40, 40, 60))
+        for col, (slot, iid) in enumerate(items):
+            x = label_w + col * cell
+            draw.rectangle((x, y, x + cell - 1, y + cell - 1), outline=(180, 174, 200))
+            img = render_pet(sp, loadout={slot: iid}, native=False).resize(
+                (cell, cell), Image.NEAREST
+            )
+            sheet.paste(img, (x, y), img)
+    draw.text(
+        (6, height - footer_h + 2),
+        "launch-003 cosmetic fit grid v2 — anchors + per-species transforms",
+        fill=(70, 66, 90),
+    )
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out, optimize=True)
+    return out
+
+
 def contact_sheet(n=100, cols=10, cell=256, out=A / "contact_sheet_100_launch-003.png"):
     rows = (n + cols - 1) // cols; sheet = Image.new("RGB", (cols * cell, rows * (cell + 14)), (236, 232, 245)); d = ImageDraw.Draw(sheet); looks = []
     for i in range(n):
@@ -125,6 +174,15 @@ def contact_sheet(n=100, cols=10, cell=256, out=A / "contact_sheet_100_launch-00
     sheet.save(out, optimize=True); return looks
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--n", type=int, default=100); a = ap.parse_args()
-    looks = contact_sheet(a.n); keys = {json.dumps([l["species"], l["palette"], l["marking"], l["loadout"]], sort_keys=True) for l in looks}
-    print(f"rendered {len(looks)} looks, {len(keys)} distinct")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=100)
+    ap.add_argument("--fit-grid", action="store_true")
+    ap.add_argument("--out", default=str(A / "preview" / "cosmetics_fit_grid_v2.png"))
+    ap.add_argument("--cell", type=int, default=160)
+    a = ap.parse_args()
+    if a.fit_grid:
+        path = render_fit_grid(a.out, cell=a.cell)
+        print(f"wrote {path}")
+    else:
+        looks = contact_sheet(a.n); keys = {json.dumps([l["species"], l["palette"], l["marking"], l["loadout"]], sort_keys=True) for l in looks}
+        print(f"rendered {len(looks)} looks, {len(keys)} distinct")

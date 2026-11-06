@@ -10,8 +10,22 @@ import {
 } from "../../anim/petAnimPlayer.js";
 
 function layerStyle(layer) {
-  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
   const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
+  const percent = Array.isArray(layer.offsetPercent)
+    ? layer.offsetPercent
+    : null;
+  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
+  const translate = percent
+    ? "translate(" +
+      (Number(percent[0]) || 0) +
+      "%, " +
+      (Number(percent[1]) || 0) +
+      "%)"
+    : "translate(" +
+      (Number(offset[0]) || 0) +
+      "px, " +
+      (Number(offset[1]) || 0) +
+      "px)";
   return {
     position: "absolute",
     inset: "0",
@@ -19,17 +33,17 @@ function layerStyle(layer) {
     height: "100%",
     objectFit: "contain",
     zIndex: String(layer.z),
-    transform:
-      "translate(" +
-      (Number(offset[0]) || 0) +
-      "px, " +
-      (Number(offset[1]) || 0) +
-      "px) scale(" +
-      scale +
-      ")",
+    transform: translate + " scale(" + scale + ")",
     transformOrigin: "center",
     pointerEvents: "none",
   };
+}
+
+function numericSizeOf(value, fallback) {
+  const text = String(value == null ? "" : value).trim();
+  if (!text || text.endsWith("%")) return fallback;
+  const parsed = parseFloat(text);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function stripStyle(url, clip, frameIndex) {
@@ -68,16 +82,25 @@ function followAnchors() {
   return list.map((value) => String(value));
 }
 
-function withAnchorDelta(layer, delta, anchors, frameScale) {
+function withAnchorDelta(layer, delta, anchors, frameScale, nativeSize) {
   const anchor = String(layer.anchor || layer.slot || "");
   if (!anchors.includes(anchor)) return layer;
   const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
-  return Object.assign({}, layer, {
+  const next = Object.assign({}, layer, {
     offsetPx: [
       (Number(offset[0]) || 0) + (Number(delta[0]) || 0) * frameScale,
       (Number(offset[1]) || 0) + (Number(delta[1]) || 0) * frameScale,
     ],
   });
+  if (Array.isArray(layer.offsetPercent)) {
+    const percent = layer.offsetPercent;
+    const size = Number(nativeSize) > 0 ? Number(nativeSize) : 32;
+    next.offsetPercent = [
+      (Number(percent[0]) || 0) + ((Number(delta[0]) || 0) / size) * 100,
+      (Number(percent[1]) || 0) + ((Number(delta[1]) || 0) / size) * 100,
+    ];
+  }
+  return next;
 }
 
 /**
@@ -100,12 +123,17 @@ export function PetPreview(props = {}) {
     (pet && pet.palette) ||
     "";
   const palette = resolveAnimPalette(rawPalette || "teal");
+  const spriteSize = props.size || "100%";
+  const nativeSize = Number(contract && contract.native_size) || 32;
+  const numericSize = numericSizeOf(spriteSize, nativeSize);
   const layers = buildPreviewLayers({
     pet: pet,
     loadout: props.loadout,
     catalog: props.catalog,
     manifest: manifest,
     assetBaseUrl: assetBaseUrl,
+    nativeSize: nativeSize,
+    displaySize: numericSize,
   });
 
   let baseLayer = null;
@@ -216,14 +244,8 @@ export function PetPreview(props = {}) {
   const label =
     props.label ||
     (pet && pet.name ? pet.name + " preview" : "Pet preview");
-  const spriteSize = props.size || "100%";
   const anchors = followAnchors();
-  const numericSize = parseFloat(spriteSize);
-  const nativeSize = Number(contract && contract.native_size) || 32;
-  const frameScale =
-    Number.isFinite(numericSize) && numericSize > 0
-      ? numericSize / nativeSize
-      : 1;
+  const frameScale = numericSize / nativeSize;
 
   const children = [];
   if (animated) {
@@ -268,7 +290,7 @@ export function PetPreview(props = {}) {
 
   for (const layer of itemLayers) {
     const adjusted = animated
-      ? withAnchorDelta(layer, anchorDelta, anchors, frameScale)
+      ? withAnchorDelta(layer, anchorDelta, anchors, frameScale, nativeSize)
       : layer;
     children.push(
       jsx(
