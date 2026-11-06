@@ -19,7 +19,7 @@ export const TAB_LABELS = Object.freeze({
   battle: "Battle",
   shop: "Shop",
   leaderboard: "Leaderboard",
-  chat: "Chat",
+  chat: "Social",
   settings: "Settings",
 });
 

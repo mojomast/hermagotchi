@@ -91,7 +91,7 @@ EXPECTED_EXPORTS = {
 }
 
 TAB_ORDER = ["habitat", "battle", "shop", "leaderboard", "chat", "settings"]
-TAB_LABELS = ["Habitat", "Battle", "Shop", "Leaderboard", "Chat", "Settings"]
+TAB_LABELS = ["Habitat", "Battle", "Shop", "Leaderboard", "Social", "Settings"]
 
 ALLOWED_IMPORTS = {"react", "react/jsx-runtime", "@hermes/plugin-sdk"}
 FETCH_ALLOWED = UI / "api.js"
@@ -156,7 +156,13 @@ def test_pane_declares_the_six_tabs_in_order() -> None:
     index = _source(UI / "index.js")
     for label in TAB_LABELS:
         assert f'"{label}"' in pane, f"pane.js is missing the {label} tab label"
-        assert f'"{label}"' in index or f'./tabs/{label}Tab.js' in index
+        # Social hub keeps the ChatTab.js module name for compatibility.
+        module = "Chat" if label == "Social" else label
+        assert (
+            f'"{label}"' in index
+            or f'./tabs/{module}Tab.js' in index
+            or f'"{module}Tab"' in index
+        ), f"index.js is missing the {label} tab export"
 
 
 def test_each_tab_stub_contains_its_required_placeholder_content() -> None:

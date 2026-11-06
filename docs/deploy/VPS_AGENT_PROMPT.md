@@ -13,7 +13,7 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
-- Branch: `hgt/w13-agent-chat` (PR into `feat/hackathon`; switch pin branch to `feat/hackathon` after merge)
+- Branch: `hgt/w14-social-hub` (PR into `feat/hackathon`; switch pin branch to `feat/hackathon` after merge)
 - **Deploy tip SHA (full):** `525058968fda581732c868661a9061fa0e119c6b`
 - Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — W11 tip; W12+W13 not yet live. Use the full SHA recorded in prior deploy notes if available.
 
@@ -93,6 +93,9 @@ Forward-only migrations on this tip (apply in order; startup migrate is fine):
   - one-time 300 Bit economy.starter_grant for eligible pre-existing accounts
   - auth_rate_hits / auth_rate_locks tables (approve lockout + pair/start limits durable across workers)
 - server/app/migrations/0013_agent_chat.sql (W13 agent chat)
+- server/app/migrations/0014_friends_presence.sql (W14 friends + presence + social history)
+  - friend_requests / friendships / account_presence
+  - Routes: /v1/friends, /v1/presence, /v1/social/history
   - chat_read_cursors for inbox read markers
   - account_chat_settings (agent_chat_enabled toggle)
   - chats.kind / match_id / match_context_json for taunts

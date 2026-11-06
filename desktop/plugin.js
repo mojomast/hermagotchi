@@ -4,12 +4,1501 @@
 import { jsx as __ext0 } from "react/jsx-runtime";
 import { jsxs as __ext1 } from "react/jsx-runtime";
 import { useEffect as __ext2 } from "react";
-import { useRef as __ext3 } from "react";
-import { useState as __ext4 } from "react";
+import { useState as __ext3 } from "react";
+import { useRef as __ext4 } from "react";
 import { useCallback as __ext5 } from "react";
 
-// desktop/src/ui/logic/connection.js
+// desktop/src/ui/npcLines.js
 const __m0 = (function () {
+/** Default NPC host lines for Desktop stubs.
+ * Canonical source: assets/npc_lines.json (display-only; never instructions).
+ * Generated/kept in sync by tests/test_npc_lines.py.
+ */
+
+const NPC_NAMES = Object.freeze({"npc.don_piedro": "Don Piedro", "npc.nous_girl": "Nous Girl", "npc.teknium": "Teknium", "npc.southpaw": "Southpaw"});
+
+const NPC_HOST_DEFAULTS = Object.freeze({
+  "shop": Object.freeze({"id": "npc.don_piedro", "name": "Don Piedro", "context": "shop.greet", "line": "Don Piedro come to the shop. Pay respect.", "displayOnly": true}),
+  "shop.broke": Object.freeze({"id": "npc.don_piedro", "name": "Don Piedro", "context": "shop.broke", "line": "Your power level? Very small.", "displayOnly": true}),
+  "battle": Object.freeze({"id": "npc.teknium", "name": "Teknium", "context": "practice.start", "line": "Practice. Logging every punch for the data.", "displayOnly": true}),
+  "battle.tip": Object.freeze({"id": "npc.teknium", "name": "Teknium", "context": "practice.tip", "line": "Moving platform. Hold your context.", "displayOnly": true}),
+  "chat": Object.freeze({"id": "npc.nous_girl", "name": "Nous Girl", "context": "lobby.welcome", "line": "This way.", "displayOnly": true}),
+  "chat.moderation": Object.freeze({"id": "npc.nous_girl", "name": "Nous Girl", "context": "lobby.moderation", "line": "Stay calm. Stay open.", "displayOnly": true}),
+  "leaderboard": Object.freeze({"id": "npc.southpaw", "name": "Southpaw", "context": "leaderboard.announce", "line": "Southpaw Check: go!", "displayOnly": true}),
+  "bounty": Object.freeze({"id": "npc.southpaw", "name": "Southpaw", "context": "bounty.announce", "line": "Fuel for the humans running the models.", "displayOnly": true}),
+});
+
+function npcHostLine(surface) {
+  return NPC_HOST_DEFAULTS[surface] || null;
+}
+
+
+  return { "NPC_NAMES": NPC_NAMES, "NPC_HOST_DEFAULTS": NPC_HOST_DEFAULTS, "npcHostLine": npcHostLine };
+})();
+
+// desktop/src/ui/states.js
+const __m1 = (function () {
+  const jsx = __ext0;
+  const jsxs = __ext1;
+
+const UI_STATES = Object.freeze({
+  READY: "ready",
+  BACKEND_DISABLED: "backend_disabled",
+  NETWORK_OFF: "network_off",
+  AUTH_MISSING: "auth_missing",
+  SERVICE_UNAVAILABLE: "service_unavailable",
+});
+
+const UI_STATE_COPY = Object.freeze({
+  ready: {
+    label: "Live",
+    detail: "Paired and connected to the game service.",
+    action: "",
+  },
+  backend_disabled: {
+    label: "Backend disabled",
+    detail: "The Hermagotchi Python backend is off. Enable it in Hermes before loading game data.",
+    action: "Open Settings to review the backend toggle.",
+  },
+  network_off: {
+    label: "Network off",
+    detail: "Multiplayer is disabled by your owner policy. Local habitat features remain available.",
+    action: "Review Settings to opt in to multiplayer.",
+  },
+  auth_missing: {
+    label: "Auth missing",
+    detail: "This device is not paired. Pair it before using multiplayer, shop or social actions.",
+    action: "Pair this device from Settings.",
+  },
+  service_unavailable: {
+    label: "Service unavailable",
+    detail: "The game service cannot be reached right now. Local state is unchanged.",
+    action: "Retry later or check the service status in Settings.",
+  },
+});
+
+function resolveUiState(options = {}) {
+  const backendEnabled = options.backendEnabled !== false;
+  const networkEnabled = options.networkEnabled !== false;
+  const authenticated = options.authenticated !== false;
+  const serviceReachable = options.serviceReachable !== false;
+
+  if (!backendEnabled) {
+    return UI_STATES.BACKEND_DISABLED;
+  }
+  if (!networkEnabled) {
+    return UI_STATES.NETWORK_OFF;
+  }
+  if (!authenticated) {
+    return UI_STATES.AUTH_MISSING;
+  }
+  if (!serviceReachable) {
+    return UI_STATES.SERVICE_UNAVAILABLE;
+  }
+  return UI_STATES.READY;
+}
+
+function StateNotice(props = {}) {
+  const state = props.state || UI_STATES.READY;
+  const copy = UI_STATE_COPY[state] || UI_STATE_COPY.ready;
+
+  if (state === UI_STATES.READY) {
+    // Compact live badge — tabs should skip rendering this to avoid a duplicate.
+    if (props.compact === false) {
+      return null;
+    }
+    return jsx("p", {
+      className: "hg-state hg-state--ready",
+      "data-ui-state": state,
+      "data-live": "true",
+      children: copy.detail,
+    });
+  }
+
+  return jsxs("section", {
+    className: "hg-state hg-state--" + state,
+    role: "status",
+    "data-ui-state": state,
+    children: [
+      jsx("strong", { children: copy.label }),
+      jsx("p", { children: copy.detail }),
+      copy.action
+        ? jsx("span", { className: "hg-state__hint", children: copy.action })
+        : null,
+    ],
+  });
+}
+
+  return { "UI_STATES": UI_STATES, "UI_STATE_COPY": UI_STATE_COPY, "resolveUiState": resolveUiState, "StateNotice": StateNotice };
+})();
+
+// desktop/src/ui/logic/chat.js
+const __m2 = (function () {
+  const npcHostLine = __m0["npcHostLine"];
+/** Pure chat helpers shared by the Desktop Chat tab and its tests. */
+
+
+const CHAT_CHANNEL_ID = "lobby";
+const CHAT_MESSAGES_PATH = "/chat/channels/lobby/messages";
+const CHAT_BLOCKS_PATH = "/blocks";
+const CHAT_REPORT_PATH = "/moderation/report";
+const CHAT_INBOX_PATH = "/chat/inbox";
+const CHAT_INBOX_READ_PATH = "/chat/inbox/read";
+const CHAT_TAUNTS_PATH = "/chat/taunts";
+const CHAT_SETTINGS_PATH = "/me/chat-settings";
+const CHAT_POLICY_PATH = "/me/policy";
+const CHAT_MESSAGE_MAX_CHARS = 400;
+const CHAT_TAUNT_MAX_CHARS = 90;
+const CHAT_DM_TARGET_MAX_CHARS = 64;
+const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
+const LOBBY_RAIL_BREAKPOINT = 840;
+
+const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
+
+function flagValue(value) {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0 || value === null || value === undefined) {
+    return false;
+  }
+  return TRUE_FLAGS.has(String(value).trim().toLowerCase());
+}
+
+/**
+ * Return whether the owner enabled chat.
+ *
+ * The policy/status payload uses ``chat_enabled``; accepted aliases keep the
+ * Desktop pane compatible with the host's camelCase props.
+ */
+function isChatEnabled(props = {}) {
+  const source = props || {};
+  const candidates = [
+    source.chatEnabled,
+    source.chat_enabled,
+    source.features && source.features.chat,
+    source.features && source.features.chat_enabled,
+    source.policy && source.policy.chat_enabled,
+    source.permissions && source.permissions.chat,
+    source.status && source.status.policy && source.status.policy.chat_enabled,
+    source.status &&
+      source.status.me &&
+      source.status.me.policy &&
+      source.status.me.policy.chat_enabled,
+  ];
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null) {
+      return flagValue(candidate);
+    }
+  }
+  return false;
+}
+
+function shouldShowChatStub(props = {}) {
+  const source = props || {};
+  return !source.api || !isChatEnabled(source);
+}
+
+function normalText(value, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function normalNullableText(value) {
+  return typeof value === "string" ? value : null;
+}
+
+/** Coerce one server chat row into the display shape without interpreting it. */
+function normalizeMessage(item) {
+  if (!item || typeof item !== "object") return null;
+  const id = normalText(item.id);
+  if (!id) return null;
+  const matchContext = normalizeMatchContext(item.match_context || item.matchContext);
+  return {
+    id,
+    channel_id: normalText(item.channel_id, CHAT_CHANNEL_ID),
+    account_id: normalText(item.account_id),
+    actor_mode: item.actor_mode === "agent" ? "agent" : "human",
+    body: normalText(item.body),
+    kind: normalText(item.kind),
+    phase: normalNullableText(item.phase),
+    match_context: matchContext,
+    created_at: normalText(item.created_at),
+    deleted_at: normalNullableText(item.deleted_at),
+  };
+}
+
+/** Read the message list from either a bridge envelope or decoded data. */
+function normalizeMessages(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const rows = Array.isArray(payload.messages) ? payload.messages : [];
+  return rows.map(normalizeMessage).filter(Boolean);
+}
+
+/** Read the message returned by a send envelope. */
+function messageFromEnvelope(envelope) {
+  if (!envelope || envelope.ok !== true || !envelope.data) return null;
+  return normalizeMessage(envelope.data.message);
+}
+
+/** Merge messages by id and sort oldest first. */
+function mergeMessages(existing, incoming) {
+  const byId = new Map();
+  for (const message of [...(existing || []), ...(incoming || [])]) {
+    const normalized = normalizeMessage(message);
+    if (normalized) byId.set(normalized.id, normalized);
+  }
+  return [...byId.values()].sort(function (left, right) {
+    if (left.created_at === right.created_at) {
+      return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
+    }
+    return left.created_at < right.created_at ? -1 : 1;
+  });
+}
+
+/** Validate a composer draft before it is sent to the bridge. */
+function validateChatDraft(draft) {
+  const value = typeof draft === "string" ? draft.trim() : "";
+  if (!value) {
+    return { ok: false, error: "Message cannot be empty." };
+  }
+  if (value.length > CHAT_MESSAGE_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `Message cannot exceed ${CHAT_MESSAGE_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+/** Validate an optional direct-message target (player or pet name). */
+function validateDmTarget(target) {
+  const value = typeof target === "string" ? target.trim() : "";
+  if (!value) return { ok: true, value: "" };
+  if (value.length > CHAT_DM_TARGET_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `DM target cannot exceed ${CHAT_DM_TARGET_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+/** Plain text is always sent as display data; the server owns sanitization. */
+function chatMessagePayload(value, target) {
+  const payload = { body: String(value || ""), actor_mode: "human" };
+  const checked = validateDmTarget(target);
+  if (checked.ok && checked.value) {
+    payload.dm_target = checked.value;
+  }
+  return payload;
+}
+
+/** Validate a short taunt draft before it is sent to the bridge. */
+function validateTauntDraft(draft) {
+  const value = typeof draft === "string" ? draft.trim() : "";
+  if (!value) {
+    return { ok: false, error: "Taunt cannot be empty." };
+  }
+  if (value.length > CHAT_TAUNT_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `Taunt cannot exceed ${CHAT_TAUNT_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+function normalizeMatchContext(source) {
+  if (!source || typeof source !== "object") return null;
+  const hp = source.hp || source.final_hp || source.finalHp || null;
+  return {
+    match_id: normalNullableText(source.match_id || source.matchId),
+    winner: normalNullableText(source.winner),
+    winner_name: normalNullableText(source.winner_name || source.winnerName),
+    hp: hp && typeof hp === "object" ? { ...hp } : null,
+    rounds:
+      source.rounds === undefined || source.rounds === null
+        ? null
+        : Number(source.rounds) || 0,
+  };
+}
+
+function formatHp(hp) {
+  if (!hp || typeof hp !== "object") return "";
+  const a = Number(hp.a);
+  const b = Number(hp.b);
+  if (Number.isFinite(a) && Number.isFinite(b)) return `${a}-${b}`;
+  return "";
+}
+
+/** Short display-only callout for a taunt's match summary. */
+function tauntSummary(matchContext) {
+  const context = normalizeMatchContext(matchContext);
+  if (!context) return "";
+  const winner =
+    context.winner_name ||
+    (context.winner ? `Side ${context.winner}` : "Draw");
+  const hp = formatHp(context.hp);
+  return "Winner: " + winner + (hp ? " · HP " + hp : "");
+}
+
+/** A taunt bubble is any message tagged as a taunt or carrying match context. */
+function isTauntMessage(message) {
+  if (!message || typeof message !== "object") return false;
+  return (
+    message.kind === "taunt" ||
+    message.kind === "match_context" ||
+    Boolean(message.match_context)
+  );
+}
+
+/** Build the payload used by the Battle tab post-match taunt composer. */
+function tauntMessagePayload(value, options = {}) {
+  const opts = options && typeof options === "object" ? options : {};
+  const phase = opts.phase === "pre" ? "pre" : "post";
+  const payload = {
+    body: String(value || ""),
+    kind: "taunt",
+    phase,
+  };
+  const context = normalizeMatchContext(opts.match_context || opts.matchContext);
+  if (context) payload.match_context = context;
+  if (opts.match_id) payload.match_id = String(opts.match_id);
+  return payload;
+}
+
+function inboxRows(payload) {
+  const candidates = [
+    payload.inbox,
+    payload.items,
+    payload.entries,
+    payload.threads,
+    payload.dms,
+    payload.messages,
+    payload.notifications,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  return [];
+}
+
+function inboxFromName(item) {
+  const source = item && typeof item === "object" ? item : {};
+  return (
+    normalText(source.from) ||
+    normalText(source.sender) ||
+    normalText(source.player) ||
+    normalText(source.pet_name) ||
+    normalText(source.petName) ||
+    normalText(source.actor_name) ||
+    normalText(source.account_id)
+  );
+}
+
+/** Coerce one inbox row (DM, mention or taunt notification) for display. */
+function normalizeInboxItem(item) {
+  if (!item || typeof item !== "object") return null;
+  const body =
+    normalText(item.preview) ||
+    normalText(item.body) ||
+    normalText(item.text) ||
+    normalText(item.message);
+  const channelId = normalText(item.channel_id || item.channelId);
+  const id =
+    normalText(item.id) ||
+    normalText(item.notification_id) ||
+    (channelId ? channelId + ":" + normalText(item.created_at) : "");
+  if (!id && !body) return null;
+  const rawKind = normalText(item.kind || item.type).toLowerCase();
+  const kind =
+    rawKind === "dm" || rawKind === "direct"
+      ? "dm"
+      : rawKind === "mention" || rawKind === "@mention"
+        ? "mention"
+        : rawKind === "taunt"
+          ? "taunt"
+          : channelId.indexOf("dm:") === 0
+            ? "dm"
+            : /(^|\s)@[A-Za-z0-9_]/.test(body)
+              ? "mention"
+              : "notice";
+  return {
+    id: id || body,
+    kind,
+    channel_id: channelId || null,
+    account_id: normalText(item.account_id || item.accountId) || null,
+    from: inboxFromName(item) || null,
+    body,
+    created_at: normalText(item.created_at),
+    read: item.read === true || item.unread === false,
+    unread: item.unread === true || item.read === false,
+    match_context: normalizeMatchContext(
+      item.match_context || item.matchContext
+    ),
+  };
+}
+
+/** Read an inbox envelope into unread counts and display rows. */
+function normalizeInbox(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") {
+    return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
+  }
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const items = inboxRows(payload).map(normalizeInboxItem).filter(Boolean);
+  const explicitUnread = Number(
+    payload.unread_count !== undefined
+      ? payload.unread_count
+      : payload.unreadCount !== undefined
+        ? payload.unreadCount
+        : payload.unread
+  );
+  const derivedUnread = items.filter(function (item) {
+    return item.unread;
+  }).length;
+  const unreadCount =
+    Number.isFinite(explicitUnread) && explicitUnread >= 0
+      ? Math.trunc(explicitUnread)
+      : derivedUnread;
+  return {
+    items,
+    unreadCount,
+    total:
+      Number.isFinite(Number(payload.total)) && Number(payload.total) >= 0
+        ? Math.trunc(Number(payload.total))
+        : items.length,
+    dms: items.filter(function (item) {
+      return item.kind === "dm";
+    }),
+    mentions: items.filter(function (item) {
+      return item.kind === "mention";
+    }),
+  };
+}
+
+/** The persistent rail collapses below this viewport width. */
+function lobbyRailAutoCollapsed(width) {
+  const value = Number(width);
+  if (!Number.isFinite(value)) return false;
+  return value < LOBBY_RAIL_BREAKPOINT;
+}
+
+/** Unread count for the collapsed lobby rail badge. */
+function lobbyUnreadCount(inbox) {
+  return normalizeInbox(inbox).unreadCount;
+}
+
+/** Compact badge label; empty at zero and capped for very busy lobbies. */
+function lobbyUnreadLabel(count) {
+  const value = Math.trunc(Number(count));
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return value > 99 ? "99+" : String(value);
+}
+
+/** Mark every inbox row read locally without mutating the input. */
+function markInboxRead(inbox) {
+  if (!inbox || typeof inbox !== "object") {
+    return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
+  }
+  const items = (Array.isArray(inbox.items) ? inbox.items : []).map(
+    function (item) {
+      return { ...item, read: true, unread: false };
+    }
+  );
+  return {
+    ...inbox,
+    items,
+    unreadCount: 0,
+    dms: items.filter(function (item) {
+      return item.kind === "dm";
+    }),
+    mentions: items.filter(function (item) {
+      return item.kind === "mention";
+    }),
+  };
+}
+
+/** Best-effort bridge call telling the server the inbox was opened. */
+function markInboxReadRequest(api, ids) {
+  const list = (Array.isArray(ids) ? ids : []).filter(Boolean).map(String);
+  if (!list.length) return Promise.resolve(null);
+  if (api && typeof api.post === "function") {
+    return api.post(CHAT_INBOX_READ_PATH, { ids: list });
+  }
+  if (api && typeof api.patch === "function") {
+    return api.patch(CHAT_INBOX_READ_PATH, { ids: list });
+  }
+  return Promise.resolve(null);
+}
+
+/** Payload for the owner Agent-chat toggle. */
+function chatSettingsPayload(enabled) {
+  return { chat_enabled: enabled === true };
+}
+
+/** Read the confirmed chat flag from a settings/policy envelope. */
+function chatEnabledFromEnvelope(envelope, fallback = false) {
+  if (!envelope || envelope.ok !== true) return fallback;
+  const data =
+    envelope.data && typeof envelope.data === "object"
+      ? envelope.data
+      : envelope;
+  const candidates = [
+    data.chat_enabled,
+    data.chatEnabled,
+    data.policy && data.policy.chat_enabled,
+    data.settings && data.settings.chat_enabled,
+    data.me && data.me.policy && data.me.policy.chat_enabled,
+  ];
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null) {
+      return flagValue(candidate);
+    }
+  }
+  return fallback;
+}
+
+/**
+ * PATCH the owner chat setting through the local bridge.
+ *
+ * api.js exposes ``patch`` on newer bridges; older bridges fall back to a POST
+ * to the same bridge-relative route so the toggle still works in tests.
+ */
+function updateChatSetting(api, enabled, options = {}) {
+  const opts = options && typeof options === "object" ? options : {};
+  const path = opts.path || CHAT_SETTINGS_PATH;
+  const payload = chatSettingsPayload(enabled);
+  if (api && typeof api.patch === "function") {
+    return api.patch(path, payload);
+  }
+  if (api && typeof api.post === "function") {
+    return api.post(path, payload);
+  }
+  return Promise.resolve({
+    ok: false,
+    status: "offline",
+    error: {
+      code: "network_error",
+      message: "Could not reach the local Hermagotchi bridge.",
+    },
+  });
+}
+
+const MODERATION_CODES = new Set([
+  "blocked",
+  "blocked_interaction",
+  "forbidden",
+  "rate_limited",
+  "empty_message",
+  "message_too_long",
+  "validation_error",
+  "chat_disabled",
+  "agent_chat_disabled",
+  "chat_off",
+  "daily_cap",
+  "chat_daily_cap",
+  "agent_chat_daily_cap",
+  "daily_message_cap",
+  "cooldown",
+  "chat_cooldown",
+  "taunt_cooldown",
+  "unanswered_cap",
+  "taunt_unanswered_cap",
+  "unanswered_taunt_cap",
+  "invalid_taunt",
+  "taunt_invalid",
+  "taunt_rejected",
+]);
+
+const AUTH_CODES = new Set(["auth_missing", "unauthorized", "expired", "disabled"]);
+
+function cleanCode(value) {
+  return typeof value === "string" ? value.slice(0, 64) : "";
+}
+
+function moderationLine(code, retryAfterS) {
+  const base = npcHostLine("chat.moderation");
+  const seconds = Number(retryAfterS);
+  if (code === "rate_limited") {
+    return seconds > 0
+      ? `Easy there. Try again in ${Math.ceil(seconds)}s.`
+      : "Easy there. Slow down before sending again.";
+  }
+  if (
+    code === "cooldown" ||
+    code === "chat_cooldown" ||
+    code === "taunt_cooldown"
+  ) {
+    return seconds > 0
+      ? `Cooldown. Try again in ${Math.ceil(seconds)}s.`
+      : "Cooldown. Give it a moment before the next taunt.";
+  }
+  if (
+    code === "chat_disabled" ||
+    code === "agent_chat_disabled" ||
+    code === "chat_off"
+  ) {
+    return "Chat is off. Enable Agent chat in Settings first.";
+  }
+  if (
+    code === "daily_cap" ||
+    code === "chat_daily_cap" ||
+    code === "agent_chat_daily_cap" ||
+    code === "daily_message_cap"
+  ) {
+    return "Daily chat cap reached. Try again tomorrow.";
+  }
+  if (
+    code === "unanswered_cap" ||
+    code === "taunt_unanswered_cap" ||
+    code === "unanswered_taunt_cap"
+  ) {
+    return "Too many unanswered taunts. Wait for a reply first.";
+  }
+  if (
+    code === "invalid_taunt" ||
+    code === "taunt_invalid" ||
+    code === "taunt_rejected"
+  ) {
+    return "That taunt was rejected. Keep it short and clean.";
+  }
+  if (code === "blocked" || code === "blocked_interaction") {
+    return "That message was blocked. Stay calm. Stay open.";
+  }
+  if (
+    code === "empty_message" ||
+    code === "message_too_long" ||
+    code === "validation_error"
+  ) {
+    return "That message was rejected. Keep it short and kind.";
+  }
+  if (code === "auth_missing" || code === "unauthorized" || code === "expired") {
+    return "Pair this device before sending lobby messages.";
+  }
+  if (code === "offline" || code === "unavailable" || code === "network_disabled") {
+    return "The lobby is unavailable right now. Try again later.";
+  }
+  return base ? base.line : "The message was not sent.";
+}
+
+/** Turn a failed bridge envelope into a display-only moderation notice. */
+function chatNoticeFromEnvelope(envelope) {
+  if (envelope && envelope.ok === true) return null;
+  const source = envelope && typeof envelope === "object" ? envelope : {};
+  const status = cleanCode(source.status) || "unavailable";
+  const error = source.error && typeof source.error === "object" ? source.error : {};
+  const code = cleanCode(error.code) || cleanCode(source.status) || "unavailable";
+  const retryAfterS = Number(error.retry_after_s);
+  const message = normalText(error.message).slice(0, 240);
+  const kind = AUTH_CODES.has(code)
+    ? "auth"
+    : MODERATION_CODES.has(code)
+      ? "moderation"
+      : "error";
+  return {
+    kind,
+    status,
+    code,
+    retryAfterS: Number.isFinite(retryAfterS) && retryAfterS > 0 ? retryAfterS : null,
+    message,
+    hostLine: moderationLine(code, retryAfterS),
+  };
+}
+
+/** Build a notice for a successful block or report. */
+function chatActionNotice(kind) {
+  if (kind === "blocked") {
+    return {
+      kind: "moderation",
+      status: "ok",
+      code: "blocked",
+      retryAfterS: null,
+      message: "That account is blocked.",
+      hostLine: "Blocked. Their messages are hidden now.",
+    };
+  }
+  if (kind === "reported") {
+    return {
+      kind: "moderation",
+      status: "ok",
+      code: "reported",
+      retryAfterS: null,
+      message: "The report is queued for review.",
+      hostLine: "Report sent. A moderator will review it.",
+    };
+  }
+  return null;
+}
+
+/** Nous Girl hosts every moderation notice; the line never renders markup. */
+function chatModerationHost(notice) {
+  const base = npcHostLine("chat.moderation");
+  if (!base) return null;
+  const line = notice && typeof notice.hostLine === "string" && notice.hostLine
+    ? notice.hostLine
+    : base.line;
+  return {
+    id: base.id,
+    name: base.name,
+    context: base.context,
+    line,
+    displayOnly: true,
+  };
+}
+
+/** Provider for the normal lobby banner. */
+function chatHost() {
+  return npcHostLine("chat");
+}
+
+  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
+})();
+
+// desktop/src/ui/logic/assets.js
+const __m3 = (function () {
+/**
+ * Pure asset-path helpers shared by the Desktop UI. These never touch the DOM,
+ * the network or host-specific paths: callers join them against the bridge's
+ * `…/assets` root.
+ */
+
+const ANIM_STRIP_TEMPLATE = "px3/anims/{species}_{palette}_{state}.png";
+
+/** Server appearance.traits.palette (palette_0N) → anim strip palette names. */
+const SERVER_PALETTE_TO_ANIM = Object.freeze({
+  palette_01: "teal",
+  palette_02: "grape",
+  palette_03: "lime",
+  palette_04: "brick",
+  palette_05: "teal",
+  palette_06: "grape",
+  teal: "teal",
+  grape: "grape",
+  lime: "lime",
+  brick: "brick",
+});
+
+function resolveAnimPalette(value) {
+  if (!value) return "teal";
+  const key = String(value);
+  return SERVER_PALETTE_TO_ANIM[key] || SERVER_PALETTE_TO_ANIM[key.toLowerCase()] || "teal";
+}
+
+const NPC_PORTRAITS = Object.freeze({
+  "npc.don_piedro": "px3/npcs/don_piedro_portrait.png",
+  "npc.nous_girl": "px3/npcs/nous_girl_portrait.png",
+  "npc.teknium": "px3/npcs/teknium_portrait.png",
+  "npc.southpaw": "px3/npcs/southpaw_portrait.png",
+});
+
+function joinAssetUrl(baseUrl, path) {
+  if (!path) return "";
+  const value = String(path);
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
+  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
+  if (!base) return relative;
+  if (!relative) return base;
+  return base + "/" + relative;
+}
+
+function petSpecies(pet) {
+  if (typeof pet === "string") return pet;
+  if (!pet || typeof pet !== "object") return "";
+  return pet.species ? String(pet.species) : "";
+}
+
+function petPalette(pet) {
+  if (!pet || typeof pet !== "object") return "";
+  if (pet.appearance && typeof pet.appearance === "object") {
+    const appearance = pet.appearance;
+    const traits = appearance.traits && typeof appearance.traits === "object" ? appearance.traits : null;
+    const fromTraits = traits && (traits.palette || traits.palette_id);
+    if (fromTraits) return String(fromTraits);
+    const fromAppearance = appearance.palette || appearance.palette_id;
+    if (fromAppearance) return String(fromAppearance);
+  }
+  const direct = pet.palette || pet.palette_id;
+  return direct ? String(direct) : "";
+}
+
+function palettePath(entry, palette) {
+  if (!palette || !entry || typeof entry !== "object") return "";
+  for (const key of ["palettes", "overrides"]) {
+    const group = entry[key];
+    if (!group || typeof group !== "object" || Array.isArray(group)) continue;
+    const value = group[palette];
+    if (typeof value === "string" && value) return value;
+    if (value && typeof value === "object") {
+      if (typeof value.base === "string" && value.base) return value.base;
+      if (typeof value.path === "string" && value.path) return value.path;
+    }
+  }
+  return "";
+}
+
+function speciesBodyPath(manifest, pet) {
+  const species = petSpecies(pet);
+  if (!species) return "";
+  const entry =
+    manifest &&
+    manifest.species &&
+    typeof manifest.species === "object" &&
+    manifest.species[species];
+  if (entry && typeof entry === "object") {
+    const palette = petPalette(pet);
+    const override = palettePath(entry, palette);
+    if (override) return override;
+    if (typeof entry.base === "string" && entry.base) return entry.base;
+    if (typeof entry.path === "string" && entry.path) return entry.path;
+  }
+  return "px3/species/" + species + "_body.png";
+}
+
+function itemAssetId(itemOrId) {
+  if (typeof itemOrId === "string") return itemOrId;
+  if (!itemOrId || typeof itemOrId !== "object") return "";
+  const id = itemOrId.asset_id || itemOrId.assetId || itemOrId.id;
+  return id ? String(id) : "";
+}
+
+function itemAssetPath(manifest, itemOrId) {
+  const assetId = itemAssetId(itemOrId);
+  if (!assetId) return "";
+  const assets =
+    manifest && Array.isArray(manifest.assets) ? manifest.assets : [];
+  for (const asset of assets) {
+    if (!asset || typeof asset !== "object") continue;
+    const id = asset.id ? String(asset.id) : "";
+    const alternate = asset.asset_id || asset.assetId;
+    if (id === assetId || (alternate && String(alternate) === assetId)) {
+      if (typeof asset.path === "string" && asset.path) return asset.path;
+    }
+  }
+  if (itemOrId && typeof itemOrId === "object") {
+    const direct =
+      itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
+    if (direct) return String(direct);
+  }
+  // Prefer a silent miss over a guessed path that 404s in the shop grid.
+  return "";
+}
+
+function npcPortraitPath(npcId) {
+  if (!npcId) return "";
+  const id = String(npcId);
+  if (NPC_PORTRAITS[id]) return NPC_PORTRAITS[id];
+  const prefixed = id.startsWith("npc.") ? id : "npc." + id;
+  return NPC_PORTRAITS[prefixed] || "";
+}
+
+function animStripPath(species, palette, state) {
+  if (!species) return "";
+  return ANIM_STRIP_TEMPLATE
+    .replace("{species}", String(species))
+    .replace("{palette}", String(palette || "teal"))
+    .replace("{state}", String(state || "idle"));
+}
+
+  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
+})();
+
+// desktop/src/ui/components/NpcHostBanner.js
+const __m4 = (function () {
+  const jsx = __ext0;
+  const jsxs = __ext1;
+  const npcHostLine = __m0["npcHostLine"];
+  const joinAssetUrl = __m3["joinAssetUrl"];
+  const npcPortraitPath = __m3["npcPortraitPath"];
+
+/** Display-only NPC quip strip for a Desktop tab. */
+function NpcHostBanner(props = {}) {
+  const surface = props.surface;
+  const host = props.host || (surface ? npcHostLine(surface) : null);
+  if (!host || !host.line) return null;
+  const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
+  const portrait = npcPortraitPath(host.id);
+  const portraitUrl =
+    portrait && assetBaseUrl ? joinAssetUrl(assetBaseUrl, portrait) : "";
+  return jsxs("aside", {
+    className: "hg-npc-host",
+    "data-npc-id": host.id,
+    "data-npc-context": host.context,
+    "data-display-only": "true",
+    children: [
+      portraitUrl
+        ? jsx("img", {
+            className: "hg-npc-host__portrait",
+            src: portraitUrl,
+            alt: "",
+            "aria-hidden": "true",
+            loading: "lazy",
+            decoding: "async",
+            draggable: "false",
+            width: 56,
+            height: 56,
+          })
+        : null,
+      jsx("strong", { className: "hg-npc-host__name", children: host.name }),
+      jsx("p", {
+        className: "hg-npc-host__line",
+        children: host.line,
+      }),
+    ],
+  });
+}
+
+  return { "NpcHostBanner": NpcHostBanner };
+})();
+
+// desktop/src/ui/components/LobbyRail.js
+const __m5 = (function () {
+  const useEffect = __ext2;
+  const useState = __ext3;
+  const jsx = __ext0;
+  const jsxs = __ext1;
+  const npcHostLine = __m0["npcHostLine"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const CHAT_BLOCKS_PATH = __m2["CHAT_BLOCKS_PATH"];
+  const CHAT_DM_TARGET_MAX_CHARS = __m2["CHAT_DM_TARGET_MAX_CHARS"];
+  const CHAT_INBOX_PATH = __m2["CHAT_INBOX_PATH"];
+  const CHAT_MESSAGES_PATH = __m2["CHAT_MESSAGES_PATH"];
+  const CHAT_MESSAGE_MAX_CHARS = __m2["CHAT_MESSAGE_MAX_CHARS"];
+  const CHAT_REPORT_PATH = __m2["CHAT_REPORT_PATH"];
+  const CHAT_REPORT_REASON = __m2["CHAT_REPORT_REASON"];
+  const chatActionNotice = __m2["chatActionNotice"];
+  const chatMessagePayload = __m2["chatMessagePayload"];
+  const chatModerationHost = __m2["chatModerationHost"];
+  const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
+  const isTauntMessage = __m2["isTauntMessage"];
+  const lobbyUnreadCount = __m2["lobbyUnreadCount"];
+  const lobbyUnreadLabel = __m2["lobbyUnreadLabel"];
+  const mergeMessages = __m2["mergeMessages"];
+  const messageFromEnvelope = __m2["messageFromEnvelope"];
+  const normalizeInbox = __m2["normalizeInbox"];
+  const normalizeMessages = __m2["normalizeMessages"];
+  const shouldShowChatStub = __m2["shouldShowChatStub"];
+  const tauntSummary = __m2["tauntSummary"];
+  const validateChatDraft = __m2["validateChatDraft"];
+  const validateDmTarget = __m2["validateDmTarget"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+
+function emptyInbox() {
+  return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
+}
+
+function actorLabel(message) {
+  return message.actor_mode === "agent" ? "Agent" : "Player";
+}
+
+function LobbyActions(props) {
+  const message = props.message;
+  return jsxs("div", {
+    className: "hg-actions hg-actions--tight",
+    children: [
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: props.busy,
+        onClick: function () {
+          props.onReport(message);
+        },
+        children: "Report",
+      }),
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: props.busy || !message.account_id,
+        onClick: function () {
+          props.onBlock(message);
+        },
+        children: "Block",
+      }),
+    ],
+  });
+}
+
+function LobbyMessageRow(props) {
+  const message = props.message;
+
+  if (isTauntMessage(message)) {
+    const summary = tauntSummary(message.match_context);
+    return jsxs("li", {
+      className: "hg-lobby-rail__message hg-lobby-rail__taunt",
+      "data-message-id": message.id,
+      "data-actor-mode": message.actor_mode,
+      "data-message-kind": "taunt",
+      children: [
+        jsxs("div", {
+          className: "hg-lobby-rail__bubble",
+          children: [
+            jsxs("div", {
+              className: "hg-row hg-row--between",
+              children: [
+                jsx("strong", { children: actorLabel(message) + " taunt" }),
+                jsx("span", {
+                  className: "hg-muted",
+                  children: message.created_at || "Unknown time",
+                }),
+              ],
+            }),
+            jsx("p", {
+              className: "hg-lobby-rail__text",
+              children: message.body,
+            }),
+            summary
+              ? jsx("p", {
+                  className: "hg-lobby-rail__match",
+                  "data-taunt-match": "true",
+                  children: summary,
+                })
+              : null,
+            jsx(LobbyActions, {
+              message,
+              busy: props.busy,
+              onReport: props.onReport,
+              onBlock: props.onBlock,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  return jsxs("li", {
+    className: "hg-lobby-rail__message",
+    "data-message-id": message.id,
+    "data-actor-mode": message.actor_mode,
+    children: [
+      jsxs("div", {
+        className: "hg-row hg-row--between",
+        children: [
+          jsx("strong", { children: actorLabel(message) }),
+          jsx("span", {
+            className: "hg-muted",
+            children: message.created_at || "Unknown time",
+          }),
+        ],
+      }),
+      jsx("p", {
+        className: "hg-lobby-rail__text",
+        children: message.body,
+      }),
+      jsx(LobbyActions, {
+        message,
+        busy: props.busy,
+        onReport: props.onReport,
+        onBlock: props.onBlock,
+      }),
+    ],
+  });
+}
+
+function LobbyStub(props) {
+  const uiState = props.uiState || UI_STATES.NETWORK_OFF;
+  return jsxs("div", {
+    className: "hg-lobby-rail__stub",
+    "data-chat-mode": "stub",
+    children: [
+      uiState && uiState !== UI_STATES.READY
+        ? jsx(StateNotice, { state: uiState })
+        : null,
+      jsx(NpcHostBanner, { surface: "chat" }),
+      jsx("p", { className: "hg-lobby-rail__stub-title", children: "Chat is off by default" }),
+      jsx("p", {
+        className: "hg-muted",
+        children:
+          "The lobby stays unavailable until the owner enables chat and this device is paired.",
+      }),
+      jsx("label", {
+        className: "hg-field",
+        children: [
+          jsx("span", { children: "Message" }),
+          jsx("textarea", {
+            rows: "3",
+            disabled: true,
+            placeholder: "Chat is disabled in this stub",
+          }),
+        ],
+      }),
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: true,
+        children: "Send (disabled)",
+      }),
+    ],
+  });
+}
+
+function LobbyRail(props = {}) {
+  const api = props.api;
+  const uiState = props.uiState || props.state || UI_STATES.READY;
+  const enabled = !shouldShowChatStub(props);
+  const collapsedState = useState(false);
+  const collapsed =
+    props.collapsed === undefined ? collapsedState[0] : props.collapsed === true;
+  const setInternalCollapsed = collapsedState[1];
+
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [dmTarget, setDmTarget] = useState("");
+  const [composerError, setComposerError] = useState("");
+  const [notice, setNotice] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [inbox, setInbox] = useState(emptyInbox);
+
+  useEffect(
+    function loadMessages() {
+      if (!enabled || !api || typeof api.get !== "function") {
+        setMessages([]);
+        setLoading(false);
+        return undefined;
+      }
+      let cancelled = false;
+      setLoading(true);
+      api
+        .get(CHAT_MESSAGES_PATH)
+        .then(function (envelope) {
+          if (cancelled) return;
+          if (envelope && envelope.ok === true) {
+            setMessages(normalizeMessages(envelope));
+            setNotice(null);
+          } else {
+            setNotice(chatNoticeFromEnvelope(envelope));
+          }
+        })
+        .catch(function () {
+          if (!cancelled) setNotice(chatNoticeFromEnvelope(null));
+        })
+        .then(function () {
+          if (!cancelled) setLoading(false);
+        });
+      return function () {
+        cancelled = true;
+      };
+    },
+    [api, enabled, refreshTick]
+  );
+
+  useEffect(
+    function pollInbox() {
+      if (!enabled || !api || typeof api.get !== "function") {
+        setInbox(emptyInbox());
+        return undefined;
+      }
+      let cancelled = false;
+      async function load() {
+        try {
+          const envelope = await api.get(CHAT_INBOX_PATH);
+          if (!cancelled && envelope && envelope.ok === true) {
+            setInbox(normalizeInbox(envelope));
+          }
+        } catch (_error) {
+          /* The rail badge stays quiet; the lobby notice owns errors. */
+        }
+      }
+      load();
+      const timer = setInterval(load, 30000);
+      return function () {
+        cancelled = true;
+        clearInterval(timer);
+      };
+    },
+    [api, enabled]
+  );
+
+  const unread = lobbyUnreadCount(inbox);
+
+  function toggle() {
+    if (typeof props.onToggle === "function") {
+      props.onToggle();
+      return;
+    }
+    setInternalCollapsed(function (current) {
+      return !current;
+    });
+  }
+
+  function refresh() {
+    setRefreshTick(function (tick) {
+      return tick + 1;
+    });
+  }
+
+  async function submitMessage(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    const checked = validateChatDraft(draft);
+    if (!checked.ok) {
+      setComposerError(checked.error);
+      return;
+    }
+    const checkedTarget = validateDmTarget(dmTarget);
+    if (!checkedTarget.ok) {
+      setComposerError(checkedTarget.error);
+      return;
+    }
+
+    setComposerError("");
+    setBusy(true);
+    try {
+      const envelope = await api.post(
+        CHAT_MESSAGES_PATH,
+        chatMessagePayload(checked.value, checkedTarget.value)
+      );
+      if (envelope && envelope.ok === true) {
+        const sent = messageFromEnvelope(envelope);
+        if (sent) {
+          setMessages(function (current) {
+            return mergeMessages(current, [sent]);
+          });
+        } else {
+          refresh();
+        }
+        setDraft("");
+        setNotice(null);
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function blockMessage(message) {
+    if (!message || !message.account_id) return;
+    setBusy(true);
+    try {
+      const envelope = await api.post(CHAT_BLOCKS_PATH, {
+        blocked_id: message.account_id,
+      });
+      if (envelope && envelope.ok === true) {
+        setMessages(function (current) {
+          return current.filter(function (item) {
+            return item.account_id !== message.account_id;
+          });
+        });
+        setNotice(chatActionNotice("blocked"));
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reportMessage(message) {
+    if (!message || !message.id) return;
+    setBusy(true);
+    try {
+      const envelope = await api.post(CHAT_REPORT_PATH, {
+        target_type: "message",
+        target_id: message.id,
+        reason: CHAT_REPORT_REASON,
+      });
+      setNotice(
+        envelope && envelope.ok === true
+          ? chatActionNotice("reported")
+          : chatNoticeFromEnvelope(envelope)
+      );
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const moderationHost = notice
+    ? chatModerationHost(notice) || npcHostLine("chat.moderation")
+    : null;
+  const unreadLabel = lobbyUnreadLabel(unread);
+
+  const rows = messages.map(function (message) {
+    return jsx(
+      LobbyMessageRow,
+      {
+        message,
+        busy,
+        onReport: reportMessage,
+        onBlock: blockMessage,
+      },
+      message.id
+    );
+  });
+
+  const emptyState =
+    enabled && !loading && messages.length === 0
+      ? jsx("li", {
+          className: "hg-muted",
+          children: "No lobby messages yet. Say hello below.",
+        })
+      : null;
+
+  const header = jsxs("header", {
+    className: "hg-lobby-rail__header",
+    children: [
+      jsxs("button", {
+        type: "button",
+        className: "hg-lobby-rail__toggle",
+        onClick: toggle,
+        "aria-expanded": collapsed ? "false" : "true",
+        "aria-label": collapsed ? "Open lobby" : "Collapse lobby",
+        title: collapsed ? "Open lobby" : "Collapse lobby",
+        children: [
+          jsx("span", {
+            className: "hg-lobby-rail__icon",
+            "aria-hidden": "true",
+            children: collapsed ? "«" : "»",
+          }),
+          jsx("span", {
+            className: "hg-lobby-rail__label",
+            children: "Social",
+          }),
+        ],
+      }),
+      unread > 0
+        ? jsx("span", {
+            className: "hg-lobby-rail__badge",
+            "data-rail-unread": String(unread),
+            "aria-label": unread + " unread",
+            children: unreadLabel,
+          })
+        : null,
+    ],
+  });
+
+  const body = collapsed
+    ? null
+    : enabled
+      ? jsxs("div", {
+          className: "hg-lobby-rail__body",
+          "data-chat-mode": "live",
+          children: [
+            uiState && uiState !== UI_STATES.READY
+              ? jsx(StateNotice, { state: uiState })
+              : null,
+            notice
+              ? jsx(NpcHostBanner, {
+                  surface: "chat.moderation",
+                  host: moderationHost,
+                })
+              : jsx(NpcHostBanner, { surface: "chat" }),
+            notice && (notice.message || notice.hostLine)
+              ? jsx("p", {
+                  className:
+                    notice.kind === "moderation"
+                      ? "hg-lobby-rail__notice hg-muted"
+                      : "hg-lobby-rail__notice hg-error",
+                  "data-chat-notice": notice.code,
+                  role: "status",
+                  children: notice.message || notice.hostLine,
+                })
+              : null,
+            jsx("ol", {
+              className: "hg-lobby-rail__messages",
+              "aria-live": "polite",
+              children: [emptyState, ...rows],
+            }),
+            jsxs("form", {
+              className: "hg-lobby-rail__compose",
+              onSubmit: submitMessage,
+              children: [
+                jsxs("label", {
+                  className: "hg-field",
+                  children: [
+                    jsx("span", { children: "Message" }),
+                    jsx("textarea", {
+                      className: "hg-input",
+                      rows: "3",
+                      maxLength: String(CHAT_MESSAGE_MAX_CHARS),
+                      value: draft,
+                      disabled: busy,
+                      placeholder: "Write a plain-text lobby message",
+                      onChange: function (event) {
+                        setDraft(event.target.value);
+                      },
+                    }),
+                  ],
+                }),
+                jsxs("label", {
+                  className: "hg-field hg-chat__dm-target",
+                  children: [
+                    jsx("span", { children: "Direct message to (optional)" }),
+                    jsx("input", {
+                      className: "hg-input",
+                      type: "text",
+                      maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
+                      value: dmTarget,
+                      disabled: busy,
+                      placeholder: "Player or pet name — blank keeps the lobby",
+                      "data-chat-dm-target": "true",
+                      onChange: function (event) {
+                        setDmTarget(event.target.value);
+                      },
+                    }),
+                  ],
+                }),
+                composerError
+                  ? jsx("p", {
+                      className: "hg-error",
+                      role: "alert",
+                      children: composerError,
+                    })
+                  : null,
+                jsxs("div", {
+                  className: "hg-actions",
+                  children: [
+                    jsx("button", {
+                      type: "submit",
+                      className: "hg-btn hg-btn--primary",
+                      disabled: busy,
+                      children: busy ? "Working..." : "Send",
+                    }),
+                    jsx("button", {
+                      type: "button",
+                      className: "hg-btn",
+                      disabled: busy,
+                      onClick: refresh,
+                      children: "Refresh",
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        })
+      : jsx(LobbyStub, { uiState });
+
+  return jsxs("aside", {
+    className: collapsed
+      ? "hg-lobby-rail hg-lobby-rail--collapsed"
+      : "hg-lobby-rail",
+    "data-rail": "lobby",
+    "data-collapsed": collapsed ? "true" : "false",
+    "aria-label": "Lobby",
+    children: [header, body],
+  });
+}
+
+  return { "LobbyRail": LobbyRail };
+})();
+
+// desktop/src/ui/logic/connection.js
+const __m6 = (function () {
 /**
  * Pure connection/pairing status helpers.
  *
@@ -264,329 +1753,8 @@ function resolveConnectionUiState(connection = {}) {
   return { "deriveConnectionStatus": deriveConnectionStatus, "connectionRows": connectionRows, "resolveConnectionUiState": resolveConnectionUiState };
 })();
 
-// desktop/src/ui/states.js
-const __m1 = (function () {
-  const jsx = __ext0;
-  const jsxs = __ext1;
-
-const UI_STATES = Object.freeze({
-  READY: "ready",
-  BACKEND_DISABLED: "backend_disabled",
-  NETWORK_OFF: "network_off",
-  AUTH_MISSING: "auth_missing",
-  SERVICE_UNAVAILABLE: "service_unavailable",
-});
-
-const UI_STATE_COPY = Object.freeze({
-  ready: {
-    label: "Live",
-    detail: "Paired and connected to the game service.",
-    action: "",
-  },
-  backend_disabled: {
-    label: "Backend disabled",
-    detail: "The Hermagotchi Python backend is off. Enable it in Hermes before loading game data.",
-    action: "Open Settings to review the backend toggle.",
-  },
-  network_off: {
-    label: "Network off",
-    detail: "Multiplayer is disabled by your owner policy. Local habitat features remain available.",
-    action: "Review Settings to opt in to multiplayer.",
-  },
-  auth_missing: {
-    label: "Auth missing",
-    detail: "This device is not paired. Pair it before using multiplayer, shop or social actions.",
-    action: "Pair this device from Settings.",
-  },
-  service_unavailable: {
-    label: "Service unavailable",
-    detail: "The game service cannot be reached right now. Local state is unchanged.",
-    action: "Retry later or check the service status in Settings.",
-  },
-});
-
-function resolveUiState(options = {}) {
-  const backendEnabled = options.backendEnabled !== false;
-  const networkEnabled = options.networkEnabled !== false;
-  const authenticated = options.authenticated !== false;
-  const serviceReachable = options.serviceReachable !== false;
-
-  if (!backendEnabled) {
-    return UI_STATES.BACKEND_DISABLED;
-  }
-  if (!networkEnabled) {
-    return UI_STATES.NETWORK_OFF;
-  }
-  if (!authenticated) {
-    return UI_STATES.AUTH_MISSING;
-  }
-  if (!serviceReachable) {
-    return UI_STATES.SERVICE_UNAVAILABLE;
-  }
-  return UI_STATES.READY;
-}
-
-function StateNotice(props = {}) {
-  const state = props.state || UI_STATES.READY;
-  const copy = UI_STATE_COPY[state] || UI_STATE_COPY.ready;
-
-  if (state === UI_STATES.READY) {
-    // Compact live badge — tabs should skip rendering this to avoid a duplicate.
-    if (props.compact === false) {
-      return null;
-    }
-    return jsx("p", {
-      className: "hg-state hg-state--ready",
-      "data-ui-state": state,
-      "data-live": "true",
-      children: copy.detail,
-    });
-  }
-
-  return jsxs("section", {
-    className: "hg-state hg-state--" + state,
-    role: "status",
-    "data-ui-state": state,
-    children: [
-      jsx("strong", { children: copy.label }),
-      jsx("p", { children: copy.detail }),
-      copy.action
-        ? jsx("span", { className: "hg-state__hint", children: copy.action })
-        : null,
-    ],
-  });
-}
-
-  return { "UI_STATES": UI_STATES, "UI_STATE_COPY": UI_STATE_COPY, "resolveUiState": resolveUiState, "StateNotice": StateNotice };
-})();
-
-// desktop/src/ui/npcLines.js
-const __m2 = (function () {
-/** Default NPC host lines for Desktop stubs.
- * Canonical source: assets/npc_lines.json (display-only; never instructions).
- * Generated/kept in sync by tests/test_npc_lines.py.
- */
-
-const NPC_NAMES = Object.freeze({"npc.don_piedro": "Don Piedro", "npc.nous_girl": "Nous Girl", "npc.teknium": "Teknium", "npc.southpaw": "Southpaw"});
-
-const NPC_HOST_DEFAULTS = Object.freeze({
-  "shop": Object.freeze({"id": "npc.don_piedro", "name": "Don Piedro", "context": "shop.greet", "line": "Don Piedro come to the shop. Pay respect.", "displayOnly": true}),
-  "shop.broke": Object.freeze({"id": "npc.don_piedro", "name": "Don Piedro", "context": "shop.broke", "line": "Your power level? Very small.", "displayOnly": true}),
-  "battle": Object.freeze({"id": "npc.teknium", "name": "Teknium", "context": "practice.start", "line": "Practice. Logging every punch for the data.", "displayOnly": true}),
-  "battle.tip": Object.freeze({"id": "npc.teknium", "name": "Teknium", "context": "practice.tip", "line": "Moving platform. Hold your context.", "displayOnly": true}),
-  "chat": Object.freeze({"id": "npc.nous_girl", "name": "Nous Girl", "context": "lobby.welcome", "line": "This way.", "displayOnly": true}),
-  "chat.moderation": Object.freeze({"id": "npc.nous_girl", "name": "Nous Girl", "context": "lobby.moderation", "line": "Stay calm. Stay open.", "displayOnly": true}),
-  "leaderboard": Object.freeze({"id": "npc.southpaw", "name": "Southpaw", "context": "leaderboard.announce", "line": "Southpaw Check: go!", "displayOnly": true}),
-  "bounty": Object.freeze({"id": "npc.southpaw", "name": "Southpaw", "context": "bounty.announce", "line": "Fuel for the humans running the models.", "displayOnly": true}),
-});
-
-function npcHostLine(surface) {
-  return NPC_HOST_DEFAULTS[surface] || null;
-}
-
-
-  return { "NPC_NAMES": NPC_NAMES, "NPC_HOST_DEFAULTS": NPC_HOST_DEFAULTS, "npcHostLine": npcHostLine };
-})();
-
-// desktop/src/ui/logic/assets.js
-const __m3 = (function () {
-/**
- * Pure asset-path helpers shared by the Desktop UI. These never touch the DOM,
- * the network or host-specific paths: callers join them against the bridge's
- * `…/assets` root.
- */
-
-const ANIM_STRIP_TEMPLATE = "px3/anims/{species}_{palette}_{state}.png";
-
-/** Server appearance.traits.palette (palette_0N) → anim strip palette names. */
-const SERVER_PALETTE_TO_ANIM = Object.freeze({
-  palette_01: "teal",
-  palette_02: "grape",
-  palette_03: "lime",
-  palette_04: "brick",
-  palette_05: "teal",
-  palette_06: "grape",
-  teal: "teal",
-  grape: "grape",
-  lime: "lime",
-  brick: "brick",
-});
-
-function resolveAnimPalette(value) {
-  if (!value) return "teal";
-  const key = String(value);
-  return SERVER_PALETTE_TO_ANIM[key] || SERVER_PALETTE_TO_ANIM[key.toLowerCase()] || "teal";
-}
-
-const NPC_PORTRAITS = Object.freeze({
-  "npc.don_piedro": "px3/npcs/don_piedro_portrait.png",
-  "npc.nous_girl": "px3/npcs/nous_girl_portrait.png",
-  "npc.teknium": "px3/npcs/teknium_portrait.png",
-  "npc.southpaw": "px3/npcs/southpaw_portrait.png",
-});
-
-function joinAssetUrl(baseUrl, path) {
-  if (!path) return "";
-  const value = String(path);
-  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
-  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
-  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
-  if (!base) return relative;
-  if (!relative) return base;
-  return base + "/" + relative;
-}
-
-function petSpecies(pet) {
-  if (typeof pet === "string") return pet;
-  if (!pet || typeof pet !== "object") return "";
-  return pet.species ? String(pet.species) : "";
-}
-
-function petPalette(pet) {
-  if (!pet || typeof pet !== "object") return "";
-  if (pet.appearance && typeof pet.appearance === "object") {
-    const appearance = pet.appearance;
-    const traits = appearance.traits && typeof appearance.traits === "object" ? appearance.traits : null;
-    const fromTraits = traits && (traits.palette || traits.palette_id);
-    if (fromTraits) return String(fromTraits);
-    const fromAppearance = appearance.palette || appearance.palette_id;
-    if (fromAppearance) return String(fromAppearance);
-  }
-  const direct = pet.palette || pet.palette_id;
-  return direct ? String(direct) : "";
-}
-
-function palettePath(entry, palette) {
-  if (!palette || !entry || typeof entry !== "object") return "";
-  for (const key of ["palettes", "overrides"]) {
-    const group = entry[key];
-    if (!group || typeof group !== "object" || Array.isArray(group)) continue;
-    const value = group[palette];
-    if (typeof value === "string" && value) return value;
-    if (value && typeof value === "object") {
-      if (typeof value.base === "string" && value.base) return value.base;
-      if (typeof value.path === "string" && value.path) return value.path;
-    }
-  }
-  return "";
-}
-
-function speciesBodyPath(manifest, pet) {
-  const species = petSpecies(pet);
-  if (!species) return "";
-  const entry =
-    manifest &&
-    manifest.species &&
-    typeof manifest.species === "object" &&
-    manifest.species[species];
-  if (entry && typeof entry === "object") {
-    const palette = petPalette(pet);
-    const override = palettePath(entry, palette);
-    if (override) return override;
-    if (typeof entry.base === "string" && entry.base) return entry.base;
-    if (typeof entry.path === "string" && entry.path) return entry.path;
-  }
-  return "px3/species/" + species + "_body.png";
-}
-
-function itemAssetId(itemOrId) {
-  if (typeof itemOrId === "string") return itemOrId;
-  if (!itemOrId || typeof itemOrId !== "object") return "";
-  const id = itemOrId.asset_id || itemOrId.assetId || itemOrId.id;
-  return id ? String(id) : "";
-}
-
-function itemAssetPath(manifest, itemOrId) {
-  const assetId = itemAssetId(itemOrId);
-  if (!assetId) return "";
-  const assets =
-    manifest && Array.isArray(manifest.assets) ? manifest.assets : [];
-  for (const asset of assets) {
-    if (!asset || typeof asset !== "object") continue;
-    const id = asset.id ? String(asset.id) : "";
-    const alternate = asset.asset_id || asset.assetId;
-    if (id === assetId || (alternate && String(alternate) === assetId)) {
-      if (typeof asset.path === "string" && asset.path) return asset.path;
-    }
-  }
-  if (itemOrId && typeof itemOrId === "object") {
-    const direct =
-      itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
-    if (direct) return String(direct);
-  }
-  // Prefer a silent miss over a guessed path that 404s in the shop grid.
-  return "";
-}
-
-function npcPortraitPath(npcId) {
-  if (!npcId) return "";
-  const id = String(npcId);
-  if (NPC_PORTRAITS[id]) return NPC_PORTRAITS[id];
-  const prefixed = id.startsWith("npc.") ? id : "npc." + id;
-  return NPC_PORTRAITS[prefixed] || "";
-}
-
-function animStripPath(species, palette, state) {
-  if (!species) return "";
-  return ANIM_STRIP_TEMPLATE
-    .replace("{species}", String(species))
-    .replace("{palette}", String(palette || "teal"))
-    .replace("{state}", String(state || "idle"));
-}
-
-  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
-})();
-
-// desktop/src/ui/components/NpcHostBanner.js
-const __m4 = (function () {
-  const jsx = __ext0;
-  const jsxs = __ext1;
-  const npcHostLine = __m2["npcHostLine"];
-  const joinAssetUrl = __m3["joinAssetUrl"];
-  const npcPortraitPath = __m3["npcPortraitPath"];
-
-/** Display-only NPC quip strip for a Desktop tab. */
-function NpcHostBanner(props = {}) {
-  const surface = props.surface;
-  const host = props.host || (surface ? npcHostLine(surface) : null);
-  if (!host || !host.line) return null;
-  const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
-  const portrait = npcPortraitPath(host.id);
-  const portraitUrl =
-    portrait && assetBaseUrl ? joinAssetUrl(assetBaseUrl, portrait) : "";
-  return jsxs("aside", {
-    className: "hg-npc-host",
-    "data-npc-id": host.id,
-    "data-npc-context": host.context,
-    "data-display-only": "true",
-    children: [
-      portraitUrl
-        ? jsx("img", {
-            className: "hg-npc-host__portrait",
-            src: portraitUrl,
-            alt: "",
-            "aria-hidden": "true",
-            loading: "lazy",
-            decoding: "async",
-            draggable: "false",
-            width: 56,
-            height: 56,
-          })
-        : null,
-      jsx("strong", { className: "hg-npc-host__name", children: host.name }),
-      jsx("p", {
-        className: "hg-npc-host__line",
-        children: host.line,
-      }),
-    ],
-  });
-}
-
-  return { "NpcHostBanner": NpcHostBanner };
-})();
-
 // desktop/src/ui/logic/compose.js
-const __m5 = (function () {
+const __m7 = (function () {
 /**
  * Pure cosmetic composition math for the Hermagotchi desktop preview.
  *
@@ -785,11 +1953,11 @@ const composeLayer = composeItem;
 })();
 
 // desktop/src/ui/logic/shop.js
-const __m6 = (function () {
+const __m8 = (function () {
   const joinAssetUrl = __m3["joinAssetUrl"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const composeItem = __m5["composeItem"];
-  const DEFAULT_NATIVE_SIZE = __m5["DEFAULT_NATIVE_SIZE"];
+  const composeItem = __m7["composeItem"];
+  const DEFAULT_NATIVE_SIZE = __m7["DEFAULT_NATIVE_SIZE"];
 /**
  * Pure Shop helpers. Catalog data always comes from the server response; item
  * ids are never hardcoded here so new cosmetics show up automatically.
@@ -1192,7 +2360,7 @@ function itemAvailability(options = {}) {
 })();
 
 // desktop/src/anim/petAnimContract.json
-const __m7 = (function () {
+const __m9 = (function () {
 const __json = {
   "schema": "hermagotchi-pet-anim-contract-v1",
   "native_size": 32,
@@ -1236,8 +2404,8 @@ const __json = {
 })();
 
 // desktop/src/anim/petAnimPlayer.js
-const __m8 = (function () {
-  const contract = __m7["default"];
+const __m10 = (function () {
+  const contract = __m9["default"];
 /**
  * Standalone pet animation helper for Hermagotchi desktop.
  * Pane UI imports this; do not put React/UI here.
@@ -1323,19 +2491,19 @@ function createPlayer(clip) {
 })();
 
 // desktop/src/ui/components/PetPreview.js
-const __m9 = (function () {
+const __m11 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
-  const buildPreviewLayers = __m6["buildPreviewLayers"];
+  const buildPreviewLayers = __m8["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const resolveAnimPalette = __m3["resolveAnimPalette"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const contract = __m8["contract"];
-  const createPlayer = __m8["createPlayer"];
-  const findClip = __m8["findClip"];
-  const resolveAnimState = __m8["resolveAnimState"];
+  const contract = __m10["contract"];
+  const createPlayer = __m10["createPlayer"];
+  const findClip = __m10["findClip"];
+  const resolveAnimState = __m10["resolveAnimState"];
 
 function layerStyle(layer) {
   const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
@@ -1664,7 +2832,7 @@ function PetPreview(props = {}) {
 })();
 
 // desktop/src/ui/logic/battle.js
-const __m10 = (function () {
+const __m12 = (function () {
 /**
  * Pure battle presentation helpers for the Desktop Battle tab.
  *
@@ -2108,10 +3276,10 @@ function battleTauntContext(match = {}, summary = {}) {
 })();
 
 // desktop/src/ui/components/TurnLog.js
-const __m11 = (function () {
+const __m13 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const formatTurnLog = __m10["formatTurnLog"];
+  const formatTurnLog = __m12["formatTurnLog"];
 
 function TypeChip(props) {
   const type = props.type;
@@ -2218,636 +3386,29 @@ function TurnLog(props = {}) {
   return { "TurnLog": TurnLog };
 })();
 
-// desktop/src/ui/logic/chat.js
-const __m12 = (function () {
-  const npcHostLine = __m2["npcHostLine"];
-/** Pure chat helpers shared by the Desktop Chat tab and its tests. */
-
-
-const CHAT_CHANNEL_ID = "lobby";
-const CHAT_MESSAGES_PATH = "/chat/channels/lobby/messages";
-const CHAT_BLOCKS_PATH = "/blocks";
-const CHAT_REPORT_PATH = "/moderation/report";
-const CHAT_INBOX_PATH = "/chat/inbox";
-const CHAT_INBOX_READ_PATH = "/chat/inbox/read";
-const CHAT_TAUNTS_PATH = "/chat/taunts";
-const CHAT_SETTINGS_PATH = "/me/chat-settings";
-const CHAT_POLICY_PATH = "/me/policy";
-const CHAT_MESSAGE_MAX_CHARS = 400;
-const CHAT_TAUNT_MAX_CHARS = 90;
-const CHAT_DM_TARGET_MAX_CHARS = 64;
-const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
-
-const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
-
-function flagValue(value) {
-  if (value === true || value === 1) return true;
-  if (value === false || value === 0 || value === null || value === undefined) {
-    return false;
-  }
-  return TRUE_FLAGS.has(String(value).trim().toLowerCase());
-}
-
-/**
- * Return whether the owner enabled chat.
- *
- * The policy/status payload uses ``chat_enabled``; accepted aliases keep the
- * Desktop pane compatible with the host's camelCase props.
- */
-function isChatEnabled(props = {}) {
-  const source = props || {};
-  const candidates = [
-    source.chatEnabled,
-    source.chat_enabled,
-    source.features && source.features.chat,
-    source.features && source.features.chat_enabled,
-    source.policy && source.policy.chat_enabled,
-    source.permissions && source.permissions.chat,
-    source.status && source.status.policy && source.status.policy.chat_enabled,
-    source.status &&
-      source.status.me &&
-      source.status.me.policy &&
-      source.status.me.policy.chat_enabled,
-  ];
-  for (const candidate of candidates) {
-    if (candidate !== undefined && candidate !== null) {
-      return flagValue(candidate);
-    }
-  }
-  return false;
-}
-
-function shouldShowChatStub(props = {}) {
-  const source = props || {};
-  return !source.api || !isChatEnabled(source);
-}
-
-function normalText(value, fallback = "") {
-  return typeof value === "string" ? value : fallback;
-}
-
-function normalNullableText(value) {
-  return typeof value === "string" ? value : null;
-}
-
-/** Coerce one server chat row into the display shape without interpreting it. */
-function normalizeMessage(item) {
-  if (!item || typeof item !== "object") return null;
-  const id = normalText(item.id);
-  if (!id) return null;
-  const matchContext = normalizeMatchContext(item.match_context || item.matchContext);
-  return {
-    id,
-    channel_id: normalText(item.channel_id, CHAT_CHANNEL_ID),
-    account_id: normalText(item.account_id),
-    actor_mode: item.actor_mode === "agent" ? "agent" : "human",
-    body: normalText(item.body),
-    kind: normalText(item.kind),
-    phase: normalNullableText(item.phase),
-    match_context: matchContext,
-    created_at: normalText(item.created_at),
-    deleted_at: normalNullableText(item.deleted_at),
-  };
-}
-
-/** Read the message list from either a bridge envelope or decoded data. */
-function normalizeMessages(envelopeOrData) {
-  if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
-  const payload =
-    envelopeOrData.data && typeof envelopeOrData.data === "object"
-      ? envelopeOrData.data
-      : envelopeOrData;
-  const rows = Array.isArray(payload.messages) ? payload.messages : [];
-  return rows.map(normalizeMessage).filter(Boolean);
-}
-
-/** Read the message returned by a send envelope. */
-function messageFromEnvelope(envelope) {
-  if (!envelope || envelope.ok !== true || !envelope.data) return null;
-  return normalizeMessage(envelope.data.message);
-}
-
-/** Merge messages by id and sort oldest first. */
-function mergeMessages(existing, incoming) {
-  const byId = new Map();
-  for (const message of [...(existing || []), ...(incoming || [])]) {
-    const normalized = normalizeMessage(message);
-    if (normalized) byId.set(normalized.id, normalized);
-  }
-  return [...byId.values()].sort(function (left, right) {
-    if (left.created_at === right.created_at) {
-      return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
-    }
-    return left.created_at < right.created_at ? -1 : 1;
-  });
-}
-
-/** Validate a composer draft before it is sent to the bridge. */
-function validateChatDraft(draft) {
-  const value = typeof draft === "string" ? draft.trim() : "";
-  if (!value) {
-    return { ok: false, error: "Message cannot be empty." };
-  }
-  if (value.length > CHAT_MESSAGE_MAX_CHARS) {
-    return {
-      ok: false,
-      error: `Message cannot exceed ${CHAT_MESSAGE_MAX_CHARS} characters.`,
-    };
-  }
-  return { ok: true, value };
-}
-
-/** Validate an optional direct-message target (player or pet name). */
-function validateDmTarget(target) {
-  const value = typeof target === "string" ? target.trim() : "";
-  if (!value) return { ok: true, value: "" };
-  if (value.length > CHAT_DM_TARGET_MAX_CHARS) {
-    return {
-      ok: false,
-      error: `DM target cannot exceed ${CHAT_DM_TARGET_MAX_CHARS} characters.`,
-    };
-  }
-  return { ok: true, value };
-}
-
-/** Plain text is always sent as display data; the server owns sanitization. */
-function chatMessagePayload(value, target) {
-  const payload = { body: String(value || ""), actor_mode: "human" };
-  const checked = validateDmTarget(target);
-  if (checked.ok && checked.value) {
-    payload.dm_target = checked.value;
-  }
-  return payload;
-}
-
-/** Validate a short taunt draft before it is sent to the bridge. */
-function validateTauntDraft(draft) {
-  const value = typeof draft === "string" ? draft.trim() : "";
-  if (!value) {
-    return { ok: false, error: "Taunt cannot be empty." };
-  }
-  if (value.length > CHAT_TAUNT_MAX_CHARS) {
-    return {
-      ok: false,
-      error: `Taunt cannot exceed ${CHAT_TAUNT_MAX_CHARS} characters.`,
-    };
-  }
-  return { ok: true, value };
-}
-
-function normalizeMatchContext(source) {
-  if (!source || typeof source !== "object") return null;
-  const hp = source.hp || source.final_hp || source.finalHp || null;
-  return {
-    match_id: normalNullableText(source.match_id || source.matchId),
-    winner: normalNullableText(source.winner),
-    winner_name: normalNullableText(source.winner_name || source.winnerName),
-    hp: hp && typeof hp === "object" ? { ...hp } : null,
-    rounds:
-      source.rounds === undefined || source.rounds === null
-        ? null
-        : Number(source.rounds) || 0,
-  };
-}
-
-function formatHp(hp) {
-  if (!hp || typeof hp !== "object") return "";
-  const a = Number(hp.a);
-  const b = Number(hp.b);
-  if (Number.isFinite(a) && Number.isFinite(b)) return `${a}-${b}`;
-  return "";
-}
-
-/** Short display-only callout for a taunt's match summary. */
-function tauntSummary(matchContext) {
-  const context = normalizeMatchContext(matchContext);
-  if (!context) return "";
-  const winner =
-    context.winner_name ||
-    (context.winner ? `Side ${context.winner}` : "Draw");
-  const hp = formatHp(context.hp);
-  return "Winner: " + winner + (hp ? " · HP " + hp : "");
-}
-
-/** A taunt bubble is any message tagged as a taunt or carrying match context. */
-function isTauntMessage(message) {
-  if (!message || typeof message !== "object") return false;
-  return (
-    message.kind === "taunt" ||
-    message.kind === "match_context" ||
-    Boolean(message.match_context)
-  );
-}
-
-/** Build the payload used by the Battle tab post-match taunt composer. */
-function tauntMessagePayload(value, options = {}) {
-  const opts = options && typeof options === "object" ? options : {};
-  const phase = opts.phase === "pre" ? "pre" : "post";
-  const payload = {
-    body: String(value || ""),
-    kind: "taunt",
-    phase,
-  };
-  const context = normalizeMatchContext(opts.match_context || opts.matchContext);
-  if (context) payload.match_context = context;
-  if (opts.match_id) payload.match_id = String(opts.match_id);
-  return payload;
-}
-
-function inboxRows(payload) {
-  const candidates = [
-    payload.inbox,
-    payload.items,
-    payload.entries,
-    payload.threads,
-    payload.dms,
-    payload.messages,
-    payload.notifications,
-  ];
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate;
-  }
-  return [];
-}
-
-function inboxFromName(item) {
-  const source = item && typeof item === "object" ? item : {};
-  return (
-    normalText(source.from) ||
-    normalText(source.sender) ||
-    normalText(source.player) ||
-    normalText(source.pet_name) ||
-    normalText(source.petName) ||
-    normalText(source.actor_name) ||
-    normalText(source.account_id)
-  );
-}
-
-/** Coerce one inbox row (DM, mention or taunt notification) for display. */
-function normalizeInboxItem(item) {
-  if (!item || typeof item !== "object") return null;
-  const body =
-    normalText(item.preview) ||
-    normalText(item.body) ||
-    normalText(item.text) ||
-    normalText(item.message);
-  const channelId = normalText(item.channel_id || item.channelId);
-  const id =
-    normalText(item.id) ||
-    normalText(item.notification_id) ||
-    (channelId ? channelId + ":" + normalText(item.created_at) : "");
-  if (!id && !body) return null;
-  const rawKind = normalText(item.kind || item.type).toLowerCase();
-  const kind =
-    rawKind === "dm" || rawKind === "direct"
-      ? "dm"
-      : rawKind === "mention" || rawKind === "@mention"
-        ? "mention"
-        : rawKind === "taunt"
-          ? "taunt"
-          : channelId.indexOf("dm:") === 0
-            ? "dm"
-            : /(^|\s)@[A-Za-z0-9_]/.test(body)
-              ? "mention"
-              : "notice";
-  return {
-    id: id || body,
-    kind,
-    channel_id: channelId || null,
-    account_id: normalText(item.account_id || item.accountId) || null,
-    from: inboxFromName(item) || null,
-    body,
-    created_at: normalText(item.created_at),
-    read: item.read === true || item.unread === false,
-    unread: item.unread === true || item.read === false,
-    match_context: normalizeMatchContext(
-      item.match_context || item.matchContext
-    ),
-  };
-}
-
-/** Read an inbox envelope into unread counts and display rows. */
-function normalizeInbox(envelopeOrData) {
-  if (!envelopeOrData || typeof envelopeOrData !== "object") {
-    return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
-  }
-  const payload =
-    envelopeOrData.data && typeof envelopeOrData.data === "object"
-      ? envelopeOrData.data
-      : envelopeOrData;
-  const items = inboxRows(payload).map(normalizeInboxItem).filter(Boolean);
-  const explicitUnread = Number(
-    payload.unread_count !== undefined
-      ? payload.unread_count
-      : payload.unreadCount !== undefined
-        ? payload.unreadCount
-        : payload.unread
-  );
-  const derivedUnread = items.filter(function (item) {
-    return item.unread;
-  }).length;
-  const unreadCount =
-    Number.isFinite(explicitUnread) && explicitUnread >= 0
-      ? Math.trunc(explicitUnread)
-      : derivedUnread;
-  return {
-    items,
-    unreadCount,
-    total:
-      Number.isFinite(Number(payload.total)) && Number(payload.total) >= 0
-        ? Math.trunc(Number(payload.total))
-        : items.length,
-    dms: items.filter(function (item) {
-      return item.kind === "dm";
-    }),
-    mentions: items.filter(function (item) {
-      return item.kind === "mention";
-    }),
-  };
-}
-
-/** Mark every inbox row read locally without mutating the input. */
-function markInboxRead(inbox) {
-  if (!inbox || typeof inbox !== "object") {
-    return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
-  }
-  const items = (Array.isArray(inbox.items) ? inbox.items : []).map(
-    function (item) {
-      return { ...item, read: true, unread: false };
-    }
-  );
-  return {
-    ...inbox,
-    items,
-    unreadCount: 0,
-    dms: items.filter(function (item) {
-      return item.kind === "dm";
-    }),
-    mentions: items.filter(function (item) {
-      return item.kind === "mention";
-    }),
-  };
-}
-
-/** Best-effort bridge call telling the server the inbox was opened. */
-function markInboxReadRequest(api, ids) {
-  const list = (Array.isArray(ids) ? ids : []).filter(Boolean).map(String);
-  if (!list.length) return Promise.resolve(null);
-  if (api && typeof api.post === "function") {
-    return api.post(CHAT_INBOX_READ_PATH, { ids: list });
-  }
-  if (api && typeof api.patch === "function") {
-    return api.patch(CHAT_INBOX_READ_PATH, { ids: list });
-  }
-  return Promise.resolve(null);
-}
-
-/** Payload for the owner Agent-chat toggle. */
-function chatSettingsPayload(enabled) {
-  return { chat_enabled: enabled === true };
-}
-
-/** Read the confirmed chat flag from a settings/policy envelope. */
-function chatEnabledFromEnvelope(envelope, fallback = false) {
-  if (!envelope || envelope.ok !== true) return fallback;
-  const data =
-    envelope.data && typeof envelope.data === "object"
-      ? envelope.data
-      : envelope;
-  const candidates = [
-    data.chat_enabled,
-    data.chatEnabled,
-    data.policy && data.policy.chat_enabled,
-    data.settings && data.settings.chat_enabled,
-    data.me && data.me.policy && data.me.policy.chat_enabled,
-  ];
-  for (const candidate of candidates) {
-    if (candidate !== undefined && candidate !== null) {
-      return flagValue(candidate);
-    }
-  }
-  return fallback;
-}
-
-/**
- * PATCH the owner chat setting through the local bridge.
- *
- * api.js exposes ``patch`` on newer bridges; older bridges fall back to a POST
- * to the same bridge-relative route so the toggle still works in tests.
- */
-function updateChatSetting(api, enabled, options = {}) {
-  const opts = options && typeof options === "object" ? options : {};
-  const path = opts.path || CHAT_SETTINGS_PATH;
-  const payload = chatSettingsPayload(enabled);
-  if (api && typeof api.patch === "function") {
-    return api.patch(path, payload);
-  }
-  if (api && typeof api.post === "function") {
-    return api.post(path, payload);
-  }
-  return Promise.resolve({
-    ok: false,
-    status: "offline",
-    error: {
-      code: "network_error",
-      message: "Could not reach the local Hermagotchi bridge.",
-    },
-  });
-}
-
-const MODERATION_CODES = new Set([
-  "blocked",
-  "blocked_interaction",
-  "forbidden",
-  "rate_limited",
-  "empty_message",
-  "message_too_long",
-  "validation_error",
-  "chat_disabled",
-  "agent_chat_disabled",
-  "chat_off",
-  "daily_cap",
-  "chat_daily_cap",
-  "agent_chat_daily_cap",
-  "daily_message_cap",
-  "cooldown",
-  "chat_cooldown",
-  "taunt_cooldown",
-  "unanswered_cap",
-  "taunt_unanswered_cap",
-  "unanswered_taunt_cap",
-  "invalid_taunt",
-  "taunt_invalid",
-  "taunt_rejected",
-]);
-
-const AUTH_CODES = new Set(["auth_missing", "unauthorized", "expired", "disabled"]);
-
-function cleanCode(value) {
-  return typeof value === "string" ? value.slice(0, 64) : "";
-}
-
-function moderationLine(code, retryAfterS) {
-  const base = npcHostLine("chat.moderation");
-  const seconds = Number(retryAfterS);
-  if (code === "rate_limited") {
-    return seconds > 0
-      ? `Easy there. Try again in ${Math.ceil(seconds)}s.`
-      : "Easy there. Slow down before sending again.";
-  }
-  if (
-    code === "cooldown" ||
-    code === "chat_cooldown" ||
-    code === "taunt_cooldown"
-  ) {
-    return seconds > 0
-      ? `Cooldown. Try again in ${Math.ceil(seconds)}s.`
-      : "Cooldown. Give it a moment before the next taunt.";
-  }
-  if (
-    code === "chat_disabled" ||
-    code === "agent_chat_disabled" ||
-    code === "chat_off"
-  ) {
-    return "Chat is off. Enable Agent chat in Settings first.";
-  }
-  if (
-    code === "daily_cap" ||
-    code === "chat_daily_cap" ||
-    code === "agent_chat_daily_cap" ||
-    code === "daily_message_cap"
-  ) {
-    return "Daily chat cap reached. Try again tomorrow.";
-  }
-  if (
-    code === "unanswered_cap" ||
-    code === "taunt_unanswered_cap" ||
-    code === "unanswered_taunt_cap"
-  ) {
-    return "Too many unanswered taunts. Wait for a reply first.";
-  }
-  if (
-    code === "invalid_taunt" ||
-    code === "taunt_invalid" ||
-    code === "taunt_rejected"
-  ) {
-    return "That taunt was rejected. Keep it short and clean.";
-  }
-  if (code === "blocked" || code === "blocked_interaction") {
-    return "That message was blocked. Stay calm. Stay open.";
-  }
-  if (
-    code === "empty_message" ||
-    code === "message_too_long" ||
-    code === "validation_error"
-  ) {
-    return "That message was rejected. Keep it short and kind.";
-  }
-  if (code === "auth_missing" || code === "unauthorized" || code === "expired") {
-    return "Pair this device before sending lobby messages.";
-  }
-  if (code === "offline" || code === "unavailable" || code === "network_disabled") {
-    return "The lobby is unavailable right now. Try again later.";
-  }
-  return base ? base.line : "The message was not sent.";
-}
-
-/** Turn a failed bridge envelope into a display-only moderation notice. */
-function chatNoticeFromEnvelope(envelope) {
-  if (envelope && envelope.ok === true) return null;
-  const source = envelope && typeof envelope === "object" ? envelope : {};
-  const status = cleanCode(source.status) || "unavailable";
-  const error = source.error && typeof source.error === "object" ? source.error : {};
-  const code = cleanCode(error.code) || cleanCode(source.status) || "unavailable";
-  const retryAfterS = Number(error.retry_after_s);
-  const message = normalText(error.message).slice(0, 240);
-  const kind = AUTH_CODES.has(code)
-    ? "auth"
-    : MODERATION_CODES.has(code)
-      ? "moderation"
-      : "error";
-  return {
-    kind,
-    status,
-    code,
-    retryAfterS: Number.isFinite(retryAfterS) && retryAfterS > 0 ? retryAfterS : null,
-    message,
-    hostLine: moderationLine(code, retryAfterS),
-  };
-}
-
-/** Build a notice for a successful block or report. */
-function chatActionNotice(kind) {
-  if (kind === "blocked") {
-    return {
-      kind: "moderation",
-      status: "ok",
-      code: "blocked",
-      retryAfterS: null,
-      message: "That account is blocked.",
-      hostLine: "Blocked. Their messages are hidden now.",
-    };
-  }
-  if (kind === "reported") {
-    return {
-      kind: "moderation",
-      status: "ok",
-      code: "reported",
-      retryAfterS: null,
-      message: "The report is queued for review.",
-      hostLine: "Report sent. A moderator will review it.",
-    };
-  }
-  return null;
-}
-
-/** Nous Girl hosts every moderation notice; the line never renders markup. */
-function chatModerationHost(notice) {
-  const base = npcHostLine("chat.moderation");
-  if (!base) return null;
-  const line = notice && typeof notice.hostLine === "string" && notice.hostLine
-    ? notice.hostLine
-    : base.line;
-  return {
-    id: base.id,
-    name: base.name,
-    context: base.context,
-    line,
-    displayOnly: true,
-  };
-}
-
-/** Provider for the normal lobby banner. */
-function chatHost() {
-  return npcHostLine("chat");
-}
-
-  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
-})();
-
 // desktop/src/ui/tabs/BattleTab.js
-const __m13 = (function () {
+const __m14 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m9["PetPreview"];
-  const TurnLog = __m11["TurnLog"];
-  const battleParticipantsFromMatch = __m10["battleParticipantsFromMatch"];
-  const battleSummary = __m10["battleSummary"];
-  const battleTauntContext = __m10["battleTauntContext"];
-  const battleTaunts = __m10["battleTaunts"];
-  const rewardCapNotice = __m10["rewardCapNotice"];
-  const rewardCapReason = __m10["rewardCapReason"];
-  const CHAT_TAUNT_MAX_CHARS = __m12["CHAT_TAUNT_MAX_CHARS"];
-  const CHAT_TAUNTS_PATH = __m12["CHAT_TAUNTS_PATH"];
-  const chatNoticeFromEnvelope = __m12["chatNoticeFromEnvelope"];
-  const tauntMessagePayload = __m12["tauntMessagePayload"];
-  const tauntSummary = __m12["tauntSummary"];
-  const validateTauntDraft = __m12["validateTauntDraft"];
+  const PetPreview = __m11["PetPreview"];
+  const TurnLog = __m13["TurnLog"];
+  const battleParticipantsFromMatch = __m12["battleParticipantsFromMatch"];
+  const battleSummary = __m12["battleSummary"];
+  const battleTauntContext = __m12["battleTauntContext"];
+  const battleTaunts = __m12["battleTaunts"];
+  const rewardCapNotice = __m12["rewardCapNotice"];
+  const rewardCapReason = __m12["rewardCapReason"];
+  const CHAT_TAUNT_MAX_CHARS = __m2["CHAT_TAUNT_MAX_CHARS"];
+  const CHAT_TAUNTS_PATH = __m2["CHAT_TAUNTS_PATH"];
+  const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
+  const tauntMessagePayload = __m2["tauntMessagePayload"];
+  const tauntSummary = __m2["tauntSummary"];
+  const validateTauntDraft = __m2["validateTauntDraft"];
 
 const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 const PRACTICE_BOT_NAME = "Teknium";
@@ -3457,38 +4018,580 @@ function BattleTab(props = {}) {
   return { "CHALLENGE_INBOX_PLACEHOLDER": CHALLENGE_INBOX_PLACEHOLDER, "PRACTICE_BOT_NAME": PRACTICE_BOT_NAME, "BattleTab": BattleTab };
 })();
 
+// desktop/src/ui/logic/friends.js
+const __m15 = (function () {
+/** Pure friend roster and request helpers for the Desktop social hub. */
+
+const FRIENDS_PATH = "/friends";
+const FRIEND_REQUESTS_PATH = "/friends/requests";
+const FRIEND_TARGET_MAX_CHARS = 64;
+
+const FRIEND_STATUSES = Object.freeze(["online", "away", "offline"]);
+
+const STATUS_LABELS = Object.freeze({
+  online: "Online",
+  away: "Away",
+  offline: "Offline",
+});
+
+function text(value, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function list(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeFriendStatus(value) {
+  const status = text(value).trim().toLowerCase();
+  return FRIEND_STATUSES.indexOf(status) >= 0 ? status : "offline";
+}
+
+function friendStatusLabel(value) {
+  return STATUS_LABELS[normalizeFriendStatus(value)];
+}
+
+function friendIdentity(item) {
+  return (
+    text(item.account_id) ||
+    text(item.accountId) ||
+    text(item.friend_id) ||
+    text(item.friendId) ||
+    text(item.id)
+  );
+}
+
+function friendName(item) {
+  return (
+    text(item.name) ||
+    text(item.public_handle) ||
+    text(item.publicHandle) ||
+    text(item.handle) ||
+    text(item.pet_name) ||
+    text(item.petName) ||
+    text(item.player) ||
+    friendIdentity(item)
+  );
+}
+
+/** Coerce one friend row into the display shape without trusting its text. */
+function normalizeFriend(item) {
+  if (!item || typeof item !== "object") return null;
+  const accountId = friendIdentity(item);
+  const name = friendName(item);
+  if (!accountId && !name) return null;
+  const id = accountId || name;
+  return {
+    id,
+    account_id: accountId || null,
+    name,
+    pet_name:
+      text(item.pet_name) ||
+      text(item.petName) ||
+      text(item.pet && item.pet.name) ||
+      null,
+    status: normalizeFriendStatus(item.status || item.presence),
+    status_label: friendStatusLabel(item.status || item.presence),
+    last_seen: text(item.last_seen) || text(item.lastSeen) || null,
+    direction: text(item.direction) || null,
+    created_at: text(item.created_at) || null,
+  };
+}
+
+function requestRows(payload, keys) {
+  for (const key of keys) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
+function normalizeRequest(item, direction) {
+  const row = normalizeFriend(item);
+  if (!row) return null;
+  return {
+    ...row,
+    id:
+      text(item.id) ||
+      text(item.request_id) ||
+      text(item.requestId) ||
+      row.id,
+    direction,
+  };
+}
+
+/** Read friends plus incoming/outgoing requests from an envelope or payload. */
+function normalizeFriends(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") {
+    return { friends: [], incoming: [], outgoing: [], total: 0 };
+  }
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const friends = list(payload.friends)
+    .concat(list(payload.items))
+    .map(normalizeFriend)
+    .filter(Boolean);
+  const requests =
+    payload.requests && typeof payload.requests === "object"
+      ? payload.requests
+      : {};
+  const incoming = requestRows(payload, ["incoming", "incoming_requests"])
+    .concat(requestRows(requests, ["incoming", "incoming_requests"]))
+    .map(function (item) {
+      return normalizeRequest(item, "incoming");
+    })
+    .filter(Boolean);
+  const outgoing = requestRows(payload, ["outgoing", "outgoing_requests"])
+    .concat(requestRows(requests, ["outgoing", "outgoing_requests"]))
+    .map(function (item) {
+      return normalizeRequest(item, "outgoing");
+    })
+    .filter(Boolean);
+  return {
+    friends,
+    incoming,
+    outgoing,
+    total: friends.length + incoming.length + outgoing.length,
+  };
+}
+
+function friendPresenceCounts(friends) {
+  const counts = { online: 0, away: 0, offline: 0 };
+  for (const friend of list(friends)) {
+    const status = normalizeFriendStatus(friend && friend.status);
+    counts[status] += 1;
+  }
+  return counts;
+}
+
+/** Filter the roster by presence and a plain-text name query. */
+function filterFriends(friends, options = {}) {
+  const opts = options && typeof options === "object" ? options : {};
+  const status = text(opts.status).trim().toLowerCase();
+  const query = text(opts.query).trim().toLowerCase();
+  return list(friends).filter(function (friend) {
+    if (!friend) return false;
+    if (status && status !== "all" && normalizeFriendStatus(friend.status) !== status) {
+      return false;
+    }
+    if (!query) return true;
+    const haystack = [friend.name, friend.pet_name, friend.account_id]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.indexOf(query) >= 0;
+  });
+}
+
+function validateFriendTarget(value) {
+  const target = typeof value === "string" ? value.trim() : "";
+  if (!target) {
+    return { ok: false, error: "Enter a player or pet name." };
+  }
+  if (target.length > FRIEND_TARGET_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `Friend names cannot exceed ${FRIEND_TARGET_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value: target };
+}
+
+function friendRequestPayload(value) {
+  const checked = validateFriendTarget(value);
+  return { target: checked.ok ? checked.value : "" };
+}
+
+function friendRequestRespondPath(requestId) {
+  const id = typeof requestId === "string" ? requestId : String(requestId || "");
+  return FRIEND_REQUESTS_PATH + "/" + encodeURIComponent(id) + "/respond";
+}
+
+function friendRequestResponsePayload(action) {
+  return { action: action === "accept" ? "accept" : "decline" };
+}
+
+function friendRemovePath(friendId) {
+  const id = typeof friendId === "string" ? friendId : String(friendId || "");
+  return FRIENDS_PATH + "/" + encodeURIComponent(id);
+}
+
+  return { "FRIENDS_PATH": FRIENDS_PATH, "FRIEND_REQUESTS_PATH": FRIEND_REQUESTS_PATH, "FRIEND_TARGET_MAX_CHARS": FRIEND_TARGET_MAX_CHARS, "FRIEND_STATUSES": FRIEND_STATUSES, "normalizeFriendStatus": normalizeFriendStatus, "friendStatusLabel": friendStatusLabel, "normalizeFriend": normalizeFriend, "normalizeFriends": normalizeFriends, "friendPresenceCounts": friendPresenceCounts, "filterFriends": filterFriends, "validateFriendTarget": validateFriendTarget, "friendRequestPayload": friendRequestPayload, "friendRequestRespondPath": friendRequestRespondPath, "friendRequestResponsePayload": friendRequestResponsePayload, "friendRemovePath": friendRemovePath };
+})();
+
+// desktop/src/ui/logic/social_hub.js
+const __m16 = (function () {
+  const normalizeInbox = __m2["normalizeInbox"];
+  const tauntSummary = __m2["tauntSummary"];
+/** Pure social-hub helpers shared by the Desktop Chat tab and its tests. */
+
+
+const SOCIAL_HUB_CONTEXT = "lobby.social";
+const SOCIAL_HUB_SECTIONS = Object.freeze([
+  Object.freeze({ id: "dms", label: "Direct messages" }),
+  Object.freeze({ id: "friends", label: "Friends" }),
+  Object.freeze({ id: "challenges", label: "Challenges" }),
+  Object.freeze({ id: "history", label: "Taunts & mentions" }),
+]);
+
+const SOCIAL_HUB_HOST = Object.freeze({
+  id: "npc.nous_girl",
+  name: "Nous Girl",
+  context: SOCIAL_HUB_CONTEXT,
+  line: "Welcome to the hub. DMs, friends, challenges, all one signal.",
+  displayOnly: true,
+});
+
+const CHALLENGES_PATH = "/challenges";
+const CHALLENGE_INBOX_PATH = "/challenges/inbox";
+const CHALLENGE_MODES = Object.freeze(["casual", "ranked"]);
+
+function text(value, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function list(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function socialHubHost() {
+  return { ...SOCIAL_HUB_HOST };
+}
+
+function bridgeSafeChannel(value) {
+  return (
+    typeof value === "string" &&
+    /^[A-Za-z0-9_.:~-]+$/.test(value) &&
+    value !== "." &&
+    value !== ".."
+  );
+}
+
+/** Return the bridge-relative message path for one DM channel. */
+function threadMessagePath(channelId) {
+  const channel = text(channelId).trim();
+  if (!channel) return "";
+  const segment = bridgeSafeChannel(channel)
+    ? channel
+    : encodeURIComponent(channel).replace(/[.]/g, "%2E");
+  return "/chat/channels/" + segment + "/messages";
+}
+
+function isDmChannel(channelId) {
+  return (
+    channelId.indexOf("dm:") === 0 || channelId.indexOf("direct:") === 0
+  );
+}
+
+function threadPeer(item, channelId) {
+  return (
+    text(item.from) ||
+    text(item.peer_name) ||
+    text(item.peerName) ||
+    text(item.player) ||
+    text(item.account_id) ||
+    text(channelId)
+  );
+}
+
+function threadFromItem(item) {
+  if (!item || typeof item !== "object") return null;
+  const channelId = text(item.channel_id);
+  if (!channelId || !isDmChannel(channelId)) return null;
+  return {
+    id: channelId,
+    channel_id: channelId,
+    peer: threadPeer(item, channelId),
+    preview: text(item.body),
+    updated_at: text(item.created_at),
+    unread: Boolean(item.unread),
+    kind: "dm",
+  };
+}
+
+/** Group inbox DM rows into one thread per channel, newest first. */
+function normalizeThreads(envelopeOrData) {
+  const inbox = normalizeInbox(envelopeOrData);
+  const byChannel = new Map();
+  for (const item of inbox.items) {
+    const thread = threadFromItem(item);
+    if (!thread) continue;
+    const current = byChannel.get(thread.channel_id);
+    if (!current) {
+      byChannel.set(thread.channel_id, thread);
+      continue;
+    }
+    const newer = thread.updated_at >= current.updated_at;
+    byChannel.set(thread.channel_id, {
+      ...current,
+      peer: thread.peer || current.peer,
+      preview: newer ? thread.preview : current.preview,
+      updated_at: newer ? thread.updated_at : current.updated_at,
+      unread: current.unread || thread.unread,
+    });
+  }
+  return [...byChannel.values()].sort(function (left, right) {
+    if (left.updated_at === right.updated_at) {
+      return left.channel_id < right.channel_id ? 1 : -1;
+    }
+    return left.updated_at < right.updated_at ? 1 : -1;
+  });
+}
+
+function normalizeMode(value) {
+  const mode = text(value).trim().toLowerCase();
+  return CHALLENGE_MODES.indexOf(mode) >= 0 ? mode : "casual";
+}
+
+function modeLabel(mode) {
+  const label = normalizeMode(mode);
+  return label.charAt(0).toUpperCase() + label.slice(1) + " challenge";
+}
+
+/** Coerce one challenge row for the hub's pending list. */
+function normalizeChallenge(item) {
+  if (!item || typeof item !== "object") return null;
+  const id = text(item.id);
+  if (!id) return null;
+  const mode = normalizeMode(item.mode);
+  return {
+    id,
+    challenger_id: text(item.challenger_id) || null,
+    defender_id: text(item.defender_id) || null,
+    mode,
+    label: modeLabel(mode),
+    direction: item.direction === "incoming" ? "incoming" : "outgoing",
+    status: text(item.status) || "pending",
+    created_at: text(item.created_at) || null,
+    expires_at: text(item.expires_at) || null,
+  };
+}
+
+/** Read pending incoming/outgoing challenges from an inbox envelope. */
+function normalizeChallengeInbox(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") {
+    return { incoming: [], outgoing: [], pending: [] };
+  }
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const incoming = list(payload.incoming)
+    .map(function (item) {
+      return normalizeChallenge({ ...item, direction: "incoming" });
+    })
+    .filter(Boolean);
+  const outgoing = list(payload.outgoing)
+    .map(function (item) {
+      return normalizeChallenge({ ...item, direction: "outgoing" });
+    })
+    .filter(Boolean);
+  const combined = list(payload.challenges)
+    .map(normalizeChallenge)
+    .filter(Boolean);
+  const pending =
+    incoming.length || outgoing.length ? [...incoming, ...outgoing] : combined;
+  return { incoming, outgoing, pending };
+}
+
+function challengeCreatePayload(target, mode) {
+  return {
+    defender_id: typeof target === "string" ? target : String(target || ""),
+    mode: normalizeMode(mode),
+  };
+}
+
+function challengeRespondPath(challengeId) {
+  const id =
+    typeof challengeId === "string" ? challengeId : String(challengeId || "");
+  return CHALLENGES_PATH + "/" + encodeURIComponent(id) + "/respond";
+}
+
+function challengeResponsePayload(action) {
+  return { action: action === "accept" ? "accept" : "decline" };
+}
+
+function historyKind(item) {
+  if (!item || typeof item !== "object") return "";
+  if (item.kind === "dm" || item.kind === "direct") return "";
+  if (item.kind === "taunt" || item.match_context || item.matchContext) {
+    return "taunt";
+  }
+  if (item.kind === "mention" || item.kind === "@mention") return "mention";
+  const body = text(item.body) || text(item.preview) || text(item.text);
+  return /(^|\s)@[A-Za-z0-9_]/.test(body) ? "mention" : "";
+}
+
+function matchContext(item) {
+  const source = item.match_context || item.matchContext;
+  return source && typeof source === "object" ? source : null;
+}
+
+/** Coerce one taunt or @mention row for the filterable history list. */
+function normalizeHistoryItem(item) {
+  if (!item || typeof item !== "object") return null;
+  const kind = historyKind(item);
+  const body =
+    text(item.body) || text(item.preview) || text(item.text) || text(item.message);
+  if (!kind || !body) return null;
+  const context = matchContext(item);
+  const matchId = text(item.match_id) || (context && text(context.match_id));
+  return {
+    id: text(item.id) || matchId || kind + ":" + body.slice(0, 24),
+    kind,
+    body,
+    from:
+      text(item.from) ||
+      text(item.sender) ||
+      text(item.player) ||
+      text(item.account_id) ||
+      null,
+    created_at: text(item.created_at) || null,
+    match_id: matchId || null,
+    match_context: context,
+    match_summary: context ? tauntSummary(context) : "",
+  };
+}
+
+function historyRows(payload) {
+  const rows = [];
+  for (const key of ["history", "items", "messages", "taunts", "mentions"]) {
+    rows.push(...list(payload[key]));
+  }
+  return rows;
+}
+
+/** Read taunts and mentions from an envelope, deduplicated by id. */
+function normalizeHistory(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const seen = new Set();
+  const rows = [];
+  for (const item of historyRows(payload)) {
+    const row = normalizeHistoryItem(item);
+    if (!row || seen.has(row.id)) continue;
+    seen.add(row.id);
+    rows.push(row);
+  }
+  return rows.sort(function (left, right) {
+    if (left.created_at === right.created_at) return 0;
+    return left.created_at < right.created_at ? 1 : -1;
+  });
+}
+
+function historyFilterCounts(items) {
+  const rows = list(items);
+  return {
+    all: rows.length,
+    taunt: rows.filter(function (item) {
+      return item && item.kind === "taunt";
+    }).length,
+    mention: rows.filter(function (item) {
+      return item && item.kind === "mention";
+    }).length,
+  };
+}
+
+/** Filter history rows by kind and a plain-text query. */
+function filterHistory(items, filter, query) {
+  const kind = text(filter) || "all";
+  const search = text(query).trim().toLowerCase();
+  return list(items).filter(function (item) {
+    if (!item) return false;
+    if (kind !== "all" && item.kind !== kind) return false;
+    if (!search) return true;
+    const haystack = [
+      item.body,
+      item.from,
+      item.match_id,
+      item.match_summary,
+      item.match_context && item.match_context.winner_name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.indexOf(search) >= 0;
+  });
+}
+
+function replayHref(matchId) {
+  const id = text(matchId).trim();
+  return id ? "#replay/" + encodeURIComponent(id) : "";
+}
+
+function replayPath(matchId) {
+  const id = text(matchId).trim();
+  return id ? "/matches/" + encodeURIComponent(id) : "";
+}
+
+  return { "SOCIAL_HUB_CONTEXT": SOCIAL_HUB_CONTEXT, "SOCIAL_HUB_SECTIONS": SOCIAL_HUB_SECTIONS, "SOCIAL_HUB_HOST": SOCIAL_HUB_HOST, "CHALLENGES_PATH": CHALLENGES_PATH, "CHALLENGE_INBOX_PATH": CHALLENGE_INBOX_PATH, "CHALLENGE_MODES": CHALLENGE_MODES, "socialHubHost": socialHubHost, "threadMessagePath": threadMessagePath, "normalizeThreads": normalizeThreads, "normalizeChallenge": normalizeChallenge, "normalizeChallengeInbox": normalizeChallengeInbox, "challengeCreatePayload": challengeCreatePayload, "challengeRespondPath": challengeRespondPath, "challengeResponsePayload": challengeResponsePayload, "normalizeHistoryItem": normalizeHistoryItem, "normalizeHistory": normalizeHistory, "historyFilterCounts": historyFilterCounts, "filterHistory": filterHistory, "replayHref": replayHref, "replayPath": replayPath };
+})();
+
 // desktop/src/ui/tabs/ChatTab.js
-const __m14 = (function () {
+const __m17 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const npcHostLine = __m2["npcHostLine"];
+  const npcHostLine = __m0["npcHostLine"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CHAT_BLOCKS_PATH = __m12["CHAT_BLOCKS_PATH"];
-  const CHAT_DM_TARGET_MAX_CHARS = __m12["CHAT_DM_TARGET_MAX_CHARS"];
-  const CHAT_INBOX_PATH = __m12["CHAT_INBOX_PATH"];
-  const CHAT_MESSAGES_PATH = __m12["CHAT_MESSAGES_PATH"];
-  const CHAT_MESSAGE_MAX_CHARS = __m12["CHAT_MESSAGE_MAX_CHARS"];
-  const CHAT_REPORT_PATH = __m12["CHAT_REPORT_PATH"];
-  const CHAT_REPORT_REASON = __m12["CHAT_REPORT_REASON"];
-  const chatActionNotice = __m12["chatActionNotice"];
-  const chatMessagePayload = __m12["chatMessagePayload"];
-  const chatModerationHost = __m12["chatModerationHost"];
-  const chatNoticeFromEnvelope = __m12["chatNoticeFromEnvelope"];
-  const isChatEnabled = __m12["isChatEnabled"];
-  const isTauntMessage = __m12["isTauntMessage"];
-  const markInboxRead = __m12["markInboxRead"];
-  const markInboxReadRequest = __m12["markInboxReadRequest"];
-  const mergeMessages = __m12["mergeMessages"];
-  const messageFromEnvelope = __m12["messageFromEnvelope"];
-  const normalizeInbox = __m12["normalizeInbox"];
-  const normalizeMessages = __m12["normalizeMessages"];
-  const tauntSummary = __m12["tauntSummary"];
-  const validateChatDraft = __m12["validateChatDraft"];
-  const validateDmTarget = __m12["validateDmTarget"];
+  const CHAT_BLOCKS_PATH = __m2["CHAT_BLOCKS_PATH"];
+  const CHAT_DM_TARGET_MAX_CHARS = __m2["CHAT_DM_TARGET_MAX_CHARS"];
+  const CHAT_INBOX_PATH = __m2["CHAT_INBOX_PATH"];
+  const CHAT_MESSAGES_PATH = __m2["CHAT_MESSAGES_PATH"];
+  const CHAT_MESSAGE_MAX_CHARS = __m2["CHAT_MESSAGE_MAX_CHARS"];
+  const CHAT_REPORT_PATH = __m2["CHAT_REPORT_PATH"];
+  const CHAT_REPORT_REASON = __m2["CHAT_REPORT_REASON"];
+  const chatActionNotice = __m2["chatActionNotice"];
+  const chatMessagePayload = __m2["chatMessagePayload"];
+  const chatModerationHost = __m2["chatModerationHost"];
+  const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
+  const isChatEnabled = __m2["isChatEnabled"];
+  const isTauntMessage = __m2["isTauntMessage"];
+  const markInboxRead = __m2["markInboxRead"];
+  const markInboxReadRequest = __m2["markInboxReadRequest"];
+  const mergeMessages = __m2["mergeMessages"];
+  const messageFromEnvelope = __m2["messageFromEnvelope"];
+  const normalizeInbox = __m2["normalizeInbox"];
+  const normalizeMessages = __m2["normalizeMessages"];
+  const tauntSummary = __m2["tauntSummary"];
+  const validateChatDraft = __m2["validateChatDraft"];
+  const validateDmTarget = __m2["validateDmTarget"];
+  const FRIEND_REQUESTS_PATH = __m15["FRIEND_REQUESTS_PATH"];
+  const filterFriends = __m15["filterFriends"];
+  const friendPresenceCounts = __m15["friendPresenceCounts"];
+  const friendRemovePath = __m15["friendRemovePath"];
+  const friendRequestPayload = __m15["friendRequestPayload"];
+  const friendRequestRespondPath = __m15["friendRequestRespondPath"];
+  const friendRequestResponsePayload = __m15["friendRequestResponsePayload"];
+  const normalizeFriends = __m15["normalizeFriends"];
+  const validateFriendTarget = __m15["validateFriendTarget"];
+  const CHALLENGES_PATH = __m16["CHALLENGES_PATH"];
+  const CHALLENGE_INBOX_PATH = __m16["CHALLENGE_INBOX_PATH"];
+  const SOCIAL_HUB_SECTIONS = __m16["SOCIAL_HUB_SECTIONS"];
+  const challengeCreatePayload = __m16["challengeCreatePayload"];
+  const challengeRespondPath = __m16["challengeRespondPath"];
+  const challengeResponsePayload = __m16["challengeResponsePayload"];
+  const filterHistory = __m16["filterHistory"];
+  const historyFilterCounts = __m16["historyFilterCounts"];
+  const normalizeChallengeInbox = __m16["normalizeChallengeInbox"];
+  const normalizeHistory = __m16["normalizeHistory"];
+  const normalizeThreads = __m16["normalizeThreads"];
+  const replayHref = __m16["replayHref"];
+  const socialHubHost = __m16["socialHubHost"];
+  const threadMessagePath = __m16["threadMessagePath"];
+
+const HISTORY_FILTERS = Object.freeze([
+  Object.freeze({ id: "all", label: "All" }),
+  Object.freeze({ id: "taunt", label: "Taunts" }),
+  Object.freeze({ id: "mention", label: "@mentions" }),
+]);
 
 function ChatOffStub(props) {
   const uiState = props.uiState || UI_STATES.NETWORK_OFF;
@@ -3508,7 +4611,7 @@ function ChatOffStub(props) {
           jsx("p", {
             className: "hg-muted",
             children:
-              "The lobby and challenge threads stay unavailable until the owner enables chat and the device is paired.",
+              "The social hub stays unavailable until the owner enables chat and the device is paired.",
           }),
           jsxs("label", {
             className: "hg-field",
@@ -3536,103 +4639,32 @@ function ChatOffStub(props) {
   });
 }
 
-function InboxCard(props) {
-  const inbox = props.inbox || { items: [], unreadCount: 0 };
-  const count = Number(inbox.unreadCount) || 0;
-  const items = Array.isArray(inbox.items) ? inbox.items : [];
-
+function SocialSection(props) {
   return jsxs("div", {
-    className: "hg-card hg-inbox",
-    "data-section": "chat-inbox",
+    className: "hg-card hg-social__section",
+    "data-social-section": props.id,
     children: [
       jsxs("header", {
         className: "hg-card__header",
         children: [
-          jsxs("h3", {
-            children: [
-              "Inbox ",
-              jsx("span", {
-                className:
-                  count > 0
-                    ? "hg-badge hg-inbox__badge hg-inbox__badge--unread"
-                    : "hg-badge hg-inbox__badge",
-                "data-inbox-unread": String(count),
-                children: count > 0 ? String(count) + " unread" : "Clear",
-              }),
-            ],
-          }),
-          jsxs("div", {
-            className: "hg-actions hg-actions--tight",
-            children: [
-              jsx("button", {
-                type: "button",
-                className: "hg-btn",
-                onClick: props.onRefresh,
-                disabled: props.busy,
-                children: "Refresh inbox",
-              }),
-              jsx("button", {
-                type: "button",
-                className: "hg-btn",
-                onClick: props.onOpen,
-                disabled: props.busy,
-                "data-inbox-open": props.open ? "true" : "false",
-                children: props.open ? "Hide inbox" : "Open inbox",
-              }),
-            ],
-          }),
+          jsx("h3", { children: props.title }),
+          props.badge ? jsx("span", { className: "hg-badge", children: props.badge }) : null,
         ],
       }),
-      jsx("p", {
-        className: "hg-muted",
-        children:
-          "Unread direct messages, @mentions and taunt notices. Opening the inbox marks them read.",
-      }),
-      props.open
-        ? items.length
-          ? jsx("ul", {
-              className: "hg-inbox__list hg-chat__thread",
-              children: items.map(function (item) {
-                return jsxs(
-                  "li",
-                  {
-                    className:
-                      "hg-inbox__item hg-inbox__item--" + item.kind +
-                      (item.unread ? " hg-inbox__item--unread" : ""),
-                    "data-inbox-id": item.id,
-                    "data-inbox-kind": item.kind,
-                    children: [
-                      jsxs("div", {
-                        className: "hg-row hg-row--between",
-                        children: [
-                          jsx("strong", {
-                            children:
-                              (item.kind === "mention" ? "@mention" : item.kind.toUpperCase()) +
-                              (item.from ? " · " + item.from : ""),
-                          }),
-                          jsx("span", {
-                            className: "hg-muted",
-                            children: item.created_at || "",
-                          }),
-                        ],
-                      }),
-                      jsx("p", {
-                        className: "hg-inbox__preview",
-                        children: item.body || "",
-                      }),
-                    ],
-                  },
-                  item.id
-                );
-              }),
-            })
-          : jsx("p", {
-              className: "hg-muted",
-              "data-placeholder": "chat-inbox-empty",
-              children: "No unread messages.",
-            })
-        : null,
+      props.children,
     ],
+  });
+}
+
+function InboxBadge(props) {
+  const count = Number(props.count) || 0;
+  return jsx("span", {
+    className:
+      count > 0
+        ? "hg-badge hg-inbox__badge hg-inbox__badge--unread"
+        : "hg-badge hg-inbox__badge",
+    "data-inbox-unread": String(count),
+    children: count > 0 ? String(count) + " unread" : "Clear",
   });
 }
 
@@ -3757,6 +4789,582 @@ function MessageRow(props) {
   });
 }
 
+function DmSection(props) {
+  const threads = props.threads || [];
+  const inbox = props.inbox || { unreadCount: 0 };
+  const conversation = props.conversation || [];
+  const activeThread = props.activeThread;
+
+  return jsx(SocialSection, {
+    id: "dms",
+    title: "Direct messages",
+    badge: jsx(InboxBadge, { count: inbox.unreadCount }),
+    children: [
+      jsx("p", {
+        className: "hg-muted",
+        children:
+          "DM threads stay plain text. Pick a thread or type a player or pet name to start one.",
+      }),
+      jsxs("div", {
+        className: "hg-social__split",
+        children: [
+          jsxs("div", {
+            className: "hg-col hg-social__threads",
+            "aria-label": "DM threads",
+            children: [
+              jsx("div", {
+                className: "hg-actions hg-actions--tight",
+                children: [
+                  jsx("button", {
+                    type: "button",
+                    className: "hg-btn",
+                    onClick: props.onRefresh,
+                    disabled: props.busy,
+                    children: "Refresh inbox",
+                  }),
+                  jsx("button", {
+                    type: "button",
+                    className: "hg-btn",
+                    onClick: props.onOpenInbox,
+                    disabled: props.busy,
+                    "data-inbox-open": props.inboxOpen ? "true" : "false",
+                    children: props.inboxOpen ? "Hide inbox" : "Open inbox",
+                  }),
+                ],
+              }),
+              threads.length
+                ? jsx("ul", {
+                    className: "hg-inbox__list hg-chat__thread",
+                    children: threads.map(function (thread) {
+                      const active = activeThread && activeThread.channel_id === thread.channel_id;
+                      return jsxs(
+                        "li",
+                        {
+                          className:
+                            "hg-inbox__item hg-inbox__item--dm" +
+                            (thread.unread ? " hg-inbox__item--unread" : "") +
+                            (active ? " hg-inbox__item--active" : ""),
+                          "data-inbox-id": thread.channel_id,
+                          "data-inbox-kind": "dm",
+                          children: [
+                            jsxs("button", {
+                              type: "button",
+                              className: "hg-btn hg-btn--ghost",
+                              onClick: function () {
+                                props.onSelectThread(thread);
+                              },
+                              children: [
+                                jsx("strong", { children: thread.peer || "DM" }),
+                                thread.unread
+                                  ? jsx("span", { className: "hg-badge", children: "unread" })
+                                  : null,
+                              ],
+                            }),
+                            jsx("p", {
+                              className: "hg-inbox__preview",
+                              children: thread.preview || "",
+                            }),
+                            jsx("span", {
+                              className: "hg-muted",
+                              children: thread.updated_at || "",
+                            }),
+                          ],
+                        },
+                        thread.channel_id
+                      );
+                    }),
+                  })
+                : jsx("p", {
+                    className: "hg-muted",
+                    "data-placeholder": "social-dm-empty",
+                    children: "No direct messages yet.",
+                  }),
+            ],
+          }),
+          jsxs("div", {
+            className: "hg-col hg-social__conversation",
+            "aria-label": "DM conversation",
+            children: [
+              jsx("h4", {
+                children: activeThread
+                  ? "Conversation with " + (activeThread.peer || "your friend")
+                  : "Conversation",
+              }),
+              conversation.length
+                ? jsx("ol", {
+                    className: "hg-log",
+                    "aria-live": "polite",
+                    children: conversation.map(function (message) {
+                      return jsx(
+                        MessageRow,
+                        {
+                          message,
+                          busy: props.busy,
+                          onReport: props.onReport,
+                          onBlock: props.onBlock,
+                        },
+                        message.id
+                      );
+                    }),
+                  })
+                : jsx("p", {
+                    className: "hg-muted",
+                    "data-placeholder": "social-conversation-empty",
+                    children: activeThread
+                      ? "No messages in this thread yet."
+                      : "Select a thread or enter a name below.",
+                  }),
+            ],
+          }),
+        ],
+      }),
+      jsxs("form", {
+        className: "hg-chat__compose",
+        onSubmit: props.onSubmit,
+        children: [
+          jsxs("label", {
+            className: "hg-field",
+            children: [
+              jsx("span", { children: "Message" }),
+              jsx("textarea", {
+                className: "hg-input",
+                rows: "3",
+                maxLength: String(CHAT_MESSAGE_MAX_CHARS),
+                value: props.draft,
+                disabled: props.busy,
+                placeholder: "Write a plain-text direct message",
+                onChange: function (event) {
+                  props.onDraft(event.target.value);
+                },
+              }),
+            ],
+          }),
+          jsxs("label", {
+            className: "hg-field hg-chat__dm-target",
+            children: [
+              jsx("span", { children: "Send to player or pet" }),
+              jsx("input", {
+                className: "hg-input",
+                type: "text",
+                maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
+                value: props.dmTarget,
+                disabled: props.busy,
+                placeholder: "Player or pet name",
+                "data-chat-dm-target": "true",
+                onChange: function (event) {
+                  props.onTarget(event.target.value);
+                },
+              }),
+            ],
+          }),
+          props.composerError
+            ? jsx("p", {
+                className: "hg-error",
+                role: "alert",
+                children: props.composerError,
+              })
+            : null,
+          jsxs("div", {
+            className: "hg-actions",
+            children: [
+              jsx("button", {
+                type: "submit",
+                className: "hg-btn hg-btn--primary",
+                disabled: props.busy,
+                children: props.busy ? "Working..." : "Send DM",
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function FriendsSection(props) {
+  const roster = props.roster || { friends: [], incoming: [], outgoing: [] };
+  const counts = friendPresenceCounts(roster.friends);
+  const friends = filterFriends(roster.friends, {
+    status: props.statusFilter,
+    query: props.query,
+  });
+
+  return jsx(SocialSection, {
+    id: "friends",
+    title: "Friends",
+    badge: counts.online + " online",
+    children: [
+      jsxs("form", {
+        className: "hg-actions",
+        onSubmit: props.onAdd,
+        children: [
+          jsxs("label", {
+            className: "hg-field",
+            children: [
+              jsx("span", { children: "Add friend" }),
+              jsx("input", {
+                className: "hg-input",
+                type: "text",
+                value: props.friendTarget,
+                disabled: props.busy,
+                placeholder: "Player or pet name",
+                "data-friend-target": "true",
+                onChange: function (event) {
+                  props.onFriendTarget(event.target.value);
+                },
+              }),
+            ],
+          }),
+          jsx("button", {
+            type: "submit",
+            className: "hg-btn hg-btn--primary",
+            disabled: props.busy,
+            children: "Add",
+          }),
+        ],
+      }),
+      roster.incoming.length
+        ? jsxs("div", {
+            className: "hg-col",
+            "data-friend-requests": "incoming",
+            children: [
+              jsx("h4", { children: "Friend requests" }),
+              ...roster.incoming.map(function (request) {
+                return jsxs(
+                  "div",
+                  {
+                    className: "hg-row hg-row--between hg-friend__request",
+                    "data-friend-request-id": request.id,
+                    children: [
+                      jsx("strong", { children: request.name || "Unknown player" }),
+                      jsxs("div", {
+                        className: "hg-actions hg-actions--tight",
+                        children: [
+                          jsx("button", {
+                            type: "button",
+                            className: "hg-btn hg-btn--primary",
+                            disabled: props.busy,
+                            onClick: function () {
+                              props.onRespondRequest(request, "accept");
+                            },
+                            children: "Accept",
+                          }),
+                          jsx("button", {
+                            type: "button",
+                            className: "hg-btn",
+                            disabled: props.busy,
+                            onClick: function () {
+                              props.onRespondRequest(request, "decline");
+                            },
+                            children: "Decline",
+                          }),
+                        ],
+                      }),
+                    ],
+                  },
+                  request.id
+                );
+              }),
+            ],
+          })
+        : null,
+      jsxs("div", {
+        className: "hg-actions",
+        children: [
+          jsx("label", {
+            className: "hg-field",
+            children: [
+              jsx("span", { children: "Filter" }),
+              jsx("input", {
+                className: "hg-input",
+                type: "search",
+                value: props.query,
+                placeholder: "Search friends",
+                "data-friend-search": "true",
+                onChange: function (event) {
+                  props.onQuery(event.target.value);
+                },
+              }),
+            ],
+          }),
+          jsx("button", {
+            type: "button",
+            className: "hg-btn",
+            onClick: function () {
+              props.onStatus("all");
+            },
+            children: "All (" + roster.friends.length + ")",
+          }),
+          jsx("button", {
+            type: "button",
+            className: "hg-btn",
+            onClick: function () {
+              props.onStatus("online");
+            },
+            children: "Online (" + counts.online + ")",
+          }),
+          jsx("button", {
+            type: "button",
+            className: "hg-btn",
+            onClick: function () {
+              props.onStatus("away");
+            },
+            children: "Away (" + counts.away + ")",
+          }),
+          jsx("button", {
+            type: "button",
+            className: "hg-btn",
+            onClick: function () {
+              props.onStatus("offline");
+            },
+            children: "Offline (" + counts.offline + ")",
+          }),
+        ],
+      }),
+      friends.length
+        ? jsx("ul", {
+            className: "hg-social__friends",
+            children: friends.map(function (friend) {
+              return jsxs(
+                "li",
+                {
+                  className: "hg-row hg-row--between hg-friend",
+                  "data-friend-id": friend.id,
+                  "data-friend-status": friend.status,
+                  children: [
+                    jsxs("div", {
+                      className: "hg-col",
+                      children: [
+                        jsx("strong", { children: friend.name }),
+                        jsxs("span", {
+                          className: "hg-muted",
+                          children: [
+                            friend.status_label,
+                            friend.pet_name ? " · " + friend.pet_name : "",
+                          ],
+                        }),
+                      ],
+                    }),
+                    jsxs("div", {
+                      className: "hg-actions hg-actions--tight",
+                      children: [
+                        jsx("button", {
+                          type: "button",
+                          className: "hg-btn hg-btn--primary",
+                          disabled: props.busy || !(friend.account_id || friend.id),
+                          onClick: function () {
+                            props.onChallenge(friend);
+                          },
+                          "data-challenge-friend": friend.id,
+                          children: "Challenge",
+                        }),
+                        jsx("button", {
+                          type: "button",
+                          className: "hg-btn",
+                          disabled: props.busy,
+                          onClick: function () {
+                            props.onRemove(friend);
+                          },
+                          children: "Remove",
+                        }),
+                      ],
+                    }),
+                  ],
+                },
+                friend.id
+              );
+            }),
+          })
+        : jsx("p", {
+            className: "hg-muted",
+            "data-placeholder": "social-friends-empty",
+            children: "No friends match this filter.",
+          }),
+    ],
+  });
+}
+
+function ChallengesSection(props) {
+  const inbox = props.challengeInbox || { pending: [] };
+  const pending = inbox.pending || [];
+
+  return jsx(SocialSection, {
+    id: "challenges",
+    title: "Challenges",
+    badge: String(pending.length) + " pending",
+    children: [
+      jsx("p", {
+        className: "hg-muted",
+        children:
+          "Challenge a friend from the roster. Incoming challenges can be accepted or declined here.",
+      }),
+      pending.length
+        ? jsx("div", {
+            className: "hg-col",
+            children: pending.map(function (challenge) {
+              const incoming = challenge.direction === "incoming";
+              return jsxs(
+                "div",
+                {
+                  className: "hg-row hg-row--between hg-challenge",
+                  "data-challenge-id": challenge.id,
+                  "data-direction": challenge.direction,
+                  children: [
+                    jsxs("div", {
+                      className: "hg-col",
+                      children: [
+                        jsx("strong", { children: challenge.label }),
+                        jsx("span", {
+                          className: "hg-muted",
+                          children:
+                            (incoming ? "Incoming" : "Outgoing") +
+                            " · " +
+                            (challenge.created_at || ""),
+                        }),
+                      ],
+                    }),
+                    jsxs("div", {
+                      className: "hg-actions hg-actions--tight",
+                      children: [
+                        incoming
+                          ? jsx("button", {
+                              type: "button",
+                              className: "hg-btn hg-btn--primary",
+                              disabled: props.busy,
+                              onClick: function () {
+                                props.onRespond(challenge, "accept");
+                              },
+                              children: "Accept",
+                            })
+                          : null,
+                        jsx("button", {
+                          type: "button",
+                          className: "hg-btn",
+                          disabled: props.busy,
+                          onClick: function () {
+                            props.onRespond(challenge, "decline");
+                          },
+                          children: "Decline",
+                        }),
+                      ],
+                    }),
+                  ],
+                },
+                challenge.id
+              );
+            }),
+          })
+        : jsx("p", {
+            className: "hg-muted",
+            "data-placeholder": "social-challenges-empty",
+            children: "No pending challenges.",
+          }),
+    ],
+  });
+}
+
+function HistorySection(props) {
+  const counts = historyFilterCounts(props.history);
+  const rows = filterHistory(props.history, props.filter, props.query);
+
+  return jsx(SocialSection, {
+    id: "history",
+    title: "Taunts & mentions",
+    badge: String(counts.all) + " recent",
+    children: [
+      jsxs("div", {
+        className: "hg-actions",
+        children: [
+          ...HISTORY_FILTERS.map(function (filter) {
+            return jsx(
+              "button",
+              {
+                type: "button",
+                className:
+                  props.filter === filter.id ? "hg-btn hg-btn--primary" : "hg-btn",
+                onClick: function () {
+                  props.onFilter(filter.id);
+                },
+                children: filter.label + " (" + counts[filter.id] + ")",
+              },
+              filter.id
+            );
+          }),
+          jsx("input", {
+            className: "hg-input",
+            type: "search",
+            value: props.query,
+            placeholder: "Search taunts and mentions",
+            "data-history-search": "true",
+            onChange: function (event) {
+              props.onQuery(event.target.value);
+            },
+          }),
+        ],
+      }),
+      rows.length
+        ? jsx("ul", {
+            className: "hg-social__history",
+            children: rows.map(function (item) {
+              return jsxs(
+                "li",
+                {
+                  className:
+                    item.kind === "taunt"
+                      ? "hg-taunt hg-taunt--row"
+                      : "hg-inbox__item hg-inbox__item--mention",
+                  "data-history-id": item.id,
+                  "data-history-kind": item.kind,
+                  children: [
+                    jsxs("div", {
+                      className: "hg-row hg-row--between",
+                      children: [
+                        jsx("strong", {
+                          children:
+                            (item.kind === "taunt" ? "Taunt" : "@mention") +
+                            (item.from ? " · " + item.from : ""),
+                        }),
+                        jsx("span", {
+                          className: "hg-muted",
+                          children: item.created_at || "",
+                        }),
+                      ],
+                    }),
+                    jsx("p", {
+                      className:
+                        item.kind === "taunt" ? "hg-taunt__body" : "hg-log__body",
+                      children: item.body,
+                    }),
+                    item.match_summary
+                      ? jsx("p", {
+                          className: "hg-muted hg-taunt__match",
+                          "data-taunt-match": "true",
+                          children: item.match_summary,
+                        })
+                      : null,
+                    item.match_id
+                      ? jsx("a", {
+                          className: "hg-btn",
+                          href: replayHref(item.match_id),
+                          "data-replay-link": item.match_id,
+                          children: "Replay match",
+                        })
+                      : null,
+                  ],
+                },
+                item.id
+              );
+            }),
+          })
+        : jsx("p", {
+            className: "hg-muted",
+            "data-placeholder": "social-history-empty",
+            children: "No taunts or @mentions match this filter.",
+          }),
+    ],
+  });
+}
+
 function ChatLive(props) {
   const api = props.api;
   const uiState = props.uiState || props.state || UI_STATES.READY;
@@ -3777,6 +5385,25 @@ function ChatLive(props) {
   });
   const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxBusy, setInboxBusy] = useState(false);
+  const [activeThread, setActiveThread] = useState(null);
+  const [conversation, setConversation] = useState([]);
+  const [roster, setRoster] = useState({
+    friends: [],
+    incoming: [],
+    outgoing: [],
+    total: 0,
+  });
+  const [friendTarget, setFriendTarget] = useState("");
+  const [friendQuery, setFriendQuery] = useState("");
+  const [friendStatus, setFriendStatus] = useState("all");
+  const [challengeInbox, setChallengeInbox] = useState({
+    incoming: [],
+    outgoing: [],
+    pending: [],
+  });
+  const [challengeBusy, setChallengeBusy] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState("all");
+  const [historyQuery, setHistoryQuery] = useState("");
 
   useEffect(
     function () {
@@ -3808,12 +5435,22 @@ function ChatLive(props) {
     [api, refreshTick]
   );
 
+  async function loadInbox() {
+    if (!api || typeof api.get !== "function") return;
+    const envelope = await api.get(CHAT_INBOX_PATH);
+    if (envelope && envelope.ok === true) {
+      setInbox(normalizeInbox(envelope));
+    } else {
+      setNotice(chatNoticeFromEnvelope(envelope));
+    }
+  }
+
   useEffect(
     function pollInbox() {
-      let cancelled = false;
       if (!api || typeof api.get !== "function") {
         return undefined;
       }
+      let cancelled = false;
       async function load() {
         try {
           const envelope = await api.get(CHAT_INBOX_PATH);
@@ -3821,7 +5458,7 @@ function ChatLive(props) {
             setInbox(normalizeInbox(envelope));
           }
         } catch (_error) {
-          /* Inbox polling stays quiet; the lobby notice owns errors. */
+          /* Inbox polling stays quiet; the hub notice owns errors. */
         }
       }
       load();
@@ -3834,16 +5471,91 @@ function ChatLive(props) {
     [api]
   );
 
-  async function refreshInbox() {
+  useEffect(
+    function loadRoster() {
+      if (!api || typeof api.get !== "function") return undefined;
+      let cancelled = false;
+      api.get("/friends").then(
+        function (envelope) {
+          if (cancelled) return;
+          if (envelope && envelope.ok === true) {
+            setRoster(normalizeFriends(envelope));
+          }
+        },
+        function () {}
+      );
+      return function () {
+        cancelled = true;
+      };
+    },
+    [api, refreshTick]
+  );
+
+  async function loadChallenges() {
     if (!api || typeof api.get !== "function") return;
+    const envelope = await api.get(CHALLENGE_INBOX_PATH);
+    if (envelope && envelope.ok === true) {
+      setChallengeInbox(normalizeChallengeInbox(envelope));
+    }
+  }
+
+  useEffect(
+    function loadChallengeInbox() {
+      if (!api || typeof api.get !== "function") return undefined;
+      let cancelled = false;
+      api.get(CHALLENGE_INBOX_PATH).then(
+        function (envelope) {
+          if (cancelled) return;
+          if (envelope && envelope.ok === true) {
+            setChallengeInbox(normalizeChallengeInbox(envelope));
+          }
+        },
+        function () {}
+      );
+      return function () {
+        cancelled = true;
+      };
+    },
+    [api, refreshTick]
+  );
+
+  useEffect(
+    function loadConversation() {
+      if (
+        !activeThread ||
+        !activeThread.channel_id ||
+        !api ||
+        typeof api.get !== "function"
+      ) {
+        setConversation([]);
+        return undefined;
+      }
+      let cancelled = false;
+      const path = threadMessagePath(activeThread.channel_id);
+      api.get(path).then(
+        function (envelope) {
+          if (cancelled) return;
+          if (envelope && envelope.ok === true) {
+            setConversation(normalizeMessages(envelope));
+          } else {
+            setConversation([]);
+          }
+        },
+        function () {
+          if (!cancelled) setConversation([]);
+        }
+      );
+      return function () {
+        cancelled = true;
+      };
+    },
+    [api, activeThread]
+  );
+
+  async function refreshInbox() {
     setInboxBusy(true);
     try {
-      const envelope = await api.get(CHAT_INBOX_PATH);
-      if (envelope && envelope.ok === true) {
-        setInbox(normalizeInbox(envelope));
-      } else {
-        setNotice(chatNoticeFromEnvelope(envelope));
-      }
+      await loadInbox();
     } catch (_error) {
       setNotice(chatNoticeFromEnvelope(null));
     } finally {
@@ -3875,6 +5587,12 @@ function ChatLive(props) {
     }
   }
 
+  function selectThread(thread) {
+    setActiveThread(thread);
+    setDmTarget(thread.peer || "");
+    setComposerError("");
+  }
+
   async function submitMessage(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -3884,9 +5602,14 @@ function ChatLive(props) {
       setComposerError(checked.error);
       return;
     }
-    const checkedTarget = validateDmTarget(dmTarget);
+    const target = dmTarget || (activeThread && activeThread.peer) || "";
+    const checkedTarget = validateDmTarget(target);
     if (!checkedTarget.ok) {
       setComposerError(checkedTarget.error);
+      return;
+    }
+    if (!checkedTarget.value) {
+      setComposerError("Choose a player or pet to DM.");
       return;
     }
 
@@ -3900,12 +5623,8 @@ function ChatLive(props) {
       if (envelope && envelope.ok === true) {
         const sent = messageFromEnvelope(envelope);
         if (sent) {
-          setMessages(function (current) {
+          setConversation(function (current) {
             return mergeMessages(current, [sent]);
-          });
-        } else {
-          setRefreshTick(function (tick) {
-            return tick + 1;
           });
         }
         setDraft("");
@@ -3928,7 +5647,7 @@ function ChatLive(props) {
         blocked_id: message.account_id,
       });
       if (envelope && envelope.ok === true) {
-        setMessages(function (current) {
+        setConversation(function (current) {
           return current.filter(function (item) {
             return item.account_id !== message.account_id;
           });
@@ -3965,51 +5684,158 @@ function ChatLive(props) {
     }
   }
 
-  function refresh() {
-    setRefreshTick(function (tick) {
-      return tick + 1;
-    });
+  async function addFriend(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    const checked = validateFriendTarget(friendTarget);
+    if (!checked.ok) {
+      setNotice({
+        kind: "error",
+        code: "friend_target",
+        message: checked.error,
+        hostLine: npcHostLine("chat").line,
+      });
+      return;
+    }
+    setBusy(true);
+    try {
+      const envelope = await api.post(
+        FRIEND_REQUESTS_PATH,
+        friendRequestPayload(checked.value)
+      );
+      if (envelope && envelope.ok === true) {
+        setFriendTarget("");
+        setNotice(null);
+        setRefreshTick(function (tick) {
+          return tick + 1;
+        });
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setBusy(false);
+    }
   }
 
+  async function respondToRequest(request, action) {
+    if (!request || !request.id) return;
+    setBusy(true);
+    try {
+      const envelope = await api.post(
+        friendRequestRespondPath(request.id),
+        friendRequestResponsePayload(action)
+      );
+      if (envelope && envelope.ok === true) {
+        setNotice(null);
+        setRefreshTick(function (tick) {
+          return tick + 1;
+        });
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeFriend(friend) {
+    if (!friend || !friend.id) return;
+    setBusy(true);
+    try {
+      const envelope =
+        api && typeof api.del === "function"
+          ? await api.del(friendRemovePath(friend.id))
+          : await api.post(friendRemovePath(friend.id), {});
+      if (envelope && envelope.ok === true) {
+        setRoster(function (current) {
+          return {
+            ...current,
+            friends: current.friends.filter(function (item) {
+              return item.id !== friend.id;
+            }),
+          };
+        });
+        setNotice(null);
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function challengeFriend(friend) {
+    const target = friend && (friend.account_id || friend.id);
+    if (!target) return;
+    setChallengeBusy(true);
+    try {
+      const envelope = await api.post(
+        CHALLENGES_PATH,
+        challengeCreatePayload(target, "casual")
+      );
+      if (envelope && envelope.ok === true) {
+        setNotice(null);
+        await loadChallenges();
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setChallengeBusy(false);
+    }
+  }
+
+  async function respondToChallenge(challenge, action) {
+    if (!challenge || !challenge.id) return;
+    setChallengeBusy(true);
+    try {
+      const envelope = await api.post(
+        challengeRespondPath(challenge.id),
+        challengeResponsePayload(action)
+      );
+      if (envelope && envelope.ok === true) {
+        setNotice(null);
+        await loadChallenges();
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setChallengeBusy(false);
+    }
+  }
+
+  const threads = normalizeThreads(inbox);
+  const historyItems = normalizeHistory({
+    data: { messages: [...messages, ...inbox.items] },
+  });
   const moderationHost = notice
     ? chatModerationHost(notice) || npcHostLine("chat.moderation")
     : null;
-
-  const rows = messages.map(function (message) {
-    return jsx(
-      MessageRow,
-      {
-        message: message,
-        busy: busy,
-        onReport: reportMessage,
-        onBlock: blockMessage,
-      },
-      message.id
-    );
-  });
-
-  const emptyState =
-    !loading && messages.length === 0
-      ? jsx("li", {
-          className: "hg-muted",
-          children: "No lobby messages yet. Say hello below.",
-        })
-      : null;
+  const hubHost = notice ? moderationHost : socialHubHost();
 
   return jsxs("section", {
-    className: "hg-chat",
+    className: "hg-chat hg-social",
     "data-tab": "chat",
     "data-chat-mode": "live",
     children: [
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      notice
-        ? jsx(NpcHostBanner, {
-            surface: "chat.moderation",
-            host: moderationHost,
-          })
-        : jsx(NpcHostBanner, { surface: "chat" }),
+      jsx(NpcHostBanner, {
+        surface: notice ? "chat.moderation" : "chat",
+        host: hubHost,
+        assetBaseUrl: props.assetBaseUrl,
+      }),
       notice && (notice.message || notice.hostLine)
         ? jsx("p", {
             className: notice.kind === "moderation" ? "hg-muted" : "hg-error",
@@ -4018,107 +5844,62 @@ function ChatLive(props) {
             children: notice.message || notice.hostLine,
           })
         : null,
-      jsx(InboxCard, {
-        inbox,
-        open: inboxOpen,
-        busy: inboxBusy,
-        onOpen: openInbox,
-        onRefresh: refreshInbox,
-      }),
       jsxs("div", {
-        className: "hg-card",
+        className: "hg-social__sections",
+        "data-social-sections": SOCIAL_HUB_SECTIONS.map(function (section) {
+          return section.id;
+        }).join(" "),
         children: [
-          jsxs("header", {
-            className: "hg-card__header",
-            children: [
-              jsx("h3", { children: "Lobby" }),
-              jsx("span", {
-                className: "hg-badge",
-                children: loading ? "Refreshing" : "Live",
-              }),
-            ],
-          }),
-          jsx("p", {
-            className: "hg-muted",
-            children:
-              "Lobby messages are untrusted display text. They are shown exactly as plain text and never executed.",
-          }),
-          loading && messages.length === 0
-            ? jsx("p", { className: "hg-muted", children: "Loading lobby messages..." })
-            : null,
-          jsx("ol", {
-            className: "hg-log",
-            "aria-live": "polite",
-            children: [emptyState, ...rows],
-          }),
-          jsxs("form", {
-            className: "hg-chat__compose",
+          jsx(DmSection, {
+            inbox,
+            threads,
+            activeThread,
+            conversation,
+            draft,
+            dmTarget,
+            composerError,
+            busy: busy || inboxBusy,
+            inboxOpen,
+            onRefresh: refreshInbox,
+            onOpenInbox: openInbox,
+            onSelectThread: selectThread,
+            onDraft: setDraft,
+            onTarget: setDmTarget,
             onSubmit: submitMessage,
-            children: [
-              jsxs("label", {
-                className: "hg-field",
-                children: [
-                  jsx("span", { children: "Message" }),
-                  jsx("textarea", {
-                    className: "hg-input",
-                    rows: "3",
-                    maxLength: String(CHAT_MESSAGE_MAX_CHARS),
-                    value: draft,
-                    disabled: busy,
-                    placeholder: "Write a plain-text lobby message",
-                    onChange: function (event) {
-                      setDraft(event.target.value);
-                    },
-                  }),
-                ],
-              }),
-              jsxs("label", {
-                className: "hg-field hg-chat__dm-target",
-                children: [
-                  jsx("span", { children: "Direct message to (optional)" }),
-                  jsx("input", {
-                    className: "hg-input",
-                    type: "text",
-                    maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
-                    value: dmTarget,
-                    disabled: busy,
-                    placeholder: "Player or pet name — blank keeps the lobby",
-                    "data-chat-dm-target": "true",
-                    onChange: function (event) {
-                      setDmTarget(event.target.value);
-                    },
-                  }),
-                ],
-              }),
-              composerError
-                ? jsx("p", {
-                    className: "hg-error",
-                    role: "alert",
-                    children: composerError,
-                  })
-                : null,
-              jsxs("div", {
-                className: "hg-actions",
-                children: [
-                  jsx("button", {
-                    type: "submit",
-                    className: "hg-btn hg-btn--primary",
-                    disabled: busy,
-                    children: busy ? "Working..." : "Send",
-                  }),
-                  jsx("button", {
-                    type: "button",
-                    className: "hg-btn",
-                    disabled: busy,
-                    onClick: refresh,
-                    children: "Refresh",
-                  }),
-                ],
-              }),
-            ],
+            onReport: reportMessage,
+            onBlock: blockMessage,
+          }),
+          jsx(FriendsSection, {
+            roster,
+            query: friendQuery,
+            statusFilter: friendStatus,
+            friendTarget,
+            busy,
+            onFriendTarget: setFriendTarget,
+            onAdd: addFriend,
+            onQuery: setFriendQuery,
+            onStatus: setFriendStatus,
+            onRespondRequest: respondToRequest,
+            onChallenge: challengeFriend,
+            onRemove: removeFriend,
+          }),
+          jsx(ChallengesSection, {
+            challengeInbox,
+            busy: challengeBusy,
+            onRespond: respondToChallenge,
+          }),
+          jsx(HistorySection, {
+            history: historyItems,
+            filter: historyFilter,
+            query: historyQuery,
+            onFilter: setHistoryFilter,
+            onQuery: setHistoryQuery,
           }),
         ],
       }),
+      loading && messages.length === 0
+        ? jsx("p", { className: "hg-muted", children: "Loading social hub..." })
+        : null,
     ],
   });
 }
@@ -4143,7 +5924,7 @@ function ChatTab(props = {}) {
 })();
 
 // desktop/src/ui/components/CareMeter.js
-const __m15 = (function () {
+const __m18 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -4186,7 +5967,7 @@ function CareMeter(props = {}) {
 })();
 
 // desktop/src/ui/logic/habitat.js
-const __m16 = (function () {
+const __m19 = (function () {
 /**
  * Pure Habitat helpers. No React, network or DOM access so the same rules can
  * be exercised directly with `node --test`.
@@ -4382,30 +6163,30 @@ function petFromCareResponse(data, previous) {
 })();
 
 // desktop/src/ui/tabs/HabitatTab.js
-const __m17 = (function () {
+const __m20 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const CareMeter = __m15["CareMeter"];
+  const CareMeter = __m18["CareMeter"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m9["PetPreview"];
+  const PetPreview = __m11["PetPreview"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CARE_ACTIONS = __m16["CARE_ACTIONS"];
-  const CARE_LABELS = __m16["CARE_LABELS"];
-  const MODES = __m16["MODES"];
-  const MODE_LABELS = __m16["MODE_LABELS"];
-  const SPECIES = __m16["SPECIES"];
-  const SPECIES_LABELS = __m16["SPECIES_LABELS"];
-  const buildAdoptRequest = __m16["buildAdoptRequest"];
-  const careMeters = __m16["careMeters"];
-  const extractPetId = __m16["extractPetId"];
-  const habitatView = __m16["habitatView"];
-  const petFromCareResponse = __m16["petFromCareResponse"];
-  const readEnvelope = __m16["readEnvelope"];
+  const CARE_ACTIONS = __m19["CARE_ACTIONS"];
+  const CARE_LABELS = __m19["CARE_LABELS"];
+  const MODES = __m19["MODES"];
+  const MODE_LABELS = __m19["MODE_LABELS"];
+  const SPECIES = __m19["SPECIES"];
+  const SPECIES_LABELS = __m19["SPECIES_LABELS"];
+  const buildAdoptRequest = __m19["buildAdoptRequest"];
+  const careMeters = __m19["careMeters"];
+  const extractPetId = __m19["extractPetId"];
+  const habitatView = __m19["habitatView"];
+  const petFromCareResponse = __m19["petFromCareResponse"];
+  const readEnvelope = __m19["readEnvelope"];
 
 const HABITAT_PLACEHOLDER = Object.freeze({
   name: "Not named yet",
@@ -4938,7 +6719,7 @@ function HabitatTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/leaderboard.js
-const __m18 = (function () {
+const __m21 = (function () {
 /**
  * Pure ranking and bounty presentation helpers for the Desktop Leaderboard tab.
  * No React, no network.
@@ -5077,18 +6858,18 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 })();
 
 // desktop/src/ui/tabs/LeaderboardTab.js
-const __m19 = (function () {
+const __m22 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const bountyRows = __m18["bountyRows"];
-  const leaderboardRows = __m18["leaderboardRows"];
-  const mergeBountyClaim = __m18["mergeBountyClaim"];
-  const normalizeLeaderboard = __m18["normalizeLeaderboard"];
+  const bountyRows = __m21["bountyRows"];
+  const leaderboardRows = __m21["leaderboardRows"];
+  const mergeBountyClaim = __m21["mergeBountyClaim"];
+  const normalizeLeaderboard = __m21["normalizeLeaderboard"];
 
 function envelopeMessage(envelope) {
   if (!envelope) return "The bridge did not return a response.";
@@ -5418,7 +7199,7 @@ function LeaderboardTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/session.js
-const __m20 = (function () {
+const __m23 = (function () {
 /**
  * Pure pairing/session view-model helpers.
  *
@@ -5809,29 +7590,29 @@ const createPairingViewModel = buildPairingViewModel;
 })();
 
 // desktop/src/ui/tabs/SettingsTab.js
-const __m21 = (function () {
+const __m24 = (function () {
   const useCallback = __ext5;
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const connectionRows = __m0["connectionRows"];
-  const deriveConnectionStatus = __m0["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m0["resolveConnectionUiState"];
-  const CHAT_SETTINGS_PATH = __m12["CHAT_SETTINGS_PATH"];
-  const chatEnabledFromEnvelope = __m12["chatEnabledFromEnvelope"];
-  const updateChatSetting = __m12["updateChatSetting"];
-  const PAIRING_STATES = __m20["PAIRING_STATES"];
-  const SIGNUP_ERROR_MESSAGES = __m20["SIGNUP_ERROR_MESSAGES"];
-  const deviceRowsFromEnvelope = __m20["deviceRowsFromEnvelope"];
-  const emptyPairingState = __m20["emptyPairingState"];
-  const formatCountdown = __m20["formatCountdown"];
-  const pairingStateFromPoll = __m20["pairingStateFromPoll"];
-  const pairingStateFromStart = __m20["pairingStateFromStart"];
-  const secondsRemaining = __m20["secondsRemaining"];
+  const connectionRows = __m6["connectionRows"];
+  const deriveConnectionStatus = __m6["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const CHAT_SETTINGS_PATH = __m2["CHAT_SETTINGS_PATH"];
+  const chatEnabledFromEnvelope = __m2["chatEnabledFromEnvelope"];
+  const updateChatSetting = __m2["updateChatSetting"];
+  const PAIRING_STATES = __m23["PAIRING_STATES"];
+  const SIGNUP_ERROR_MESSAGES = __m23["SIGNUP_ERROR_MESSAGES"];
+  const deviceRowsFromEnvelope = __m23["deviceRowsFromEnvelope"];
+  const emptyPairingState = __m23["emptyPairingState"];
+  const formatCountdown = __m23["formatCountdown"];
+  const pairingStateFromPoll = __m23["pairingStateFromPoll"];
+  const pairingStateFromStart = __m23["pairingStateFromStart"];
+  const secondsRemaining = __m23["secondsRemaining"];
 
 const SETTINGS_PLACEHOLDER = Object.freeze([
   { key: "backend", label: "Python backend", value: "Disabled" },
@@ -6537,24 +8318,24 @@ function SettingsTab(props = {}) {
 })();
 
 // desktop/src/ui/tabs/ShopTab.js
-const __m22 = (function () {
+const __m25 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m9["PetPreview"];
-  const extractPetId = __m16["extractPetId"];
-  const compareItemsByPrice = __m6["compareItemsByPrice"];
-  const groupCatalogBySlot = __m6["groupCatalogBySlot"];
-  const itemAvailability = __m6["itemAvailability"];
-  const itemThumbUrl = __m6["itemThumbUrl"];
-  const manifestFromCatalog = __m6["manifestFromCatalog"];
-  const normaliseWallet = __m6["normaliseWallet"];
-  const RARITY_LABELS = __m6["RARITY_LABELS"];
-  const readEnvelope = __m6["readEnvelope"];
+  const PetPreview = __m11["PetPreview"];
+  const extractPetId = __m19["extractPetId"];
+  const compareItemsByPrice = __m8["compareItemsByPrice"];
+  const groupCatalogBySlot = __m8["groupCatalogBySlot"];
+  const itemAvailability = __m8["itemAvailability"];
+  const itemThumbUrl = __m8["itemThumbUrl"];
+  const manifestFromCatalog = __m8["manifestFromCatalog"];
+  const normaliseWallet = __m8["normaliseWallet"];
+  const RARITY_LABELS = __m8["RARITY_LABELS"];
+  const readEnvelope = __m8["readEnvelope"];
 
 const SLOT_MARKS = Object.freeze({
   head: "HAT",
@@ -7223,7 +9004,7 @@ function ShopTab(props = {}) {
 })();
 
 // desktop/src/ui/wordmark.js
-const __m23 = (function () {
+const __m26 = (function () {
 // Generated by scripts/make_wordmark.py — do not edit by hand.
 const WORDMARK_WIDTH = 207;
 const WORDMARK_HEIGHT = 33;
@@ -7234,25 +9015,27 @@ const WORDMARK_SRC_2X = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZ4AAABCC
 })();
 
 // desktop/src/ui/pane.js
-const __m24 = (function () {
+const __m27 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const deriveConnectionStatus = __m0["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m0["resolveConnectionUiState"];
-  const BattleTab = __m13["BattleTab"];
-  const ChatTab = __m14["ChatTab"];
-  const HabitatTab = __m17["HabitatTab"];
-  const LeaderboardTab = __m19["LeaderboardTab"];
-  const SettingsTab = __m21["SettingsTab"];
-  const ShopTab = __m22["ShopTab"];
+  const LobbyRail = __m5["LobbyRail"];
+  const deriveConnectionStatus = __m6["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const lobbyRailAutoCollapsed = __m2["lobbyRailAutoCollapsed"];
+  const BattleTab = __m14["BattleTab"];
+  const ChatTab = __m17["ChatTab"];
+  const HabitatTab = __m20["HabitatTab"];
+  const LeaderboardTab = __m22["LeaderboardTab"];
+  const SettingsTab = __m24["SettingsTab"];
+  const ShopTab = __m25["ShopTab"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const WORDMARK_HEIGHT = __m23["WORDMARK_HEIGHT"];
-  const WORDMARK_SRC = __m23["WORDMARK_SRC"];
-  const WORDMARK_SRC_2X = __m23["WORDMARK_SRC_2X"];
-  const WORDMARK_WIDTH = __m23["WORDMARK_WIDTH"];
+  const WORDMARK_HEIGHT = __m26["WORDMARK_HEIGHT"];
+  const WORDMARK_SRC = __m26["WORDMARK_SRC"];
+  const WORDMARK_SRC_2X = __m26["WORDMARK_SRC_2X"];
+  const WORDMARK_WIDTH = __m26["WORDMARK_WIDTH"];
 
 const TAB_IDS = Object.freeze(["habitat", "battle", "shop", "leaderboard", "chat", "settings"]);
 
@@ -7261,7 +9044,7 @@ const TAB_LABELS = Object.freeze({
   battle: "Battle",
   shop: "Shop",
   leaderboard: "Leaderboard",
-  chat: "Chat",
+  chat: "Social",
   settings: "Settings",
 });
 
@@ -7324,6 +9107,13 @@ function pairEnvelopeFor(api) {
   return Promise.resolve(null);
 }
 
+function initialRailCollapsed() {
+  if (typeof window === "undefined" || typeof window.innerWidth !== "number") {
+    return false;
+  }
+  return lobbyRailAutoCollapsed(window.innerWidth);
+}
+
 function HermagotchiPane(props = {}) {
   const initialTab = TAB_IDS.includes(props.initialTab) ? props.initialTab : "habitat";
   const api = props.api;
@@ -7336,6 +9126,9 @@ function HermagotchiPane(props = {}) {
   const connectionState = useState(null);
   const connection = connectionState[0];
   const setConnection = connectionState[1];
+  const railState = useState(initialRailCollapsed);
+  const railCollapsed = railState[0];
+  const setRailCollapsed = railState[1];
 
   useEffect(
     function pollConnection() {
@@ -7370,6 +9163,38 @@ function HermagotchiPane(props = {}) {
     [api, hasApi]
   );
 
+  useEffect(
+    function syncLobbyRail() {
+      if (
+        typeof window === "undefined" ||
+        typeof window.matchMedia !== "function"
+      ) {
+        return undefined;
+      }
+      const query = window.matchMedia("(max-width: 839px)");
+      function sync(event) {
+        if (event && event.matches) {
+          setRailCollapsed(true);
+        }
+      }
+      sync(query);
+      if (typeof query.addEventListener === "function") {
+        query.addEventListener("change", sync);
+        return function () {
+          query.removeEventListener("change", sync);
+        };
+      }
+      if (typeof query.addListener === "function") {
+        query.addListener(sync);
+        return function () {
+          query.removeListener(sync);
+        };
+      }
+      return undefined;
+    },
+    []
+  );
+
   const effectiveState = hasApi
     ? connection
       ? resolveConnectionUiState(connection)
@@ -7381,6 +9206,12 @@ function HermagotchiPane(props = {}) {
     if (typeof props.onTabChange === "function") {
       props.onTabChange(nextTab);
     }
+  }
+
+  function toggleLobbyRail() {
+    setRailCollapsed(function (current) {
+      return !current;
+    });
   }
 
   const tabButtons = TAB_IDS.map((tabId) =>
@@ -7428,11 +9259,27 @@ function HermagotchiPane(props = {}) {
         "aria-label": "Hermagotchi sections",
         children: tabButtons,
       }),
-      jsx("main", {
-        className: "hg-pane__body",
-        role: "tabpanel",
-        "aria-label": TAB_LABELS[activeTab],
-        children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+      jsxs("div", {
+        className: railCollapsed
+          ? "hg-pane__layout hg-pane__layout--rail-collapsed"
+          : "hg-pane__layout",
+        children: [
+          jsx("main", {
+            className: "hg-pane__body hg-pane__main",
+            role: "tabpanel",
+            "aria-label": TAB_LABELS[activeTab],
+            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+          }),
+          jsx(LobbyRail, Object.assign({}, props, {
+            api: api,
+            uiState: effectiveState,
+            state: effectiveState,
+            collapsed: railCollapsed,
+            onToggle: toggleLobbyRail,
+            initialTab: undefined,
+            onTabChange: undefined,
+          })),
+        ],
       }),
     ],
   });
@@ -7442,7 +9289,7 @@ function HermagotchiPane(props = {}) {
 })();
 
 // desktop/src/ui/api.js
-const __m25 = (function () {
+const __m28 = (function () {
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
@@ -7824,10 +9671,10 @@ function uiStateFromEnvelope(envelope) {
 })();
 
 // desktop/src/ui/register.js
-const __m26 = (function () {
+const __m29 = (function () {
   const jsx = __ext0;
-  const HermagotchiPane = __m24["HermagotchiPane"];
-  const createApiClient = __m25["createApiClient"];
+  const HermagotchiPane = __m27["HermagotchiPane"];
+  const createApiClient = __m28["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -7868,17 +9715,17 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m27 = (function () {
+const __m30 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m24["HermagotchiPane"], "TAB_IDS": __m24["TAB_IDS"], "TAB_LABELS": __m24["TAB_LABELS"], "TAB_COMPONENTS": __m24["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m26["PANE_ID"], "PANE_TITLE": __m26["PANE_TITLE"], "createPaneContribution": __m26["createPaneContribution"], "registerHermagotchiPane": __m26["registerHermagotchiPane"], "createDesktopPlugin": __m26["createDesktopPlugin"], "HabitatTab": __m17["HabitatTab"], "HABITAT_PLACEHOLDER": __m17["HABITAT_PLACEHOLDER"], "BattleTab": __m13["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m13["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m22["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m22["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m19["LeaderboardTab"], "ChatTab": __m14["ChatTab"], "SettingsTab": __m21["SettingsTab"], "SETTINGS_PLACEHOLDER": __m21["SETTINGS_PLACEHOLDER"], "CareMeter": __m15["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m2["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m2["NPC_NAMES"], "npcHostLine": __m2["npcHostLine"] };
+  return { "HermagotchiPane": __m27["HermagotchiPane"], "TAB_IDS": __m27["TAB_IDS"], "TAB_LABELS": __m27["TAB_LABELS"], "TAB_COMPONENTS": __m27["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m29["PANE_ID"], "PANE_TITLE": __m29["PANE_TITLE"], "createPaneContribution": __m29["createPaneContribution"], "registerHermagotchiPane": __m29["registerHermagotchiPane"], "createDesktopPlugin": __m29["createDesktopPlugin"], "HabitatTab": __m20["HabitatTab"], "HABITAT_PLACEHOLDER": __m20["HABITAT_PLACEHOLDER"], "BattleTab": __m14["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m14["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m25["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m25["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m22["LeaderboardTab"], "ChatTab": __m17["ChatTab"], "SettingsTab": __m24["SettingsTab"], "SETTINGS_PLACEHOLDER": __m24["SETTINGS_PLACEHOLDER"], "CareMeter": __m18["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 240px;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) 320px;\n  gap: 12px;\n  align-items: start;\n  padding-top: 12px;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 52px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  max-height: calc(100vh - 180px);\n  overflow: hidden;\n  position: sticky;\n  top: 12px;\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: none;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  padding: 8px;\n  overflow-y: auto;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 8px 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-lobby-rail__message {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-lobby-rail__taunt {\n  border-color: var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-lobby-rail__bubble {\n  display: block;\n}\n\n.hg-lobby-rail__text,\n.hg-lobby-rail__match {\n  margin: 4px 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-lobby-rail__match {\n  color: var(--hg-muted);\n  font-size: 0.6875rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 8px;\n  margin-top: auto;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    max-height: none;\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;
@@ -7893,8 +9740,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m27["createDesktopPlugin"];
-const __hgRegisterPane = __m27["registerHermagotchiPane"];
+const __hgCreatePlugin = __m30["createDesktopPlugin"];
+const __hgRegisterPane = __m30["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -7912,34 +9759,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m27["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m27["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m27["CareMeter"];
-export const ChatTab = __m27["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m27["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m27["HabitatTab"];
-export const HermagotchiPane = __m27["HermagotchiPane"];
-export const LeaderboardTab = __m27["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m27["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m27["NPC_NAMES"];
-export const NpcHostBanner = __m27["NpcHostBanner"];
-export const PANE_ID = __m27["PANE_ID"];
-export const PANE_TITLE = __m27["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m27["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m27["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m27["SettingsTab"];
-export const ShopTab = __m27["ShopTab"];
-export const StateNotice = __m27["StateNotice"];
-export const TAB_COMPONENTS = __m27["TAB_COMPONENTS"];
-export const TAB_IDS = __m27["TAB_IDS"];
-export const TAB_LABELS = __m27["TAB_LABELS"];
-export const UI_STATES = __m27["UI_STATES"];
-export const UI_STATE_COPY = __m27["UI_STATE_COPY"];
-export const createDesktopPlugin = __m27["createDesktopPlugin"];
-export const createPaneContribution = __m27["createPaneContribution"];
-export const npcHostLine = __m27["npcHostLine"];
-export const registerHermagotchiPane = __m27["registerHermagotchiPane"];
-export const resolveUiState = __m27["resolveUiState"];
+export const BattleTab = __m30["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m30["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m30["CareMeter"];
+export const ChatTab = __m30["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m30["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m30["HabitatTab"];
+export const HermagotchiPane = __m30["HermagotchiPane"];
+export const LeaderboardTab = __m30["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m30["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m30["NPC_NAMES"];
+export const NpcHostBanner = __m30["NpcHostBanner"];
+export const PANE_ID = __m30["PANE_ID"];
+export const PANE_TITLE = __m30["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m30["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m30["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m30["SettingsTab"];
+export const ShopTab = __m30["ShopTab"];
+export const StateNotice = __m30["StateNotice"];
+export const TAB_COMPONENTS = __m30["TAB_COMPONENTS"];
+export const TAB_IDS = __m30["TAB_IDS"];
+export const TAB_LABELS = __m30["TAB_LABELS"];
+export const UI_STATES = __m30["UI_STATES"];
+export const UI_STATE_COPY = __m30["UI_STATE_COPY"];
+export const createDesktopPlugin = __m30["createDesktopPlugin"];
+export const createPaneContribution = __m30["createPaneContribution"];
+export const npcHostLine = __m30["npcHostLine"];
+export const registerHermagotchiPane = __m30["registerHermagotchiPane"];
+export const resolveUiState = __m30["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;
