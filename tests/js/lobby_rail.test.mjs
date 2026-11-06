@@ -78,6 +78,7 @@ test("LobbyRail owns messages, taunt bubbles, composer and reason notices", () =
     "hg-lobby-rail__host",
     "hg-lobby-rail__resize",
     "hg-lobby-rail__new",
+    "hg-lobby-rail__anchor",
   ]) {
     assert.ok(RAIL.includes(className), `missing ${className}`);
   }
@@ -157,6 +158,19 @@ test("stylesheet lays out the rail, badge and narrow toggle breakpoint", () => {
   assert.match(STYLES, /\.hg-pane__layout\s*\{[^}]*align-items:\s*stretch/s);
   assert.match(STYLES, /\.hg-pane__layout\s*\{[^}]*flex:\s*1\s+1\s+auto/s);
   assert.match(STYLES, /\.hg-lobby-rail__message\s*\{[^}]*width:\s*100%/s);
+  assert.ok(STYLES.includes("hg-lobby-rail__anchor"));
+  assert.match(
+    STYLES,
+    /\.hg-lobby-rail__messages\s*\{[^}]*margin-top:\s*auto/s
+  );
+  assert.match(
+    STYLES,
+    /\.hg-lobby-rail__text\s*\{[^}]*font-size:\s*0\.8125rem/s
+  );
+  assert.match(
+    STYLES,
+    /\.hg-lobby-rail__author\s*\{[^}]*font-size:\s*0\.8125rem/s
+  );
 });
 
 test("lobby collapse preference key is stable", () => {

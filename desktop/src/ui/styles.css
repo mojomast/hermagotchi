@@ -1171,6 +1171,17 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* min-height:100% + margin-top:auto bottom-anchors short chats without
+   the flex-end overflow bug (top messages stay scrollable when long). */
+.hg-lobby-rail__anchor {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  width: 100%;
 }
 
 .hg-lobby-rail__new {
@@ -1208,27 +1219,26 @@
 .hg-lobby-rail__messages {
   list-style: none;
   margin: 0;
-  padding: 0;
+  margin-top: auto;
+  padding: 4px 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  gap: 1px;
+  width: 100%;
+  flex: 0 0 auto;
 }
 
 .hg-lobby-rail__empty {
-  padding: 8px 4px;
-  font-size: 0.75rem;
+  padding: 8px 8px;
+  font-size: 0.8125rem;
 }
 
 .hg-lobby-rail__message {
   position: relative;
   border: 0;
   background: transparent;
-  padding: 1px 4px 1px 6px;
-  font-size: 0.75rem;
+  padding: 2px 10px 2px 10px;
+  font-size: 0.8125rem;
   line-height: 1.35;
   width: 100%;
   max-width: none;
@@ -1265,6 +1275,8 @@
 
 .hg-lobby-rail__author {
   font-weight: 700;
+  font-size: 0.8125rem;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1302,7 +1314,8 @@
 .hg-lobby-rail__time {
   margin-left: auto;
   flex: 0 0 auto;
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
+  line-height: 1.35;
   opacity: 0.75;
 }
 
@@ -1310,6 +1323,8 @@
   margin: 0;
   width: 100%;
   max-width: none;
+  font-size: 0.8125rem;
+  line-height: 1.35;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--hg-text);
@@ -1388,7 +1403,8 @@
 .hg-lobby-rail__compose {
   border-top: 1px dashed var(--hg-border);
   padding-top: 6px;
-  margin-top: 4px;
+  margin-top: 0;
+  margin-bottom: 0;
   flex: 0 0 auto;
 }
 
@@ -1400,12 +1416,12 @@
 }
 
 .hg-lobby-rail__draft {
-  min-height: 1.8rem;
+  min-height: 1.9rem;
   max-height: 66px;
   resize: none;
-  padding: 4px 6px;
-  font-size: 0.75rem;
-  line-height: 1.3;
+  padding: 5px 8px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
 }
 
 .hg-lobby-rail__dm-toggle {

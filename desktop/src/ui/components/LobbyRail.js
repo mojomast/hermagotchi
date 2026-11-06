@@ -674,15 +674,20 @@ export function LobbyRail(props = {}) {
               : null,
             jsxs("div", {
               className: "hg-lobby-rail__scroller",
+              ref: function (node) {
+                listRef.current = node;
+              },
+              onScroll: onListScroll,
               children: [
-                jsx("ol", {
-                  className: "hg-lobby-rail__messages",
-                  "aria-live": "polite",
-                  ref: function (node) {
-                    listRef.current = node;
-                  },
-                  onScroll: onListScroll,
-                  children: [emptyState, ...rows],
+                jsxs("div", {
+                  className: "hg-lobby-rail__anchor",
+                  children: [
+                    jsx("ol", {
+                      className: "hg-lobby-rail__messages",
+                      "aria-live": "polite",
+                      children: [emptyState, ...rows],
+                    }),
+                  ],
                 }),
                 pendingNew
                   ? jsx("button", {
