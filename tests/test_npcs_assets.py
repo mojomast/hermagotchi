@@ -1,4 +1,4 @@
-"""Smoke checks for launch-003 NPC cameo pack (hand-pixel portraits)."""
+"""Smoke checks for launch-003 NPC cameo pack (hand-authored pixel portraits)."""
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -63,12 +63,15 @@ def test_teknium_hair_has_teal_not_white_dominant():
     assert teal.mean() > 0.08, teal.mean()
     assert teal.mean() > white.mean() * 0.5
 
-def test_hand_pixel_reference_and_palette_bound():
+def test_hand_authored_reference_and_palette_bound():
     import numpy as np
+    assert NPC.get("lines_ref") == "npc_lines.json"
     for n in NPC["npcs"]:
-        assert "hand-pixel" in n["reference"]
+        assert "hand-authored" in n["reference"] or "draw_npcs.py" in n["reference"]
         assert "not painterly" in n["reference"]
-        assert n["source"].endswith("_v7.jpg")
+        assert "GenerateImage" in n["reference"] or "no GenerateImage" in n["reference"]
+        assert n["source"].startswith("scripts/draw_npcs.py")
+        assert "v6" not in n["source"] and "v7" not in n["source"]
         im = np.asarray(Image.open(A / n["portrait"]["path"]))
         m = im[..., 3] > 128
         cols = {tuple(c[:3].tolist()) for c in im[m]}

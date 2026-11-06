@@ -1,6 +1,7 @@
 {
   "schema": "hermagotchi-npcs-v1",
   "asset_pack_id": "launch-003",
+  "lines_ref": "npc_lines.json",
   "npcs": [
     {
       "id": "npc.don_piedro",
@@ -10,7 +11,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/don_piedro_portrait.png",
-        "sha256": "f6b98cbec468a11f187a9c93839274fee6ef80a1517fb76d8dee17764b3cc2db",
+        "sha256": "9be751ce2260a690b27a88ac3f441f793a287b8880ed86742d3c6673458eea4e",
         "native": [
           128,
           128
@@ -19,7 +20,7 @@
       },
       "dialog": {
         "path": "px3/npcs/don_piedro_dialog.png",
-        "sha256": "f6b98cbec468a11f187a9c93839274fee6ef80a1517fb76d8dee17764b3cc2db",
+        "sha256": "db826ba844690d77a6a1c1200aa49bdf293de8cd7136c10e055a797075d36a62",
         "native": [
           128,
           128
@@ -31,11 +32,11 @@
         "frames": [
           {
             "path": "px3/npcs/don_piedro_idle_0.png",
-            "sha256": "eb8416974d97f7d1b207e8adb6e9f0ee4820648cc06995685cc3865a4c7a0ffa"
+            "sha256": "9be751ce2260a690b27a88ac3f441f793a287b8880ed86742d3c6673458eea4e"
           },
           {
             "path": "px3/npcs/don_piedro_idle_1.png",
-            "sha256": "9660c429b2f5d946c84d491b706adbcad3628f5be1c256d9f6cb461ee0150371"
+            "sha256": "1c50e87ddaa01de35ab90cf949d20f4a6017a10c96a5cd1e8fede959832643c2"
           }
         ],
         "frame_ms": 500
@@ -47,8 +48,8 @@
         "No refunds, but I'll stir your Bits with my lucky spoon.",
         "That scarf? It's you. It's absolutely you."
       ],
-      "source": "source/px3_npc_don_piedro_v7.jpg",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/don_piedro.png \u2014 hand-pixel: GenerateImage SNES bust + fixed hand palette snap + BOX native grid + 1px outline + face pixel pass (not painterly Lab remap)",
+      "source": "scripts/draw_npcs.py#don_piedro",
+      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/don_piedro.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -59,7 +60,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/nous_girl_portrait.png",
-        "sha256": "e1dbc4511e3fc5cd869322a3ad39fb7ebd6e59c87d6fe2a7c26e4fd27b57698b",
+        "sha256": "035b7ad5b63cbee83c69a1cf102b38ade4a5af2c95d8e124d8fa4c212df0cdfb",
         "native": [
           128,
           128
@@ -68,7 +69,7 @@
       },
       "dialog": {
         "path": "px3/npcs/nous_girl_dialog.png",
-        "sha256": "b965dbf84d83a4f3618e8982dec123e7c6a08f71d09369744141f483fa26a04c",
+        "sha256": "f889c275b0ff44d72762b08a4fa0b25a9b6c40d4440c26fd6a1c9d76163a0631",
         "native": [
           128,
           128
@@ -80,11 +81,11 @@
         "frames": [
           {
             "path": "px3/npcs/nous_girl_idle_0.png",
-            "sha256": "e4ce1400ac7a5b9974a8834d856333099f9c3428cdfe7e39f30b7ecb5ab6fe54"
+            "sha256": "035b7ad5b63cbee83c69a1cf102b38ade4a5af2c95d8e124d8fa4c212df0cdfb"
           },
           {
             "path": "px3/npcs/nous_girl_idle_1.png",
-            "sha256": "bba406bb7882b46450fa01abd7111a844f71eb82fa113a3847308edeb341c647"
+            "sha256": "c0f77573ad98caf59a47229b5452e98064ce81e9e34d968ecba9645a6db58171"
           }
         ],
         "frame_ms": 500
@@ -96,8 +97,8 @@
         "New challenger in the lobby. Say hi!",
         "Signal clear. Chat on."
       ],
-      "source": "source/px3_npc_nous_girl_v7.jpg",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/nous_girl.png \u2014 hand-pixel: GenerateImage SNES bust + fixed hand palette snap + BOX native grid + 1px outline + face pixel pass (not painterly Lab remap)",
+      "source": "scripts/draw_npcs.py#nous_girl",
+      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/nous_girl.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -108,7 +109,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/teknium_portrait.png",
-        "sha256": "4649e25f8c13715fc6d8eeed7def5b313285a13065811dfa043ea59a4ee5001c",
+        "sha256": "e6fefb0fef9a1f493048299c1d4d7887f9b4cb9ae184b8d327f4a8c42aeb7d8b",
         "native": [
           128,
           128
@@ -117,7 +118,7 @@
       },
       "dialog": {
         "path": "px3/npcs/teknium_dialog.png",
-        "sha256": "03875cd5df94916ea7380a2e3728206859c4eba700416bcad40a30ad6a329f47",
+        "sha256": "4ba5af8bd645a975b3808ead0687f9f1df17deffd132782b761af34e9aa72f64",
         "native": [
           128,
           128
@@ -129,11 +130,11 @@
         "frames": [
           {
             "path": "px3/npcs/teknium_idle_0.png",
-            "sha256": "dfd50bf6635275dc4697e3170565ee5d02a8f425dbc4dc63d9c05a6436b47c95"
+            "sha256": "e6fefb0fef9a1f493048299c1d4d7887f9b4cb9ae184b8d327f4a8c42aeb7d8b"
           },
           {
             "path": "px3/npcs/teknium_idle_1.png",
-            "sha256": "eb604654b5d82e4761ef3618c1ea069b4ca44d776a66636d67666e74ea2e9b73"
+            "sha256": "e6fefb0fef9a1f493048299c1d4d7887f9b4cb9ae184b8d327f4a8c42aeb7d8b"
           }
         ],
         "frame_ms": 500
@@ -145,8 +146,8 @@
         "Blade's charged. Let's run another seed.",
         "Status effects stack less than you think. Test it."
       ],
-      "source": "source/px3_npc_teknium_v7.jpg",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/teknium.png \u2014 hand-pixel: GenerateImage SNES bust + fixed hand palette snap + BOX native grid + 1px outline + face pixel pass (not painterly Lab remap)",
+      "source": "scripts/draw_npcs.py#teknium",
+      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/teknium.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -157,7 +158,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/southpaw_portrait.png",
-        "sha256": "4e927f927219814fe6369cf8fc861ba7d9befa254ab0778cacb4a347ca1fea9c",
+        "sha256": "a3a9346592f8dc36dd511021f1c9c92a074ff64adc7e566d1b0f4cedc9a08b9b",
         "native": [
           128,
           128
@@ -166,7 +167,7 @@
       },
       "dialog": {
         "path": "px3/npcs/southpaw_dialog.png",
-        "sha256": "1add32f897fea24ae330c544a11b3ee31ac5016865ac796f692636e2136bdda5",
+        "sha256": "65b6e647f026a1403480739553f34ea44c097d1cc8d377de6d036d6048f1f9e6",
         "native": [
           128,
           128
@@ -178,11 +179,11 @@
         "frames": [
           {
             "path": "px3/npcs/southpaw_idle_0.png",
-            "sha256": "bf9fb371c7427b558a103f1db61197559cbdd3d77677cef2b40af59e84dd4b73"
+            "sha256": "a3a9346592f8dc36dd511021f1c9c92a074ff64adc7e566d1b0f4cedc9a08b9b"
           },
           {
             "path": "px3/npcs/southpaw_idle_1.png",
-            "sha256": "c8624ef6dbdf204fef369a53a6b202c947f5fc97411d780103dfd664b0619afb"
+            "sha256": "5fabdb0d78efd0160a1721c1fad04668a5df2a7f126df16934eb2fb1d0abd892"
           }
         ],
         "frame_ms": 500
@@ -194,8 +195,8 @@
         "Top of the board gets the loudest riff.",
         "Encore! Season standings updated."
       ],
-      "source": "source/px3_npc_southpaw_v7.jpg",
-      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/turbofit.png \u2014 hand-pixel: GenerateImage SNES bust + fixed hand palette snap + BOX native grid + 1px outline + face pixel pass (not painterly Lab remap)",
+      "source": "scripts/draw_npcs.py#southpaw",
+      "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/turbofit.png \u2014 hand-authored pixel map in scripts/draw_npcs.py (64\u2192128 NN); no GenerateImage, not painterly, no v6/v7 snap",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     }
   ]

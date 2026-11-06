@@ -77,6 +77,17 @@ Kyle: prior painterly-then-downscale/remap results looked garbage; create brand-
 No new gens. Native-128 pixel edits on top of hand-pixel v7: thicker Don spoon + metallic highlight; Nous/Southpaw hair-edge fringe scrub (zero orphan tips); Teknium 2–3px smirk with shade; Southpaw solid near-black vest + clear studs; shared eye highlights, silhouette smooth, re-outline. Applied to portrait, dialog, idle_0/1. `npc_lines.json` untouched.
 
 
+
+### NPCs (launch-003) — true from-scratch hand-author, 2026-11-05
+Kyle: prior gen/snap passes were a waste of tokens; redraw from scratch with NO GenerateImage and NO v6/v7 sources. Each NPC is an explicit pixel/shape script in `scripts/draw_npcs.py` at 64×64 (named 12–16 colour palettes from cine/v3 refs by eye), nearest ×2 to native 128, ×4 display. Portrait + dialog + idle blink/bob. `lines_ref: npc_lines.json` restored. Pets stay 32.
+
+| Output | Source | Reference (eyes only) |
+|---|---|---|
+| px3/npcs/don_piedro_* | scripts/draw_npcs.py#don_piedro | cine/v3/portraits/don_piedro.png |
+| px3/npcs/nous_girl_* | scripts/draw_npcs.py#nous_girl | cine/v3/portraits/nous_girl.png |
+| px3/npcs/teknium_* | scripts/draw_npcs.py#teknium | cine/v3/portraits/teknium.png |
+| px3/npcs/southpaw_* | scripts/draw_npcs.py#southpaw | cine/v3/portraits/turbofit.png |
+
 ### launch-003 extra species (7), 2026-11-05
 Kyle asked for 7 more base pets in the same style, for 10 in total. Each is one new generation with no reference image, using the same pipeline (green key, palette-first mode downscale, binary alpha, palette swaps with eyes locked). Anchors are derived automatically from each silhouette.
 
