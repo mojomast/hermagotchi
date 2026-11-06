@@ -1,0 +1,266 @@
+{
+  "expected": {
+    "events": [
+      {
+        "actor": "a",
+        "hp_after": {
+          "a": 100,
+          "b": 80
+        },
+        "hp_before": {
+          "a": 100,
+          "b": 100
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 1,
+        "status_delta": {
+          "damage": 20,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 80,
+          "raw_damage": 20,
+          "target": "b"
+        }
+      },
+      {
+        "actor": "b",
+        "hp_after": {
+          "a": 82,
+          "b": 80
+        },
+        "hp_before": {
+          "a": 100,
+          "b": 80
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 1,
+        "status_delta": {
+          "damage": 18,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 82,
+          "raw_damage": 18,
+          "target": "a"
+        }
+      },
+      {
+        "actor": "a",
+        "hp_after": {
+          "a": 82,
+          "b": 60
+        },
+        "hp_before": {
+          "a": 82,
+          "b": 80
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 2,
+        "status_delta": {
+          "damage": 20,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 60,
+          "raw_damage": 20,
+          "target": "b"
+        }
+      },
+      {
+        "actor": "b",
+        "hp_after": {
+          "a": 64,
+          "b": 60
+        },
+        "hp_before": {
+          "a": 82,
+          "b": 60
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 2,
+        "status_delta": {
+          "damage": 18,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 64,
+          "raw_damage": 18,
+          "target": "a"
+        }
+      },
+      {
+        "actor": "a",
+        "hp_after": {
+          "a": 64,
+          "b": 40
+        },
+        "hp_before": {
+          "a": 64,
+          "b": 60
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 3,
+        "status_delta": {
+          "damage": 20,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 40,
+          "raw_damage": 20,
+          "target": "b"
+        }
+      },
+      {
+        "actor": "b",
+        "hp_after": {
+          "a": 46,
+          "b": 40
+        },
+        "hp_before": {
+          "a": 64,
+          "b": 40
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 3,
+        "status_delta": {
+          "damage": 18,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 46,
+          "raw_damage": 18,
+          "target": "a"
+        }
+      },
+      {
+        "actor": "a",
+        "hp_after": {
+          "a": 46,
+          "b": 20
+        },
+        "hp_before": {
+          "a": 46,
+          "b": 40
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 4,
+        "status_delta": {
+          "damage": 20,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 20,
+          "raw_damage": 20,
+          "target": "b"
+        }
+      },
+      {
+        "actor": "b",
+        "hp_after": {
+          "a": 28,
+          "b": 20
+        },
+        "hp_before": {
+          "a": 46,
+          "b": 20
+        },
+        "move": "basic_attack",
+        "result": "hit",
+        "rng_counter": 0,
+        "round": 4,
+        "status_delta": {
+          "damage": 18,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 28,
+          "raw_damage": 18,
+          "target": "a"
+        }
+      },
+      {
+        "actor": "a",
+        "hp_after": {
+          "a": 28,
+          "b": 0
+        },
+        "hp_before": {
+          "a": 28,
+          "b": 20
+        },
+        "move": "basic_attack",
+        "result": "ko",
+        "rng_counter": 0,
+        "round": 5,
+        "status_delta": {
+          "damage": 20,
+          "focus_spent": 0,
+          "guard_reduced": false,
+          "guarded": false,
+          "hp_remaining": 0,
+          "raw_damage": 20,
+          "target": "b"
+        }
+      }
+    ],
+    "final_hp": {
+      "a": 28,
+      "b": 0
+    },
+    "replay_hash": "ca9a415798e2888ac2bf8dbe598ff8bfd5155066cc52b12972ba4eed02258ffd",
+    "result": "ko",
+    "rounds": 5,
+    "ruleset_version": "battle-1",
+    "seed": 42,
+    "winner": "a"
+  },
+  "pet_a": {
+    "pet_id": "pet-patchfox",
+    "species": "patchfox"
+  },
+  "pet_b": {
+    "pet_id": "pet-byteblob",
+    "species": "byteblob"
+  },
+  "ruleset": "battle-1",
+  "seed": 42,
+  "tactics_a": {
+    "actions": [
+      {
+        "move": "basic_attack",
+        "when": {
+          "always": true
+        }
+      }
+    ],
+    "ruleset_version": "battle-1",
+    "stance": "aggressive"
+  },
+  "tactics_b": {
+    "actions": [
+      {
+        "move": "basic_attack",
+        "when": {
+          "always": true
+        }
+      }
+    ],
+    "ruleset_version": "battle-1",
+    "stance": "balanced"
+  }
+}
