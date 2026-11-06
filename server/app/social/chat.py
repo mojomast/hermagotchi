@@ -374,11 +374,50 @@ def _enforce_agent_limits(
             )
 
 
+
+def _account_display(
+    conn: sqlite3.Connection, account_id: str
+) -> tuple[str | None, str | None, str]:
+    """Return (handle, pet_name, display) for UI labels.
+
+    Display prefers ``Handle · PetName`` when a pet exists, else the handle,
+    else a short fallback that avoids dumping raw UUIDs into the lobby.
+    """
+
+    aid = str(account_id or "").strip()
+    if not aid:
+        return None, None, "Unknown"
+    row = conn.execute(
+        "SELECT public_handle FROM accounts WHERE id = ?",
+        (aid,),
+    ).fetchone()
+    handle = str(row["public_handle"]).strip() if row and row["public_handle"] else None
+    pet_row = conn.execute(
+        "SELECT name FROM pets WHERE account_id = ? ORDER BY created_at LIMIT 1",
+        (aid,),
+    ).fetchone()
+    pet = str(pet_row["name"]).strip() if pet_row and pet_row["name"] else None
+    if handle and pet:
+        display = f"{handle} · {pet}"
+    elif handle:
+        display = handle
+    elif pet:
+        display = pet
+    else:
+        display = "Player"
+    return handle, pet, display
+
+
 def _row_has(row: sqlite3.Row, key: str) -> bool:
     return key in row.keys()
 
 
-def message_payload(row: sqlite3.Row) -> dict[str, object]:
+def message_payload(
+    row: sqlite3.Row,
+    conn: sqlite3.Connection | None = None,
+    *,
+    viewer_id: str | None = None,
+) -> dict[str, object]:
     payload: dict[str, object] = {
         "contracts_version": CONTRACTS_VERSION,
         "id": row["id"],
@@ -406,6 +445,20 @@ def message_payload(row: sqlite3.Row) -> dict[str, object]:
             except (TypeError, ValueError):
                 context = None
         payload["match_context"] = context
+    if conn is not None:
+        handle, pet, display = _account_display(conn, str(row["account_id"]))
+        payload["author_handle"] = handle
+        payload["author_pet_name"] = pet
+        payload["author_name"] = display
+        if viewer_id:
+            participants = _direct_participants(str(row["channel_id"]))
+            if participants is not None:
+                others = participants - {str(viewer_id)}
+                peer = next(iter(others), None)
+                if peer:
+                    _ph, _pp, peer_display = _account_display(conn, peer)
+                    payload["peer_id"] = peer
+                    payload["peer_name"] = peer_display
     return payload
 
 
@@ -446,7 +499,7 @@ def _insert_message(
     )
     conn.commit()
     row = conn.execute("SELECT * FROM chats WHERE id = ?", (message_id,)).fetchone()
-    return message_payload(row)
+    return message_payload(row, conn)
 
 
 def send_message(
@@ -473,7 +526,7 @@ def send_message(
             (account_id, idempotency_key),
         ).fetchone()
         if existing is not None:
-            return message_payload(existing)
+            return message_payload(existing, conn)
 
     try:
         cleaned = sanitize_display_text(body, max_chars=MAX_MESSAGE_CHARS)
@@ -585,7 +638,7 @@ def send_taunt(
             (account_id, idempotency_key),
         ).fetchone()
         if existing is not None:
-            return message_payload(existing)
+            return message_payload(existing, conn)
 
     match = _taunt_match_row(conn, match_id)
     participants = {str(match["challenger_id"]), str(match["defender_id"])}
@@ -738,7 +791,9 @@ def inbox(
 
     capped = max(1, min(int(limit), 100))
     page = selected[:capped]
-    messages = [message_payload(row) for row in page]
+    messages = [
+        message_payload(row, conn, viewer_id=account_id) for row in page
+    ]
     next_cursor = (
         f"{page[-1]['created_at']}|{page[-1]['id']}" if page else effective_cursor
     )
@@ -801,6 +856,8 @@ def list_messages(
     params.append(capped)
     rows = conn.execute(sql, params).fetchall()
 
-    messages = [message_payload(row) for row in reversed(rows)]
+    messages = [
+        message_payload(row, conn, viewer_id=viewer_id) for row in reversed(rows)
+    ]
     next_before = messages[0]["created_at"] if len(messages) == capped else None
     return messages, next_before

@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   LOBBY_RAIL_BREAKPOINT,
+  LOBBY_RAIL_COLLAPSED_KEY,
   lobbyRailAutoCollapsed,
   lobbyUnreadCount,
   lobbyUnreadLabel,
@@ -85,6 +86,9 @@ test("LobbyRail owns messages, taunt bubbles, composer and reason notices", () =
   }
   assert.ok(RAIL.includes('"data-rail": "lobby"') || RAIL.includes('"data-rail": "chat"'));
   assert.ok(RAIL.includes("aria-expanded"));
+  assert.ok(RAIL.includes("data-lobby-toggle"));
+  assert.ok(RAIL.includes('"LOBBY"') || RAIL.includes("'LOBBY'"));
+  assert.ok(RAIL.includes("hg-lobby-rail__toggle--collapsed"));
   assert.ok(RAIL.includes("Chat is off by default"));
   assert.doesNotMatch(RAIL, /dangerouslySetInnerHTML/);
   assert.doesNotMatch(RAIL, /innerHTML/);
@@ -100,6 +104,9 @@ test("pane mounts the lobby rail beside every tab and collapses it", () => {
   assert.ok(PANE.includes("matchMedia"));
   assert.ok(PANE.includes("839") || PANE.includes("LOBBY_RAIL_BREAKPOINT"));
   assert.ok(PANE.includes("onToggle"));
+  assert.ok(PANE.includes("LOBBY_RAIL_COLLAPSED_KEY"));
+  assert.ok(PANE.includes("localStorage"));
+  assert.ok(PANE.includes("persistRailCollapsed"));
 });
 
 test("stylesheet lays out the rail, badge and narrow toggle breakpoint", () => {
@@ -116,4 +123,10 @@ test("stylesheet lays out the rail, badge and narrow toggle breakpoint", () => {
     assert.ok(STYLES.includes(selector), `missing ${selector}`);
   }
   assert.match(STYLES, /@media \(max-width: 839px\)/);
+  assert.ok(STYLES.includes("writing-mode"), "collapsed LOBBY label stays visible");
+  assert.ok(STYLES.includes("hg-lobby-rail__toggle--collapsed"));
+});
+
+test("lobby collapse preference key is stable", () => {
+  assert.equal(LOBBY_RAIL_COLLAPSED_KEY, "hermagotchi.lobbyRail.collapsed");
 });

@@ -26,6 +26,8 @@ import {
   tauntSummary,
   validateChatDraft,
   validateDmTarget,
+  displayActorLabel,
+  formatRelativeTime,
 } from "../logic/chat.js";
 import {
   FRIEND_REQUESTS_PATH,
@@ -165,7 +167,7 @@ function TauntActions(props) {
 function MessageRow(props) {
   const message = props.message;
   const busy = props.busy;
-  const actor = message.actor_mode === "agent" ? "Agent" : "Player";
+  const actor = displayActorLabel(message);
 
   if (isTauntMessage(message)) {
     const summary = tauntSummary(message.match_context);
@@ -182,9 +184,11 @@ function MessageRow(props) {
               className: "hg-row hg-row--between",
               children: [
                 jsx("strong", { children: actor + " taunt" }),
-                jsx("span", {
-                  className: "hg-muted",
-                  children: message.created_at || "Unknown time",
+                jsx("time", {
+                  className: "hg-muted hg-time",
+                  dateTime: message.created_at || undefined,
+                  title: message.created_at || undefined,
+                  children: formatRelativeTime(message.created_at) || message.created_at || "Unknown time",
                 }),
               ],
             }),
@@ -220,9 +224,11 @@ function MessageRow(props) {
         className: "hg-row hg-row--between",
         children: [
           jsx("strong", { children: actor }),
-          jsx("span", {
-            className: "hg-muted",
-            children: message.created_at || "Unknown time",
+          jsx("time", {
+            className: "hg-muted hg-time",
+            dateTime: message.created_at || undefined,
+            title: message.created_at || undefined,
+            children: formatRelativeTime(message.created_at) || message.created_at || "Unknown time",
           }),
         ],
       }),
@@ -332,9 +338,14 @@ function DmSection(props) {
                               className: "hg-inbox__preview",
                               children: thread.preview || "",
                             }),
-                            jsx("span", {
-                              className: "hg-muted",
-                              children: thread.updated_at || "",
+                            jsx("time", {
+                              className: "hg-muted hg-time",
+                              dateTime: thread.updated_at || undefined,
+                              title: thread.updated_at || undefined,
+                              children:
+                                formatRelativeTime(thread.updated_at) ||
+                                thread.updated_at ||
+                                "",
                             }),
                           ],
                         },
@@ -608,7 +619,10 @@ function FriendsSection(props) {
                           className: "hg-muted",
                           children: [
                             friend.status_label,
-                            friend.pet_name ? " · " + friend.pet_name : "",
+                            friend.pet_name &&
+                            (!friend.name || friend.name.indexOf(friend.pet_name) === -1)
+                              ? " · " + friend.pet_name
+                              : "",
                           ],
                         }),
                       ],
@@ -682,12 +696,20 @@ function ChallengesSection(props) {
                       className: "hg-col",
                       children: [
                         jsx("strong", { children: challenge.label }),
-                        jsx("span", {
+                        jsxs("span", {
                           className: "hg-muted",
-                          children:
-                            (incoming ? "Incoming" : "Outgoing") +
-                            " · " +
-                            (challenge.created_at || ""),
+                          children: [
+                            (incoming ? "Incoming" : "Outgoing") + " · ",
+                            jsx("time", {
+                              className: "hg-time",
+                              dateTime: challenge.created_at || undefined,
+                              title: challenge.created_at || undefined,
+                              children:
+                                formatRelativeTime(challenge.created_at) ||
+                                challenge.created_at ||
+                                "",
+                            }),
+                          ],
                         }),
                       ],
                     }),
@@ -792,9 +814,11 @@ function HistorySection(props) {
                             (item.kind === "taunt" ? "Taunt" : "@mention") +
                             (item.from ? " · " + item.from : ""),
                         }),
-                        jsx("span", {
-                          className: "hg-muted",
-                          children: item.created_at || "",
+                        jsx("time", {
+                          className: "hg-muted hg-time",
+                          dateTime: item.created_at || undefined,
+                          title: item.created_at || undefined,
+                          children: formatRelativeTime(item.created_at) || item.created_at || "",
                         }),
                       ],
                     }),
@@ -1057,7 +1081,7 @@ function ChatLive(props) {
 
   function selectThread(thread) {
     setActiveThread(thread);
-    setDmTarget(thread.peer || "");
+    setDmTarget(thread.peer_id || thread.peer || "");
     setComposerError("");
   }
 
@@ -1070,7 +1094,7 @@ function ChatLive(props) {
       setComposerError(checked.error);
       return;
     }
-    const target = dmTarget || (activeThread && activeThread.peer) || "";
+    const target = dmTarget || (activeThread && (activeThread.peer_id || activeThread.peer)) || "";
     const checkedTarget = validateDmTarget(target);
     if (!checkedTarget.ok) {
       setComposerError(checkedTarget.error);

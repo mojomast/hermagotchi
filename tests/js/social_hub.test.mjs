@@ -96,6 +96,47 @@ test("DM threads group inbox rows by channel and keep newest preview", () => {
   assert.equal(threads[0].updated_at, "2026-11-06T00:05:00.000Z");
 });
 
+test("DM threads prefer peer_name for display and keep peer_id for targeting", () => {
+  const threads = normalizeThreads({
+    ok: true,
+    data: {
+      messages: [
+        {
+          id: "m1",
+          channel_id: "dm:acct-a:acct-b",
+          account_id: "acct-b",
+          peer_name: "Firewyrm · ShotWyrm",
+          peer_id: "acct-b",
+          body: "hey",
+          created_at: "2026-11-06T00:00:00.000Z",
+        },
+      ],
+    },
+  });
+  assert.equal(threads.length, 1);
+  assert.equal(threads[0].peer, "Firewyrm · ShotWyrm");
+  assert.equal(threads[0].peer_id, "acct-b");
+});
+
+test("history prefers author_name over raw account ids", () => {
+  const history = normalizeHistory({
+    ok: true,
+    data: {
+      messages: [
+        {
+          id: "t1",
+          kind: "taunt",
+          body: "GG",
+          account_id: "acct-raw",
+          author_name: "Ada · Bit",
+          match_context: { match_id: "m1", winner: "a", winner_name: "Ada" },
+        },
+      ],
+    },
+  });
+  assert.equal(history[0].from, "Ada · Bit");
+});
+
 test("thread message paths stay bridge-relative and encoded", () => {
   assert.equal(
     threadMessagePath("dm:acct-a:acct-b"),
@@ -214,6 +255,12 @@ test("friend rows normalize presence and support roster actions", () => {
     data: {
       friends: [
         { account_id: "a1", public_handle: "Ada", status: "ONLINE" },
+        {
+          account_id: "a1b",
+          display_name: "Firewyrm",
+          pet_name: "ShotWyrm",
+          status: "online",
+        },
         { id: "a2", pet_name: "Bit", presence: "away" },
         { id: "a3", name: "Ghost", status: "something-else" },
       ],
@@ -222,20 +269,22 @@ test("friend rows normalize presence and support roster actions", () => {
     },
   });
 
-  assert.equal(roster.friends.length, 3);
+  assert.equal(roster.friends.length, 4);
   assert.equal(roster.friends[0].status, "online");
-  assert.equal(roster.friends[1].status, "away");
-  assert.equal(roster.friends[2].status, "offline");
+  assert.equal(roster.friends[0].name, "Ada");
+  assert.equal(roster.friends[1].name, "Firewyrm · ShotWyrm");
+  assert.equal(roster.friends[2].status, "away");
+  assert.equal(roster.friends[3].status, "offline");
   assert.equal(roster.incoming.length, 1);
   assert.equal(roster.outgoing.length, 1);
   assert.deepEqual(friendPresenceCounts(roster.friends), {
-    online: 1,
+    online: 2,
     away: 1,
     offline: 1,
   });
   assert.equal(friendStatusLabel("away"), "Away");
   assert.equal(friendStatusLabel("bogus"), "Offline");
-  assert.equal(filterFriends(roster.friends, { status: "online" }).length, 1);
+  assert.equal(filterFriends(roster.friends, { status: "online" }).length, 2);
   assert.equal(filterFriends(roster.friends, { query: "bit" }).length, 1);
 
   assert.deepEqual(validateFriendTarget(" Ada "), { ok: true, value: "Ada" });

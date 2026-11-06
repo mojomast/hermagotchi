@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { LobbyRail } from "./components/LobbyRail.js";
 import { deriveConnectionStatus, resolveConnectionUiState } from "./logic/connection.js";
-import { lobbyRailAutoCollapsed } from "./logic/chat.js";
+import {
+  LOBBY_RAIL_COLLAPSED_KEY,
+  lobbyRailAutoCollapsed,
+} from "./logic/chat.js";
 import { BattleTab } from "./tabs/BattleTab.js";
 import { ChatTab } from "./tabs/ChatTab.js";
 import { HabitatTab } from "./tabs/HabitatTab.js";
@@ -82,7 +85,37 @@ function pairEnvelopeFor(api) {
   return Promise.resolve(null);
 }
 
+function readStoredRailCollapsed() {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(LOBBY_RAIL_COLLAPSED_KEY);
+    if (raw === "1" || raw === "true") return true;
+    if (raw === "0" || raw === "false") return false;
+  } catch (_err) {
+    /* ignore quota / private mode */
+  }
+  return null;
+}
+
+function persistRailCollapsed(collapsed) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      LOBBY_RAIL_COLLAPSED_KEY,
+      collapsed ? "1" : "0"
+    );
+  } catch (_err) {
+    /* ignore */
+  }
+}
+
 function initialRailCollapsed() {
+  const stored = readStoredRailCollapsed();
+  if (stored !== null) return stored;
   if (typeof window === "undefined" || typeof window.innerWidth !== "number") {
     return false;
   }
@@ -185,7 +218,9 @@ export function HermagotchiPane(props = {}) {
 
   function toggleLobbyRail() {
     setRailCollapsed(function (current) {
-      return !current;
+      const next = !current;
+      persistRailCollapsed(next);
+      return next;
     });
   }
 

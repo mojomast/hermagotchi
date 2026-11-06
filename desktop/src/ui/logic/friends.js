@@ -40,16 +40,26 @@ function friendIdentity(item) {
 }
 
 function friendName(item) {
-  return (
+  const display =
+    text(item.display_name) ||
+    text(item.displayName) ||
     text(item.name) ||
     text(item.public_handle) ||
     text(item.publicHandle) ||
     text(item.handle) ||
+    text(item.player) ||
+    null;
+  const pet =
     text(item.pet_name) ||
     text(item.petName) ||
-    text(item.player) ||
-    friendIdentity(item)
-  );
+    (item.pet && text(item.pet.name)) ||
+    null;
+  if (display && pet && display !== pet && display.indexOf(pet) === -1) {
+    return display + " · " + pet;
+  }
+  if (display) return display;
+  if (pet) return pet;
+  return friendIdentity(item);
 }
 
 /** Coerce one friend row into the display shape without trusting its text. */

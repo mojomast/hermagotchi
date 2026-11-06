@@ -298,6 +298,11 @@ def list_friends(
             f.friend_id AS friend_id,
             f.created_at AS friends_since,
             a.public_handle AS public_handle,
+            (
+                SELECT name FROM pets
+                WHERE account_id = f.friend_id
+                ORDER BY created_at LIMIT 1
+            ) AS pet_name,
             p.last_seen_at AS last_seen_at
         FROM friendships AS f
         JOIN accounts AS a ON a.id = f.friend_id AND a.status = 'active'
@@ -307,17 +312,27 @@ def list_friends(
         """,
         (str(account_id),),
     ).fetchall()
-    return [
-        {
-            "account_id": row["friend_id"],
-            "friend_id": row["friend_id"],
-            "public_handle": row["public_handle"],
-            "friends_since": row["friends_since"],
-            "last_seen_at": row["last_seen_at"],
-            "presence": presence_bucket(row["last_seen_at"], now),
-        }
-        for row in rows
-    ]
+    out: list[dict[str, object]] = []
+    for row in rows:
+        handle = str(row["public_handle"] or "").strip() or None
+        pet = str(row["pet_name"] or "").strip() or None
+        if handle and pet:
+            display = f"{handle} · {pet}"
+        else:
+            display = handle or pet or "Player"
+        out.append(
+            {
+                "account_id": row["friend_id"],
+                "friend_id": row["friend_id"],
+                "public_handle": handle,
+                "pet_name": pet,
+                "display_name": display,
+                "friends_since": row["friends_since"],
+                "last_seen_at": row["last_seen_at"],
+                "presence": presence_bucket(row["last_seen_at"], now),
+            }
+        )
+    return out
 
 
 def list_friend_requests(
@@ -423,7 +438,9 @@ def list_social_history(
     params.append(capped)
 
     rows = conn.execute(sql, params).fetchall()
-    entries = [message_payload(row) for row in rows]
+    entries = [
+        message_payload(row, conn, viewer_id=account) for row in rows
+    ]
     next_before = entries[-1]["created_at"] if len(entries) == capped else None
     return entries, next_before
 

@@ -25,6 +25,8 @@ import {
   tauntSummary,
   validateChatDraft,
   validateDmTarget,
+  displayActorLabel,
+  formatRelativeTime,
 } from "../logic/chat.js";
 import { NpcHostBanner } from "./NpcHostBanner.js";
 
@@ -33,7 +35,18 @@ function emptyInbox() {
 }
 
 function actorLabel(message) {
-  return message.actor_mode === "agent" ? "Agent" : "Player";
+  return displayActorLabel(message);
+}
+
+function TimeLabel(props) {
+  const iso = props.iso || "";
+  const relative = formatRelativeTime(iso);
+  return jsx("time", {
+    className: "hg-muted hg-time",
+    dateTime: iso || undefined,
+    title: iso || undefined,
+    children: relative || iso || "Unknown time",
+  });
 }
 
 function LobbyActions(props) {
@@ -81,10 +94,7 @@ function LobbyMessageRow(props) {
               className: "hg-row hg-row--between",
               children: [
                 jsx("strong", { children: actorLabel(message) + " taunt" }),
-                jsx("span", {
-                  className: "hg-muted",
-                  children: message.created_at || "Unknown time",
-                }),
+                jsx(TimeLabel, { iso: message.created_at }),
               ],
             }),
             jsx("p", {
@@ -119,10 +129,7 @@ function LobbyMessageRow(props) {
         className: "hg-row hg-row--between",
         children: [
           jsx("strong", { children: actorLabel(message) }),
-          jsx("span", {
-            className: "hg-muted",
-            children: message.created_at || "Unknown time",
-          }),
+          jsx(TimeLabel, { iso: message.created_at }),
         ],
       }),
       jsx("p", {
@@ -387,16 +394,29 @@ export function LobbyRail(props = {}) {
         })
       : null;
 
+  const unreadBadge =
+    unread > 0
+      ? jsx("span", {
+          className: "hg-lobby-rail__badge",
+          "data-rail-unread": String(unread),
+          "aria-label": unread + " unread",
+          children: unreadLabel,
+        })
+      : null;
+
   const header = jsxs("header", {
     className: "hg-lobby-rail__header",
     children: [
       jsxs("button", {
         type: "button",
-        className: "hg-lobby-rail__toggle",
+        className: collapsed
+          ? "hg-lobby-rail__toggle hg-lobby-rail__toggle--collapsed"
+          : "hg-lobby-rail__toggle",
         onClick: toggle,
         "aria-expanded": collapsed ? "false" : "true",
-        "aria-label": collapsed ? "Open lobby" : "Collapse lobby",
-        title: collapsed ? "Open lobby" : "Collapse lobby",
+        "aria-label": collapsed ? "Expand lobby chat" : "Collapse lobby chat",
+        title: collapsed ? "Expand lobby chat" : "Collapse lobby chat",
+        "data-lobby-toggle": "true",
         children: [
           jsx("span", {
             className: "hg-lobby-rail__icon",
@@ -405,18 +425,11 @@ export function LobbyRail(props = {}) {
           }),
           jsx("span", {
             className: "hg-lobby-rail__label",
-            children: "Social",
+            children: "LOBBY",
           }),
+          unreadBadge,
         ],
       }),
-      unread > 0
-        ? jsx("span", {
-            className: "hg-lobby-rail__badge",
-            "data-rail-unread": String(unread),
-            "aria-label": unread + " unread",
-            children: unreadLabel,
-          })
-        : null,
     ],
   });
 

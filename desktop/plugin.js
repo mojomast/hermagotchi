@@ -152,6 +152,8 @@ const CHAT_TAUNT_MAX_CHARS = 90;
 const CHAT_DM_TARGET_MAX_CHARS = 64;
 const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
 const LOBBY_RAIL_BREAKPOINT = 840;
+const LOBBY_RAIL_COLLAPSED_KEY = "hermagotchi.lobbyRail.collapsed";
+
 
 const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
 
@@ -205,6 +207,68 @@ function normalNullableText(value) {
   return typeof value === "string" ? value : null;
 }
 
+
+/** Build a human label like "Handle · Pet" without leaking raw UUIDs. */
+function formatPlayerLabel(parts = {}) {
+  const handle = normalText(
+    parts.handle || parts.public_handle || parts.publicHandle || parts.author_handle
+  );
+  const pet = normalText(
+    parts.pet || parts.pet_name || parts.petName || parts.author_pet_name
+  );
+  const explicit = normalText(
+    parts.display || parts.display_name || parts.displayName || parts.author_name || parts.peer_name
+  );
+  if (explicit) return explicit;
+  if (handle && pet) return handle + " · " + pet;
+  if (handle) return handle;
+  if (pet) return pet;
+  return normalText(parts.fallback, "Player");
+}
+
+/** Prefer server author_name; fall back to Player/Agent without IDs. */
+function displayActorLabel(message = {}) {
+  const named = formatPlayerLabel({
+    display: message.author_name,
+    handle: message.author_handle,
+    pet: message.author_pet_name,
+  });
+  if (named && named !== "Player") return named;
+  return message.actor_mode === "agent" ? "Agent" : "Player";
+}
+
+function _parseIsoMs(value) {
+  if (!value || typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  const normalized = text.endsWith("Z") || /[+-]\d\d:\d\d$/.test(text)
+    ? text
+    : text + "Z";
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Relative clock for chat rows; full ISO stays available for tooltips. */
+function formatRelativeTime(iso, nowMs = Date.now()) {
+  const ms = _parseIsoMs(iso);
+  if (ms == null) return "";
+  const delta = Math.max(0, nowMs - ms);
+  const sec = Math.floor(delta / 1000);
+  if (sec < 45) return "now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + "m ago";
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + "h ago";
+  try {
+    return new Date(ms).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  } catch (_err) {
+    return iso;
+  }
+}
+
 /** Coerce one server chat row into the display shape without interpreting it. */
 function normalizeMessage(item) {
   if (!item || typeof item !== "object") return null;
@@ -222,6 +286,13 @@ function normalizeMessage(item) {
     match_context: matchContext,
     created_at: normalText(item.created_at),
     deleted_at: normalNullableText(item.deleted_at),
+    author_name: normalNullableText(item.author_name || item.authorName),
+    author_handle: normalNullableText(item.author_handle || item.authorHandle),
+    author_pet_name: normalNullableText(
+      item.author_pet_name || item.authorPetName
+    ),
+    peer_name: normalNullableText(item.peer_name || item.peerName),
+    peer_id: normalNullableText(item.peer_id || item.peerId),
   };
 }
 
@@ -388,13 +459,15 @@ function inboxRows(payload) {
 function inboxFromName(item) {
   const source = item && typeof item === "object" ? item : {};
   return (
+    normalText(source.peer_name || source.peerName) ||
+    normalText(source.author_name || source.authorName) ||
+    normalText(source.display_name || source.displayName) ||
+    normalText(source.public_handle || source.publicHandle) ||
     normalText(source.from) ||
     normalText(source.sender) ||
     normalText(source.player) ||
-    normalText(source.pet_name) ||
-    normalText(source.petName) ||
-    normalText(source.actor_name) ||
-    normalText(source.account_id)
+    normalText(source.pet_name || source.petName) ||
+    normalText(source.actor_name)
   );
 }
 
@@ -431,6 +504,12 @@ function normalizeInboxItem(item) {
     channel_id: channelId || null,
     account_id: normalText(item.account_id || item.accountId) || null,
     from: inboxFromName(item) || null,
+    peer_name: normalNullableText(item.peer_name || item.peerName),
+    peer_id: normalNullableText(item.peer_id || item.peerId),
+    author_name: normalNullableText(item.author_name || item.authorName),
+    public_handle: normalNullableText(
+      item.public_handle || item.publicHandle
+    ),
     body,
     created_at: normalText(item.created_at),
     read: item.read === true || item.unread === false,
@@ -756,7 +835,7 @@ function chatHost() {
   return npcHostLine("chat");
 }
 
-  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
+  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "LOBBY_RAIL_COLLAPSED_KEY": LOBBY_RAIL_COLLAPSED_KEY, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "formatPlayerLabel": formatPlayerLabel, "displayActorLabel": displayActorLabel, "formatRelativeTime": formatRelativeTime, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
 })();
 
 // desktop/src/ui/logic/assets.js
@@ -987,6 +1066,8 @@ const __m5 = (function () {
   const tauntSummary = __m2["tauntSummary"];
   const validateChatDraft = __m2["validateChatDraft"];
   const validateDmTarget = __m2["validateDmTarget"];
+  const displayActorLabel = __m2["displayActorLabel"];
+  const formatRelativeTime = __m2["formatRelativeTime"];
   const NpcHostBanner = __m4["NpcHostBanner"];
 
 function emptyInbox() {
@@ -994,7 +1075,18 @@ function emptyInbox() {
 }
 
 function actorLabel(message) {
-  return message.actor_mode === "agent" ? "Agent" : "Player";
+  return displayActorLabel(message);
+}
+
+function TimeLabel(props) {
+  const iso = props.iso || "";
+  const relative = formatRelativeTime(iso);
+  return jsx("time", {
+    className: "hg-muted hg-time",
+    dateTime: iso || undefined,
+    title: iso || undefined,
+    children: relative || iso || "Unknown time",
+  });
 }
 
 function LobbyActions(props) {
@@ -1042,10 +1134,7 @@ function LobbyMessageRow(props) {
               className: "hg-row hg-row--between",
               children: [
                 jsx("strong", { children: actorLabel(message) + " taunt" }),
-                jsx("span", {
-                  className: "hg-muted",
-                  children: message.created_at || "Unknown time",
-                }),
+                jsx(TimeLabel, { iso: message.created_at }),
               ],
             }),
             jsx("p", {
@@ -1080,10 +1169,7 @@ function LobbyMessageRow(props) {
         className: "hg-row hg-row--between",
         children: [
           jsx("strong", { children: actorLabel(message) }),
-          jsx("span", {
-            className: "hg-muted",
-            children: message.created_at || "Unknown time",
-          }),
+          jsx(TimeLabel, { iso: message.created_at }),
         ],
       }),
       jsx("p", {
@@ -1348,16 +1434,29 @@ function LobbyRail(props = {}) {
         })
       : null;
 
+  const unreadBadge =
+    unread > 0
+      ? jsx("span", {
+          className: "hg-lobby-rail__badge",
+          "data-rail-unread": String(unread),
+          "aria-label": unread + " unread",
+          children: unreadLabel,
+        })
+      : null;
+
   const header = jsxs("header", {
     className: "hg-lobby-rail__header",
     children: [
       jsxs("button", {
         type: "button",
-        className: "hg-lobby-rail__toggle",
+        className: collapsed
+          ? "hg-lobby-rail__toggle hg-lobby-rail__toggle--collapsed"
+          : "hg-lobby-rail__toggle",
         onClick: toggle,
         "aria-expanded": collapsed ? "false" : "true",
-        "aria-label": collapsed ? "Open lobby" : "Collapse lobby",
-        title: collapsed ? "Open lobby" : "Collapse lobby",
+        "aria-label": collapsed ? "Expand lobby chat" : "Collapse lobby chat",
+        title: collapsed ? "Expand lobby chat" : "Collapse lobby chat",
+        "data-lobby-toggle": "true",
         children: [
           jsx("span", {
             className: "hg-lobby-rail__icon",
@@ -1366,18 +1465,11 @@ function LobbyRail(props = {}) {
           }),
           jsx("span", {
             className: "hg-lobby-rail__label",
-            children: "Social",
+            children: "LOBBY",
           }),
+          unreadBadge,
         ],
       }),
-      unread > 0
-        ? jsx("span", {
-            className: "hg-lobby-rail__badge",
-            "data-rail-unread": String(unread),
-            "aria-label": unread + " unread",
-            children: unreadLabel,
-          })
-        : null,
     ],
   });
 
@@ -4062,16 +4154,26 @@ function friendIdentity(item) {
 }
 
 function friendName(item) {
-  return (
+  const display =
+    text(item.display_name) ||
+    text(item.displayName) ||
     text(item.name) ||
     text(item.public_handle) ||
     text(item.publicHandle) ||
     text(item.handle) ||
+    text(item.player) ||
+    null;
+  const pet =
     text(item.pet_name) ||
     text(item.petName) ||
-    text(item.player) ||
-    friendIdentity(item)
-  );
+    (item.pet && text(item.pet.name)) ||
+    null;
+  if (display && pet && display !== pet && display.indexOf(pet) === -1) {
+    return display + " · " + pet;
+  }
+  if (display) return display;
+  if (pet) return pet;
+  return friendIdentity(item);
 }
 
 /** Coerce one friend row into the display shape without trusting its text. */
@@ -4284,25 +4386,43 @@ function isDmChannel(channelId) {
   );
 }
 
-function threadPeer(item, channelId) {
+function threadPeerId(item, channelId) {
   return (
-    text(item.from) ||
-    text(item.peer_name) ||
-    text(item.peerName) ||
-    text(item.player) ||
+    text(item.peer_id) ||
+    text(item.peerId) ||
     text(item.account_id) ||
+    text(item.from) ||
+    text(item.player) ||
     text(channelId)
   );
+}
+
+function threadPeerLabel(item, channelId) {
+  const label =
+    text(item.peer_name) ||
+    text(item.peerName) ||
+    text(item.author_name) ||
+    text(item.authorName) ||
+    text(item.public_handle) ||
+    text(item.publicHandle) ||
+    null;
+  if (label) return label;
+  // Prefer a human from/player only when it is not a raw id-looking token.
+  const soft = text(item.from) || text(item.player) || "";
+  if (soft && soft.indexOf(":") === -1 && soft.length < 48) return soft;
+  return "Player";
 }
 
 function threadFromItem(item) {
   if (!item || typeof item !== "object") return null;
   const channelId = text(item.channel_id);
   if (!channelId || !isDmChannel(channelId)) return null;
+  const peerId = threadPeerId(item, channelId);
   return {
     id: channelId,
     channel_id: channelId,
-    peer: threadPeer(item, channelId),
+    peer: threadPeerLabel(item, channelId),
+    peer_id: peerId,
     preview: text(item.body),
     updated_at: text(item.created_at),
     unread: Boolean(item.unread),
@@ -4326,6 +4446,7 @@ function normalizeThreads(envelopeOrData) {
     byChannel.set(thread.channel_id, {
       ...current,
       peer: thread.peer || current.peer,
+      peer_id: thread.peer_id || current.peer_id,
       preview: newer ? thread.preview : current.preview,
       updated_at: newer ? thread.updated_at : current.updated_at,
       unread: current.unread || thread.unread,
@@ -4442,10 +4563,12 @@ function normalizeHistoryItem(item) {
     kind,
     body,
     from:
+      text(item.author_name) ||
+      text(item.authorName) ||
       text(item.from) ||
       text(item.sender) ||
       text(item.player) ||
-      text(item.account_id) ||
+      text(item.public_handle) ||
       null,
     created_at: text(item.created_at) || null,
     match_id: matchId || null,
@@ -4563,6 +4686,8 @@ const __m17 = (function () {
   const tauntSummary = __m2["tauntSummary"];
   const validateChatDraft = __m2["validateChatDraft"];
   const validateDmTarget = __m2["validateDmTarget"];
+  const displayActorLabel = __m2["displayActorLabel"];
+  const formatRelativeTime = __m2["formatRelativeTime"];
   const FRIEND_REQUESTS_PATH = __m15["FRIEND_REQUESTS_PATH"];
   const filterFriends = __m15["filterFriends"];
   const friendPresenceCounts = __m15["friendPresenceCounts"];
@@ -4697,7 +4822,7 @@ function TauntActions(props) {
 function MessageRow(props) {
   const message = props.message;
   const busy = props.busy;
-  const actor = message.actor_mode === "agent" ? "Agent" : "Player";
+  const actor = displayActorLabel(message);
 
   if (isTauntMessage(message)) {
     const summary = tauntSummary(message.match_context);
@@ -4714,9 +4839,11 @@ function MessageRow(props) {
               className: "hg-row hg-row--between",
               children: [
                 jsx("strong", { children: actor + " taunt" }),
-                jsx("span", {
-                  className: "hg-muted",
-                  children: message.created_at || "Unknown time",
+                jsx("time", {
+                  className: "hg-muted hg-time",
+                  dateTime: message.created_at || undefined,
+                  title: message.created_at || undefined,
+                  children: formatRelativeTime(message.created_at) || message.created_at || "Unknown time",
                 }),
               ],
             }),
@@ -4752,9 +4879,11 @@ function MessageRow(props) {
         className: "hg-row hg-row--between",
         children: [
           jsx("strong", { children: actor }),
-          jsx("span", {
-            className: "hg-muted",
-            children: message.created_at || "Unknown time",
+          jsx("time", {
+            className: "hg-muted hg-time",
+            dateTime: message.created_at || undefined,
+            title: message.created_at || undefined,
+            children: formatRelativeTime(message.created_at) || message.created_at || "Unknown time",
           }),
         ],
       }),
@@ -4864,9 +4993,14 @@ function DmSection(props) {
                               className: "hg-inbox__preview",
                               children: thread.preview || "",
                             }),
-                            jsx("span", {
-                              className: "hg-muted",
-                              children: thread.updated_at || "",
+                            jsx("time", {
+                              className: "hg-muted hg-time",
+                              dateTime: thread.updated_at || undefined,
+                              title: thread.updated_at || undefined,
+                              children:
+                                formatRelativeTime(thread.updated_at) ||
+                                thread.updated_at ||
+                                "",
                             }),
                           ],
                         },
@@ -5140,7 +5274,10 @@ function FriendsSection(props) {
                           className: "hg-muted",
                           children: [
                             friend.status_label,
-                            friend.pet_name ? " · " + friend.pet_name : "",
+                            friend.pet_name &&
+                            (!friend.name || friend.name.indexOf(friend.pet_name) === -1)
+                              ? " · " + friend.pet_name
+                              : "",
                           ],
                         }),
                       ],
@@ -5214,12 +5351,20 @@ function ChallengesSection(props) {
                       className: "hg-col",
                       children: [
                         jsx("strong", { children: challenge.label }),
-                        jsx("span", {
+                        jsxs("span", {
                           className: "hg-muted",
-                          children:
-                            (incoming ? "Incoming" : "Outgoing") +
-                            " · " +
-                            (challenge.created_at || ""),
+                          children: [
+                            (incoming ? "Incoming" : "Outgoing") + " · ",
+                            jsx("time", {
+                              className: "hg-time",
+                              dateTime: challenge.created_at || undefined,
+                              title: challenge.created_at || undefined,
+                              children:
+                                formatRelativeTime(challenge.created_at) ||
+                                challenge.created_at ||
+                                "",
+                            }),
+                          ],
                         }),
                       ],
                     }),
@@ -5324,9 +5469,11 @@ function HistorySection(props) {
                             (item.kind === "taunt" ? "Taunt" : "@mention") +
                             (item.from ? " · " + item.from : ""),
                         }),
-                        jsx("span", {
-                          className: "hg-muted",
-                          children: item.created_at || "",
+                        jsx("time", {
+                          className: "hg-muted hg-time",
+                          dateTime: item.created_at || undefined,
+                          title: item.created_at || undefined,
+                          children: formatRelativeTime(item.created_at) || item.created_at || "",
                         }),
                       ],
                     }),
@@ -5589,7 +5736,7 @@ function ChatLive(props) {
 
   function selectThread(thread) {
     setActiveThread(thread);
-    setDmTarget(thread.peer || "");
+    setDmTarget(thread.peer_id || thread.peer || "");
     setComposerError("");
   }
 
@@ -5602,7 +5749,7 @@ function ChatLive(props) {
       setComposerError(checked.error);
       return;
     }
-    const target = dmTarget || (activeThread && activeThread.peer) || "";
+    const target = dmTarget || (activeThread && (activeThread.peer_id || activeThread.peer)) || "";
     const checkedTarget = validateDmTarget(target);
     if (!checkedTarget.ok) {
       setComposerError(checkedTarget.error);
@@ -9023,6 +9170,7 @@ const __m27 = (function () {
   const LobbyRail = __m5["LobbyRail"];
   const deriveConnectionStatus = __m6["deriveConnectionStatus"];
   const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const LOBBY_RAIL_COLLAPSED_KEY = __m2["LOBBY_RAIL_COLLAPSED_KEY"];
   const lobbyRailAutoCollapsed = __m2["lobbyRailAutoCollapsed"];
   const BattleTab = __m14["BattleTab"];
   const ChatTab = __m17["ChatTab"];
@@ -9107,7 +9255,37 @@ function pairEnvelopeFor(api) {
   return Promise.resolve(null);
 }
 
+function readStoredRailCollapsed() {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(LOBBY_RAIL_COLLAPSED_KEY);
+    if (raw === "1" || raw === "true") return true;
+    if (raw === "0" || raw === "false") return false;
+  } catch (_err) {
+    /* ignore quota / private mode */
+  }
+  return null;
+}
+
+function persistRailCollapsed(collapsed) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      LOBBY_RAIL_COLLAPSED_KEY,
+      collapsed ? "1" : "0"
+    );
+  } catch (_err) {
+    /* ignore */
+  }
+}
+
 function initialRailCollapsed() {
+  const stored = readStoredRailCollapsed();
+  if (stored !== null) return stored;
   if (typeof window === "undefined" || typeof window.innerWidth !== "number") {
     return false;
   }
@@ -9210,7 +9388,9 @@ function HermagotchiPane(props = {}) {
 
   function toggleLobbyRail() {
     setRailCollapsed(function (current) {
-      return !current;
+      const next = !current;
+      persistRailCollapsed(next);
+      return next;
     });
   }
 
@@ -9725,7 +9905,7 @@ const __m30 = (function () {
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 240px;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) 320px;\n  gap: 12px;\n  align-items: start;\n  padding-top: 12px;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 52px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  max-height: calc(100vh - 180px);\n  overflow: hidden;\n  position: sticky;\n  top: 12px;\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: none;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  padding: 8px;\n  overflow-y: auto;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 8px 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-lobby-rail__message {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-lobby-rail__taunt {\n  border-color: var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-lobby-rail__bubble {\n  display: block;\n}\n\n.hg-lobby-rail__text,\n.hg-lobby-rail__match {\n  margin: 4px 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-lobby-rail__match {\n  color: var(--hg-muted);\n  font-size: 0.6875rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 8px;\n  margin-top: auto;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    max-height: none;\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 240px;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) 320px;\n  gap: 12px;\n  align-items: start;\n  padding-top: 12px;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 56px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  max-height: calc(100vh - 180px);\n  overflow: hidden;\n  position: sticky;\n  top: 12px;\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n  border-left-width: 3px;\n  border-left-color: var(--hg-accent);\n  min-height: 8rem;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: inline-block;\n  writing-mode: vertical-rl;\n  transform: rotate(180deg);\n  letter-spacing: 0.18em;\n  font-weight: 700;\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__toggle--collapsed {\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-start;\n  width: 100%;\n  min-height: 7.5rem;\n  padding: 8px 4px;\n  gap: 8px;\n  border-radius: 0;\n  border-left-width: 0;\n  background: var(--hg-bg-raised);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__badge {\n  align-self: center;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  padding: 8px;\n  overflow-y: auto;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 8px 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-lobby-rail__message {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-lobby-rail__taunt {\n  border-color: var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-lobby-rail__bubble {\n  display: block;\n}\n\n.hg-lobby-rail__text,\n.hg-lobby-rail__match {\n  margin: 4px 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-lobby-rail__match {\n  color: var(--hg-muted);\n  font-size: 0.6875rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 8px;\n  margin-top: auto;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    max-height: none;\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;

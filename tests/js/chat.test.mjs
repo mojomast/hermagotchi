@@ -21,6 +21,9 @@ import {
   isChatEnabled,
   isTauntMessage,
   lobbyRailAutoCollapsed,
+  formatRelativeTime,
+  formatPlayerLabel,
+  displayActorLabel,
   lobbyUnreadCount,
   lobbyUnreadLabel,
   markInboxRead,
@@ -441,4 +444,36 @@ test("ChatTab wires the inbox badge, taunt bubbles and DM target", () => {
   assert.ok(source.includes("tauntSummary"));
   assert.ok(source.includes("data-chat-dm-target"));
   assert.ok(source.includes("validateDmTarget"));
+});
+
+test("formatPlayerLabel prefers display then handle · pet without raw ids", () => {
+  assert.equal(
+    formatPlayerLabel({ display: "Firewyrm · ShotWyrm", handle: "x", pet: "y" }),
+    "Firewyrm · ShotWyrm"
+  );
+  assert.equal(
+    formatPlayerLabel({ handle: "Firewyrm", pet: "ShotWyrm" }),
+    "Firewyrm · ShotWyrm"
+  );
+  assert.equal(formatPlayerLabel({ handle: "Ada" }), "Ada");
+  assert.equal(formatPlayerLabel({}), "Player");
+});
+
+test("displayActorLabel uses author_name and falls back to Player/Agent", () => {
+  assert.equal(
+    displayActorLabel({ author_name: "Ada · Bit", actor_mode: "human" }),
+    "Ada · Bit"
+  );
+  assert.equal(displayActorLabel({ actor_mode: "agent" }), "Agent");
+  assert.equal(displayActorLabel({ actor_mode: "human" }), "Player");
+});
+
+test("formatRelativeTime covers now, minutes, hours, and calendar days", () => {
+  const now = Date.parse("2026-11-06T12:00:00.000Z");
+  assert.equal(formatRelativeTime("2026-11-06T11:59:30.000Z", now), "now");
+  assert.equal(formatRelativeTime("2026-11-06T11:58:00.000Z", now), "2m ago");
+  assert.equal(formatRelativeTime("2026-11-06T09:00:00.000Z", now), "3h ago");
+  assert.equal(formatRelativeTime("2026-11-05T12:00:00.000Z", now), "Nov 5");
+  assert.equal(formatRelativeTime("", now), "");
+  assert.equal(formatRelativeTime(null, now), "");
 });

@@ -16,6 +16,8 @@ export const CHAT_TAUNT_MAX_CHARS = 90;
 export const CHAT_DM_TARGET_MAX_CHARS = 64;
 export const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
 export const LOBBY_RAIL_BREAKPOINT = 840;
+export const LOBBY_RAIL_COLLAPSED_KEY = "hermagotchi.lobbyRail.collapsed";
+
 
 const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
 
@@ -69,6 +71,68 @@ function normalNullableText(value) {
   return typeof value === "string" ? value : null;
 }
 
+
+/** Build a human label like "Handle · Pet" without leaking raw UUIDs. */
+export function formatPlayerLabel(parts = {}) {
+  const handle = normalText(
+    parts.handle || parts.public_handle || parts.publicHandle || parts.author_handle
+  );
+  const pet = normalText(
+    parts.pet || parts.pet_name || parts.petName || parts.author_pet_name
+  );
+  const explicit = normalText(
+    parts.display || parts.display_name || parts.displayName || parts.author_name || parts.peer_name
+  );
+  if (explicit) return explicit;
+  if (handle && pet) return handle + " · " + pet;
+  if (handle) return handle;
+  if (pet) return pet;
+  return normalText(parts.fallback, "Player");
+}
+
+/** Prefer server author_name; fall back to Player/Agent without IDs. */
+export function displayActorLabel(message = {}) {
+  const named = formatPlayerLabel({
+    display: message.author_name,
+    handle: message.author_handle,
+    pet: message.author_pet_name,
+  });
+  if (named && named !== "Player") return named;
+  return message.actor_mode === "agent" ? "Agent" : "Player";
+}
+
+function _parseIsoMs(value) {
+  if (!value || typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  const normalized = text.endsWith("Z") || /[+-]\d\d:\d\d$/.test(text)
+    ? text
+    : text + "Z";
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Relative clock for chat rows; full ISO stays available for tooltips. */
+export function formatRelativeTime(iso, nowMs = Date.now()) {
+  const ms = _parseIsoMs(iso);
+  if (ms == null) return "";
+  const delta = Math.max(0, nowMs - ms);
+  const sec = Math.floor(delta / 1000);
+  if (sec < 45) return "now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + "m ago";
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + "h ago";
+  try {
+    return new Date(ms).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  } catch (_err) {
+    return iso;
+  }
+}
+
 /** Coerce one server chat row into the display shape without interpreting it. */
 export function normalizeMessage(item) {
   if (!item || typeof item !== "object") return null;
@@ -86,6 +150,13 @@ export function normalizeMessage(item) {
     match_context: matchContext,
     created_at: normalText(item.created_at),
     deleted_at: normalNullableText(item.deleted_at),
+    author_name: normalNullableText(item.author_name || item.authorName),
+    author_handle: normalNullableText(item.author_handle || item.authorHandle),
+    author_pet_name: normalNullableText(
+      item.author_pet_name || item.authorPetName
+    ),
+    peer_name: normalNullableText(item.peer_name || item.peerName),
+    peer_id: normalNullableText(item.peer_id || item.peerId),
   };
 }
 
@@ -252,13 +323,15 @@ function inboxRows(payload) {
 function inboxFromName(item) {
   const source = item && typeof item === "object" ? item : {};
   return (
+    normalText(source.peer_name || source.peerName) ||
+    normalText(source.author_name || source.authorName) ||
+    normalText(source.display_name || source.displayName) ||
+    normalText(source.public_handle || source.publicHandle) ||
     normalText(source.from) ||
     normalText(source.sender) ||
     normalText(source.player) ||
-    normalText(source.pet_name) ||
-    normalText(source.petName) ||
-    normalText(source.actor_name) ||
-    normalText(source.account_id)
+    normalText(source.pet_name || source.petName) ||
+    normalText(source.actor_name)
   );
 }
 
@@ -295,6 +368,12 @@ export function normalizeInboxItem(item) {
     channel_id: channelId || null,
     account_id: normalText(item.account_id || item.accountId) || null,
     from: inboxFromName(item) || null,
+    peer_name: normalNullableText(item.peer_name || item.peerName),
+    peer_id: normalNullableText(item.peer_id || item.peerId),
+    author_name: normalNullableText(item.author_name || item.authorName),
+    public_handle: normalNullableText(
+      item.public_handle || item.publicHandle
+    ),
     body,
     created_at: normalText(item.created_at),
     read: item.read === true || item.unread === false,

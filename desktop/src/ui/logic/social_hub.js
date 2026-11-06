@@ -59,25 +59,43 @@ function isDmChannel(channelId) {
   );
 }
 
-function threadPeer(item, channelId) {
+function threadPeerId(item, channelId) {
   return (
-    text(item.from) ||
-    text(item.peer_name) ||
-    text(item.peerName) ||
-    text(item.player) ||
+    text(item.peer_id) ||
+    text(item.peerId) ||
     text(item.account_id) ||
+    text(item.from) ||
+    text(item.player) ||
     text(channelId)
   );
+}
+
+function threadPeerLabel(item, channelId) {
+  const label =
+    text(item.peer_name) ||
+    text(item.peerName) ||
+    text(item.author_name) ||
+    text(item.authorName) ||
+    text(item.public_handle) ||
+    text(item.publicHandle) ||
+    null;
+  if (label) return label;
+  // Prefer a human from/player only when it is not a raw id-looking token.
+  const soft = text(item.from) || text(item.player) || "";
+  if (soft && soft.indexOf(":") === -1 && soft.length < 48) return soft;
+  return "Player";
 }
 
 function threadFromItem(item) {
   if (!item || typeof item !== "object") return null;
   const channelId = text(item.channel_id);
   if (!channelId || !isDmChannel(channelId)) return null;
+  const peerId = threadPeerId(item, channelId);
   return {
     id: channelId,
     channel_id: channelId,
-    peer: threadPeer(item, channelId),
+    peer: threadPeerLabel(item, channelId),
+    peer_id: peerId,
     preview: text(item.body),
     updated_at: text(item.created_at),
     unread: Boolean(item.unread),
@@ -101,6 +119,7 @@ export function normalizeThreads(envelopeOrData) {
     byChannel.set(thread.channel_id, {
       ...current,
       peer: thread.peer || current.peer,
+      peer_id: thread.peer_id || current.peer_id,
       preview: newer ? thread.preview : current.preview,
       updated_at: newer ? thread.updated_at : current.updated_at,
       unread: current.unread || thread.unread,
@@ -217,10 +236,12 @@ export function normalizeHistoryItem(item) {
     kind,
     body,
     from:
+      text(item.author_name) ||
+      text(item.authorName) ||
       text(item.from) ||
       text(item.sender) ||
       text(item.player) ||
-      text(item.account_id) ||
+      text(item.public_handle) ||
       null,
     created_at: text(item.created_at) || null,
     match_id: matchId || null,
