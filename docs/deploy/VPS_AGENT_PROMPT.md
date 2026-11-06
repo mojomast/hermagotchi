@@ -14,8 +14,8 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
 - Branch: `feat/hackathon`
-- **Deploy tip SHA (full):** `12b0217666c7303971de423436c6adca4c0b70a7`
-- Prior rollback SHA: `37f5fa0` (short) — use the full SHA recorded in prior deploy notes if available.
+- **Deploy tip SHA (full):** `dc53d3fd0dc5f9a03e1d9b492beb173fc0ec4397`
+- Prior rollback SHA: `12b0217` (full `12b0217666c7303971de423436c6adca4c0b70a7`) — use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
 1. Run `df -h /` and `df -h /var` (and the filesystem that holds `/opt/hermagotchi` and `/var/lib/hermagotchi` if different).
@@ -65,7 +65,7 @@ Reload nginx only if you change its config; verify with a dry config test first.
    ```bash
    cd /opt/hermagotchi
    git fetch origin
-   git checkout 12b0217666c7303971de423436c6adca4c0b70a7
+   git checkout dc53d3fd0dc5f9a03e1d9b492beb173fc0ec4397
    ```
 4. **Deps:** activate `/opt/hermagotchi/.venv` and `pip install -r requirements-dev.txt` (or the production requirements file the unit already uses). Prefer the same install path as the prior deploy.
 5. **Migrations:** run the app's normal migration path (startup migration via create_app / documented migrate command). Do not hand-edit the DB. Forward-only only.
@@ -78,11 +78,35 @@ Reload nginx only if you change its config; verify with a dry config test first.
    - Signup limits: with caps configured, excess `new_account` starts return error codes `signup_closed` / `signup_ip_limit` (do not spam; one probe is enough if safe)
    - `ss -tlnp` shows uvicorn only on 127.0.0.1:8787
 
+
+## Auth / chat / economy env (names only; W11)
+Keep the auth/signup/trusted-proxy vars above. Chat HTTP routes are mounted with the
+other /v1 routers — **no new VPS env flag is required** for lobby chat to answer.
+The Hermes desktop bridge still needs policy chat_enabled=true (alias
+agent_chat_enabled) for the pane composer; that is a client/plugin policy, not a
+server env. If a future HERMAGOTCHI_CHAT_ENABLED gate is added, document it here
+before enabling (default should remain on for production once introduced).
+
+Forward-only migration added on this tip:
+- server/app/migrations/0011_starter_and_rate_limits.sql
+  - one-time 300 Bit economy.starter_grant for eligible pre-existing accounts
+  - auth_rate_hits / auth_rate_locks tables (approve lockout + pair/start limits durable across workers)
+
+## W11 verification (after this tip)
+After restart + migration:
+1. curl -fsS https://api.hermagotchi.rizz.click/healthz → 200
+2. New adopt grants 300 Bits once (economy.starter_grant); practice rewards 50 Bits (cap 3/day UTC).
+3. Casual PvP updates ratings — GET /v1/leaderboard shows both participants after a resolved casual match.
+4. Lobby chat: GET/POST /v1/chat/channels/lobby/messages (not /v1/chat/messages).
+5. Five wrong approve attempts for the same IP or code lock across uvicorn workers (DB-backed).
+6. Resolved match JSON includes winner, result, final_hp, rounds on the match object.
+7. Shop thumbnails are served by the desktop asset bridge (px3/thumbs/*_thumb.png); live API has no /assets route — do not expect GET /v1/assets/... on the VPS.
+
 ## Rollback
 If health checks fail or pairing is broken:
 1. `systemctl stop hermagotchi`
 2. Restore DB from the backup just taken (copy backup over `HERMAGOTCHI_DB` only after stopping the service).
-3. `cd /opt/hermagotchi && git checkout 37f5fa0` (or the full prior SHA from notes)
+3. `cd /opt/hermagotchi && git checkout dc53d3fd0dc5f9a03e1d9b492beb173fc0ec4397` (or the full prior SHA from notes)
 4. Reinstall deps if needed, `systemctl start hermagotchi`, re-check `/healthz`
 5. Report what failed and leave the new tip unchecked out until the owner decides.
 
