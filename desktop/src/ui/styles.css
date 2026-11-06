@@ -380,8 +380,8 @@
 }
 
 .hg-shop-preview {
-  width: 160px;
-  height: 160px;
+  width: 192px;
+  height: 192px;
   margin: 0 auto 12px;
   display: grid;
   place-items: center;
@@ -534,7 +534,15 @@
   aspect-ratio: 1 / 1;
   min-height: 96px;
   border: 1px dashed var(--hg-border);
-  background: #0d1020;
+  /* Mid-tone so sparse pixel cosmetics stay readable */
+  background:
+    linear-gradient(45deg, #1c2440 25%, transparent 25%),
+    linear-gradient(-45deg, #1c2440 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1c2440 75%),
+    linear-gradient(-45deg, transparent 75%, #1c2440 75%);
+  background-color: #243056;
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
   overflow: hidden;
 }
 
