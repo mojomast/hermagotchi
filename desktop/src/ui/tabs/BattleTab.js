@@ -119,10 +119,22 @@ function StubBattle(props) {
 export function BattleTab(props = {}) {
   const api = props.api;
   const uiState = props.uiState || props.state || UI_STATES.READY;
-  const petId =
+  const propPetId =
     props.petId ||
     props.pet_id ||
     (props.pet && typeof props.pet === "object" ? props.pet.id : null);
+  const [mePetId, setMePetId] = useState(null);
+  const petId = propPetId || mePetId;
+  useEffect(() => {
+    if (propPetId || !api || typeof api.get !== "function") return undefined;
+    let alive = true;
+    api.get("/me").then((env) => {
+      if (alive && env && env.ok && env.data && env.data.pet_id) setMePetId(env.data.pet_id);
+    }, () => {});
+    return () => {
+      alive = false;
+    };
+  }, [api, propPetId]);
   const [inbox, setInbox] = useState(null);
   const [practice, setPractice] = useState(null);
   const [replay, setReplay] = useState(null);

@@ -641,10 +641,22 @@ function StubBattle(props) {
 function BattleTab(props = {}) {
   const api = props.api;
   const uiState = props.uiState || props.state || UI_STATES.READY;
-  const petId =
+  const propPetId =
     props.petId ||
     props.pet_id ||
     (props.pet && typeof props.pet === "object" ? props.pet.id : null);
+  const [mePetId, setMePetId] = useState(null);
+  const petId = propPetId || mePetId;
+  useEffect(() => {
+    if (propPetId || !api || typeof api.get !== "function") return undefined;
+    let alive = true;
+    api.get("/me").then((env) => {
+      if (alive && env && env.ok && env.data && env.data.pet_id) setMePetId(env.data.pet_id);
+    }, () => {});
+    return () => {
+      alive = false;
+    };
+  }, [api, propPetId]);
   const [inbox, setInbox] = useState(null);
   const [practice, setPractice] = useState(null);
   const [replay, setReplay] = useState(null);
@@ -4524,7 +4536,7 @@ function HermagotchiPane(props = {}) {
         className: "hg-pane__body",
         role: "tabpanel",
         "aria-label": TAB_LABELS[activeTab],
-        children: jsx(ActiveTab, { uiState: effectiveState }),
+        children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
       }),
     ],
   });
@@ -4533,10 +4545,303 @@ function HermagotchiPane(props = {}) {
   return { "TAB_IDS": TAB_IDS, "TAB_LABELS": TAB_LABELS, "TAB_COMPONENTS": TAB_COMPONENTS, "HermagotchiPane": HermagotchiPane };
 })();
 
-// desktop/src/ui/register.js
+// desktop/src/ui/api.js
 const __m19 = (function () {
+/**
+ * Local dashboard bridge client for the Hermagotchi Desktop UI.
+ *
+ * The browser/Desktop layer never sees a session token. Every call goes to the
+ * local Hermes bridge, which adds the Bearer header server-side. All methods
+ * resolve to the bridge envelope and never reject.
+ */
+
+const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
+const PROXY_PREFIX = "/proxy/v1";
+
+const UI_STATE_VALUES = Object.freeze({
+  READY: "ready",
+  BACKEND_DISABLED: "backend_disabled",
+  NETWORK_OFF: "network_off",
+  AUTH_MISSING: "auth_missing",
+  SERVICE_UNAVAILABLE: "service_unavailable",
+});
+
+function randomKey() {
+  const source = globalThis.crypto;
+  if (source && typeof source.randomUUID === "function") {
+    return source.randomUUID();
+  }
+  return (
+    "hg-" +
+    Date.now().toString(16) +
+    "-" +
+    Math.random().toString(16).slice(2, 12)
+  );
+}
+
+function normalizeBasePath(basePath) {
+  if (typeof basePath !== "string") {
+    return DEFAULT_BASE_PATH;
+  }
+  const trimmed = basePath.trim();
+  if (!trimmed) {
+    return "";
+  }
+  if (trimmed === "/") {
+    return "";
+  }
+  return trimmed.replace(/\/+$/, "");
+}
+
+function normalizePath(path) {
+  if (typeof path !== "string") {
+    return "";
+  }
+  return path.startsWith("/") ? path : "/" + path;
+}
+
+function errorEnvelope(status, code, message, retryAfterSeconds) {
+  return {
+    ok: false,
+    status: status,
+    error: {
+      code: code,
+      message: message,
+      retry_after_s: Number(retryAfterSeconds) || 0,
+    },
+  };
+}
+
+function offlineEnvelope() {
+  return errorEnvelope(
+    "offline",
+    "network_error",
+    "Could not reach the local Hermagotchi bridge."
+  );
+}
+
+function asEnvelope(parsed, response) {
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    typeof parsed.ok === "boolean" &&
+    typeof parsed.status === "string"
+  ) {
+    return parsed;
+  }
+  const status = response && response.ok === false ? "http_error" : "ok";
+  if (status === "http_error") {
+    return errorEnvelope(
+      "http_error",
+      "http_" + (response && response.status ? response.status : "error"),
+      "The bridge returned an unexpected response."
+    );
+  }
+  return { ok: true, status: "ok", data: parsed === undefined ? null : parsed };
+}
+
+function pairStartBody(input, options) {
+  const opts = options || {};
+  if (typeof input === "string") {
+    const newAccount =
+      typeof options === "boolean"
+        ? options
+        : Boolean(
+            opts.new_account === undefined ? opts.newAccount : opts.new_account
+          );
+    return {
+      device_name: input,
+      new_account: newAccount,
+    };
+  }
+  if (input && typeof input === "object") {
+    const body = Object.assign({}, input);
+    if (body.deviceName !== undefined && body.device_name === undefined) {
+      body.device_name = body.deviceName;
+    }
+    if (body.newAccount !== undefined && body.new_account === undefined) {
+      body.new_account = body.newAccount;
+    }
+    delete body.deviceName;
+    delete body.newAccount;
+    return body;
+  }
+  return { device_name: "Desktop", new_account: false };
+}
+
+function approveBody(input) {
+  if (typeof input === "string") {
+    return { user_code: input };
+  }
+  if (input && typeof input === "object") {
+    return input;
+  }
+  return {};
+}
+
+function revokeId(input) {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input && typeof input === "object") {
+    if (input.device_id !== undefined) return String(input.device_id);
+    if (input.id !== undefined) return String(input.id);
+  }
+  return "";
+}
+
+function createApiClient(options) {
+  const config = options || {};
+  const basePath = normalizeBasePath(config.basePath);
+  const fetchImpl =
+    config.fetchImpl ||
+    (typeof globalThis.fetch === "function"
+      ? globalThis.fetch.bind(globalThis)
+      : null);
+
+  async function request(method, url, requestOptions) {
+    const opts = requestOptions || {};
+    if (typeof fetchImpl !== "function") {
+      return offlineEnvelope();
+    }
+    const headers = {};
+    if (opts.hasBody) {
+      headers["Content-Type"] = "application/json";
+    }
+    if (opts.idempotencyKey) {
+      headers["Idempotency-Key"] = opts.idempotencyKey;
+    }
+    const init = { method: method, headers: headers };
+    if (opts.hasBody) {
+      init.body = JSON.stringify(
+        opts.body === undefined || opts.body === null ? {} : opts.body
+      );
+    }
+
+    let response;
+    try {
+      response = await fetchImpl(url, init);
+    } catch (_error) {
+      return offlineEnvelope();
+    }
+
+    let parsed;
+    try {
+      parsed = await response.json();
+    } catch (_error) {
+      parsed = undefined;
+    }
+    return asEnvelope(parsed, response);
+  }
+
+  function proxyUrl(path) {
+    return basePath + PROXY_PREFIX + normalizePath(path);
+  }
+
+  function pairUrl(path) {
+    return basePath + normalizePath(path);
+  }
+
+  return {
+    basePath: basePath,
+    get: function get(path) {
+      return request("GET", proxyUrl(path), {});
+    },
+    post: function post(path, body, postOptions) {
+      const opts = postOptions || {};
+      return request("POST", proxyUrl(path), {
+        hasBody: true,
+        body: body,
+        idempotencyKey:
+          opts.idempotencyKey || opts.idempotency_key || randomKey(),
+      });
+    },
+    del: function del(path, deleteOptions) {
+      const opts = deleteOptions || {};
+      return request("DELETE", proxyUrl(path), {
+        idempotencyKey:
+          opts.idempotencyKey || opts.idempotency_key || randomKey(),
+      });
+    },
+    pair: {
+      start: function start(input, startOptions) {
+        return request("POST", pairUrl("/pair/start"), {
+          hasBody: true,
+          body: pairStartBody(input, startOptions),
+        });
+      },
+      poll: function poll() {
+        return request("POST", pairUrl("/pair/poll"), {
+          hasBody: true,
+          body: {},
+        });
+      },
+      approve: function approve(input) {
+        return request("POST", pairUrl("/pair/approve"), {
+          hasBody: true,
+          body: approveBody(input),
+        });
+      },
+      devices: function devices() {
+        return request("GET", pairUrl("/pair/devices"), {});
+      },
+      revoke: function revoke(input) {
+        const id = encodeURIComponent(revokeId(input));
+        return request("POST", pairUrl("/pair/devices/" + id + "/revoke"), {
+          hasBody: true,
+          body: {},
+        });
+      },
+      logout: function logout() {
+        return request("POST", pairUrl("/pair/logout"), {
+          hasBody: true,
+          body: {},
+        });
+      },
+    },
+  };
+}
+
+function isEnvelopeOk(envelope) {
+  return Boolean(
+    envelope &&
+      typeof envelope === "object" &&
+      envelope.ok === true
+  );
+}
+
+function uiStateFromEnvelope(envelope) {
+  if (!envelope || envelope.ok === true) {
+    return UI_STATE_VALUES.READY;
+  }
+  switch (envelope.status) {
+    case "auth_missing":
+    case "unauthorized":
+    case "expired":
+      return UI_STATE_VALUES.AUTH_MISSING;
+    case "backend_disabled":
+      return UI_STATE_VALUES.BACKEND_DISABLED;
+    case "network_off":
+      return UI_STATE_VALUES.NETWORK_OFF;
+    case "offline":
+    case "unavailable":
+    case "not_allowed":
+    case "http_error":
+      return UI_STATE_VALUES.SERVICE_UNAVAILABLE;
+    default:
+      return UI_STATE_VALUES.SERVICE_UNAVAILABLE;
+  }
+}
+
+
+  return { "DEFAULT_BASE_PATH": DEFAULT_BASE_PATH, "PROXY_PREFIX": PROXY_PREFIX, "createApiClient": createApiClient, "isEnvelopeOk": isEnvelopeOk, "uiStateFromEnvelope": uiStateFromEnvelope, "API_UI_STATES": UI_STATE_VALUES };
+})();
+
+// desktop/src/ui/register.js
+const __m20 = (function () {
   const jsx = __ext0;
   const HermagotchiPane = __m18["HermagotchiPane"];
+  const createApiClient = __m19["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -4547,7 +4852,11 @@ function createPaneContribution() {
     title: PANE_TITLE,
     area: "panes",
     render: function renderPane(props) {
-      return jsx(HermagotchiPane, props || {});
+      const p = Object.assign({}, props || {});
+      if (!p.api && p.live !== false) {
+        p.api = createApiClient({ basePath: p.apiBasePath });
+      }
+      return jsx(HermagotchiPane, p);
     },
   };
 }
@@ -4573,13 +4882,13 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m20 = (function () {
+const __m21 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m18["HermagotchiPane"], "TAB_IDS": __m18["TAB_IDS"], "TAB_LABELS": __m18["TAB_LABELS"], "TAB_COMPONENTS": __m18["TAB_COMPONENTS"], "UI_STATES": __m0["UI_STATES"], "UI_STATE_COPY": __m0["UI_STATE_COPY"], "StateNotice": __m0["StateNotice"], "resolveUiState": __m0["resolveUiState"], "PANE_ID": __m19["PANE_ID"], "PANE_TITLE": __m19["PANE_TITLE"], "createPaneContribution": __m19["createPaneContribution"], "registerHermagotchiPane": __m19["registerHermagotchiPane"], "createDesktopPlugin": __m19["createDesktopPlugin"], "HabitatTab": __m12["HabitatTab"], "HABITAT_PLACEHOLDER": __m12["HABITAT_PLACEHOLDER"], "BattleTab": __m5["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m5["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m17["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m17["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m14["LeaderboardTab"], "ChatTab": __m7["ChatTab"], "SettingsTab": __m16["SettingsTab"], "SETTINGS_PLACEHOLDER": __m16["SETTINGS_PLACEHOLDER"], "CareMeter": __m8["CareMeter"], "NpcHostBanner": __m2["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m1["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m1["NPC_NAMES"], "npcHostLine": __m1["npcHostLine"] };
+  return { "HermagotchiPane": __m18["HermagotchiPane"], "TAB_IDS": __m18["TAB_IDS"], "TAB_LABELS": __m18["TAB_LABELS"], "TAB_COMPONENTS": __m18["TAB_COMPONENTS"], "UI_STATES": __m0["UI_STATES"], "UI_STATE_COPY": __m0["UI_STATE_COPY"], "StateNotice": __m0["StateNotice"], "resolveUiState": __m0["resolveUiState"], "PANE_ID": __m20["PANE_ID"], "PANE_TITLE": __m20["PANE_TITLE"], "createPaneContribution": __m20["createPaneContribution"], "registerHermagotchiPane": __m20["registerHermagotchiPane"], "createDesktopPlugin": __m20["createDesktopPlugin"], "HabitatTab": __m12["HabitatTab"], "HABITAT_PLACEHOLDER": __m12["HABITAT_PLACEHOLDER"], "BattleTab": __m5["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m5["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m17["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m17["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m14["LeaderboardTab"], "ChatTab": __m7["ChatTab"], "SettingsTab": __m16["SettingsTab"], "SETTINGS_PLACEHOLDER": __m16["SETTINGS_PLACEHOLDER"], "CareMeter": __m8["CareMeter"], "NpcHostBanner": __m2["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m1["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m1["NPC_NAMES"], "npcHostLine": __m1["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
@@ -4598,8 +4907,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m20["createDesktopPlugin"];
-const __hgRegisterPane = __m20["registerHermagotchiPane"];
+const __hgCreatePlugin = __m21["createDesktopPlugin"];
+const __hgRegisterPane = __m21["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -4617,34 +4926,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m20["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m20["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m20["CareMeter"];
-export const ChatTab = __m20["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m20["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m20["HabitatTab"];
-export const HermagotchiPane = __m20["HermagotchiPane"];
-export const LeaderboardTab = __m20["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m20["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m20["NPC_NAMES"];
-export const NpcHostBanner = __m20["NpcHostBanner"];
-export const PANE_ID = __m20["PANE_ID"];
-export const PANE_TITLE = __m20["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m20["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m20["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m20["SettingsTab"];
-export const ShopTab = __m20["ShopTab"];
-export const StateNotice = __m20["StateNotice"];
-export const TAB_COMPONENTS = __m20["TAB_COMPONENTS"];
-export const TAB_IDS = __m20["TAB_IDS"];
-export const TAB_LABELS = __m20["TAB_LABELS"];
-export const UI_STATES = __m20["UI_STATES"];
-export const UI_STATE_COPY = __m20["UI_STATE_COPY"];
-export const createDesktopPlugin = __m20["createDesktopPlugin"];
-export const createPaneContribution = __m20["createPaneContribution"];
-export const npcHostLine = __m20["npcHostLine"];
-export const registerHermagotchiPane = __m20["registerHermagotchiPane"];
-export const resolveUiState = __m20["resolveUiState"];
+export const BattleTab = __m21["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m21["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m21["CareMeter"];
+export const ChatTab = __m21["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m21["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m21["HabitatTab"];
+export const HermagotchiPane = __m21["HermagotchiPane"];
+export const LeaderboardTab = __m21["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m21["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m21["NPC_NAMES"];
+export const NpcHostBanner = __m21["NpcHostBanner"];
+export const PANE_ID = __m21["PANE_ID"];
+export const PANE_TITLE = __m21["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m21["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m21["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m21["SettingsTab"];
+export const ShopTab = __m21["ShopTab"];
+export const StateNotice = __m21["StateNotice"];
+export const TAB_COMPONENTS = __m21["TAB_COMPONENTS"];
+export const TAB_IDS = __m21["TAB_IDS"];
+export const TAB_LABELS = __m21["TAB_LABELS"];
+export const UI_STATES = __m21["UI_STATES"];
+export const UI_STATE_COPY = __m21["UI_STATE_COPY"];
+export const createDesktopPlugin = __m21["createDesktopPlugin"];
+export const createPaneContribution = __m21["createPaneContribution"];
+export const npcHostLine = __m21["npcHostLine"];
+export const registerHermagotchiPane = __m21["registerHermagotchiPane"];
+export const resolveUiState = __m21["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;

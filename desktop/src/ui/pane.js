@@ -81,7 +81,7 @@ export function HermagotchiPane(props = {}) {
         className: "hg-pane__body",
         role: "tabpanel",
         "aria-label": TAB_LABELS[activeTab],
-        children: jsx(ActiveTab, { uiState: effectiveState }),
+        children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
       }),
     ],
   });

@@ -38,8 +38,14 @@ def get_me(
         (account_id,),
     ).fetchone()
 
+    pet_row = conn.execute(
+        "SELECT id FROM pets WHERE account_id = ? ORDER BY created_at LIMIT 1",
+        (account_id,),
+    ).fetchone()
+
     return {
         "contracts_version": CONTRACTS_VERSION,
+        "pet_id": pet_row["id"] if pet_row else None,
         "account": {
             "id": row["id"],
             "public_handle": row["public_handle"],

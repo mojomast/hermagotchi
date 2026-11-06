@@ -1,5 +1,6 @@
 import { jsx } from "react/jsx-runtime";
 import { HermagotchiPane } from "./pane.js";
+import { createApiClient } from "./api.js";
 
 export const PANE_ID = "hermagotchi";
 export const PANE_TITLE = "Hermagotchi";
@@ -10,7 +11,11 @@ export function createPaneContribution() {
     title: PANE_TITLE,
     area: "panes",
     render: function renderPane(props) {
-      return jsx(HermagotchiPane, props || {});
+      const p = Object.assign({}, props || {});
+      if (!p.api && p.live !== false) {
+        p.api = createApiClient({ basePath: p.apiBasePath });
+      }
+      return jsx(HermagotchiPane, p);
     },
   };
 }
