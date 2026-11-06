@@ -426,7 +426,7 @@ def _reward_awards(
             {
                 "account_id": challenge["challenger_id"],
                 "kind": "bits",
-                "amount": 10,
+                "amount": 50,
                 "reason": "battle.practice.bits",
             },
             {

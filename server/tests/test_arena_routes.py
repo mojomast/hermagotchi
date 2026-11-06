@@ -180,11 +180,11 @@ def test_practice_rewards_follow_existing_practice_rules_and_never_rate(
     assert response.status_code == 200, response.text
     body = response.json()
     assert {reward["kind"] for reward in body["rewards"]} == {"bits", "xp"}
-    assert {reward["amount"] for reward in body["rewards"]} == {10, 15}
+    assert {reward["amount"] for reward in body["rewards"]} == {50, 15}
 
     wallet = client.get("/v1/wallet", headers=auth_headers_a)
     assert wallet.status_code == 200, wallet.text
-    assert wallet.json()["balance"] == 10
+    assert wallet.json()["balance"] == 350  # 300 starter + 50 practice
 
     ratings = client.get("/v1/leaderboard?season_id=season-1", headers=auth_headers_a)
     assert ratings.status_code == 200, ratings.text

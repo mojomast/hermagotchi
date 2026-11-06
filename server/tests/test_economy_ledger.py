@@ -239,8 +239,11 @@ def test_grant_entitlement_credits_bits_and_xp_once(app, client, auth_headers_a,
 
         assert second == first
         assert first["delta"] == 80
-        assert _wallet(conn, account_a)["balance"] == 80
-        assert len(_ledger_rows(conn, account_a)) == 1
+        # Adopt credits the one-time 300 Bit starter grant before the entitlement.
+        assert _wallet(conn, account_a)["balance"] == 300 + 80
+        reasons = [row["reason"] for row in _ledger_rows(conn, account_a)]
+        assert reasons.count("economy.starter_grant") == 1
+        assert len(_ledger_rows(conn, account_a)) == 2
 
         entitlement_rows = conn.execute(
             "SELECT * FROM reward_entitlements WHERE match_id = ?", (match_id,)

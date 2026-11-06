@@ -299,8 +299,9 @@ def test_client_cannot_force_match_outcome_or_rewards(
     for award in ledger_awards:
         assert award["reason"].endswith(".bits")
         assert award["delta"] in {20, 70, 80, 130}
-    assert _wallet_balance(app, account_a) <= 130
-    assert _wallet_balance(app, account_b) <= 130
+    # Starter grant (300) plus at most one casual bits award (80/20 or similar).
+    assert _wallet_balance(app, account_a) <= 300 + 130
+    assert _wallet_balance(app, account_b) <= 300 + 130
 
 
 def test_tactic_payload_cannot_inject_winner_fields_into_the_engine(
