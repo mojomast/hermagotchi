@@ -46,6 +46,23 @@
   text-transform: uppercase;
 }
 
+.hg-pane__title {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.hg-pane__wordmark {
+  display: block;
+  width: auto;
+  height: 33px;
+  max-width: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  user-select: none;
+}
+
 .hg-pane__body {
   padding-top: 12px;
   min-height: 240px;

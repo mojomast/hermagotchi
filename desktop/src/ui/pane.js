@@ -8,6 +8,7 @@ import { LeaderboardTab } from "./tabs/LeaderboardTab.js";
 import { SettingsTab } from "./tabs/SettingsTab.js";
 import { ShopTab } from "./tabs/ShopTab.js";
 import { StateNotice, UI_STATES } from "./states.js";
+import { WORDMARK_HEIGHT, WORDMARK_SRC, WORDMARK_SRC_2X, WORDMARK_WIDTH } from "./wordmark.js";
 
 export const TAB_IDS = Object.freeze(["habitat", "battle", "shop", "leaderboard", "chat", "settings"]);
 
@@ -162,7 +163,18 @@ export function HermagotchiPane(props = {}) {
       jsxs("header", {
         className: "hg-pane__header",
         children: [
-          jsx("h2", { children: "Hermagotchi" }),
+          jsx("h2", {
+            className: "hg-pane__title",
+            children: jsx("img", {
+              className: "hg-pane__wordmark",
+              src: WORDMARK_SRC,
+              srcSet: `${WORDMARK_SRC} 1x, ${WORDMARK_SRC_2X} 2x`,
+              width: WORDMARK_WIDTH,
+              height: WORDMARK_HEIGHT,
+              alt: "Hermagotchi",
+              draggable: false,
+            }),
+          }),
           jsx(StateNotice, { state: effectiveState }),
         ],
       }),
