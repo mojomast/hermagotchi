@@ -551,7 +551,7 @@
       "base_sha256": "399ef23d1cf45087c816e70a5a1a3cd66cfc8ab92cd816fb23404b79779986c3"
     },
     "daemowl": {
-      "concept": "Chubby horned owl with giant amber eyes and a lightning bolt on its chest.",
+      "concept": "Chubby three-eyed horned owl with giant amber eyes (third eye on the forehead) and a lightning bolt on its chest.",
       "source": "source/px3_daemowl_v1.jpg",
       "anchors_native": {
         "head": [
@@ -584,7 +584,7 @@
             1,
             1
           ],
-          "sha256": "b1a63e978231d6c7d8da8f8ad70651c3ba56b81306bde810df67ebcd06f613d8"
+          "sha256": "47fc287bc0a19cab4e689b36b696bf50504e851b2e5909b55d1933d80b17752d"
         },
         "snowy": {
           "path": "px3/palettes/daemowl_snowy.png",
@@ -593,7 +593,7 @@
             0.3,
             1.25
           ],
-          "sha256": "a24239610a10d986adb4b9d5389434f95239aaf8006838005c886feb690b5dac"
+          "sha256": "d6cf5226c2221b8985bbfb4d1ba66befd6ab2b6077ec15b874a89f98fe973ef1"
         },
         "ash": {
           "path": "px3/palettes/daemowl_ash.png",
@@ -602,7 +602,7 @@
             0.4,
             0.9
           ],
-          "sha256": "70a7e388e917884fd3a3a04d01f3552a62c1e8a24efa755c7c171b8d354541b7"
+          "sha256": "34c36b20a575efc8171a06aa230af562694c7a3e61a289c7056d9846a7720495"
         },
         "rose": {
           "path": "px3/palettes/daemowl_rose.png",
@@ -611,7 +611,7 @@
             1,
             1.05
           ],
-          "sha256": "3b84b85763fde15095bfe1e135b8797ff6c87cfa0fe6819e65ecd677b757e5c0"
+          "sha256": "bdcdf5a0f40d3036ed70bae413725f05fdbe7ba312f0876eab2fe6b244e6c9b6"
         }
       },
       "default_palette": "bark",
@@ -633,7 +633,7 @@
         }
       },
       "ear_overlays": {},
-      "base_sha256": "b1a63e978231d6c7d8da8f8ad70651c3ba56b81306bde810df67ebcd06f613d8"
+      "base_sha256": "47fc287bc0a19cab4e689b36b696bf50504e851b2e5909b55d1933d80b17752d"
     },
     "shellsnail": {
       "concept": "Snail carrying a retro terminal as its shell, with a prompt on the screen.",

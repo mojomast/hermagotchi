@@ -18,7 +18,7 @@ SPECIES = {  # source, native height, bottom row (exclusive), colours, concept
   "kernelcrab": ("px3_kernelcrab_v1.jpg", 18, BASE_N, 8, "Wide low crab with raised claws, stalk eyes and a chip-shaped shell."),
   "cachebat": ("px3_cachebat_v1.jpg", 16, BASE_N - 4, 8, "Hovering bat with huge jagged wings, pink ears, fangs and yellow eyes."),
   "stacktoise": ("px3_stacktoise_v1.jpg", 23, BASE_N, 8, "Upright tortoise whose shell is a stack of three server racks with amber LEDs."),
-  "daemowl": ("px3_daemowl_v1.jpg", 22, BASE_N, 9, "Chubby horned owl with giant amber eyes and a lightning bolt on its chest."),
+  "daemowl": ("px3_daemowl_v1.jpg", 22, BASE_N, 9, "Chubby three-eyed horned owl with giant amber eyes (third eye on the forehead) and a lightning bolt on its chest."),
   "shellsnail": ("px3_shellsnail_v1.jpg", 16, BASE_N, 9, "Snail carrying a retro terminal as its shell, with a prompt on the screen."),
   "regexopus": ("px3_regexopus_v1.jpg", 21, BASE_N, 8, "Round-headed octopus with six curling tentacles and asterisk spots."),
   "firewyrm": ("px3_firewyrm_v1.jpg", 23, BASE_N, 9, "Upright baby dragon with horns, stubby wings, a curled tail and a flame puff."),
@@ -82,6 +82,28 @@ CORR = {
 }
 MARKINGS = ["none", "freckles", "stripes", "spot"]
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+
+def daemowl_third_eye(body: Image.Image) -> Image.Image:
+    """Hand-pixel a third amber forehead eye (Kyle). Coords on native 32 canvas."""
+    a = np.asarray(body).copy()
+    AMBER, WHITE = (239, 142, 1), (255, 255, 255)
+    MID = (165, 97, 24)
+    def put(x, y, rgb):
+        if 0 <= x < N and 0 <= y < N:
+            a[y, x, :3] = rgb
+            a[y, x, 3] = 255
+    for y, x in [(10, 14), (10, 15), (10, 16), (11, 14), (11, 15), (11, 16), (12, 14), (12, 15), (12, 16)]:
+        if a[y, x, 3] > 0 and tuple(a[y, x, :3]) != OUTLINE:
+            put(x, y, MID)
+    for x, y in [(14, 11), (16, 11), (13, 12), (17, 12), (14, 13), (16, 13), (15, 10), (15, 14)]:
+        put(x, y, OUTLINE)
+    put(14, 12, AMBER); put(15, 12, AMBER); put(16, 12, AMBER)
+    put(14, 13, AMBER); put(16, 13, AMBER)
+    put(15, 13, OUTLINE)  # pupil
+    put(14, 11, WHITE)    # highlight
+    put(15, 10, OUTLINE); put(13, 12, OUTLINE); put(17, 12, OUTLINE)
+    return Image.fromarray(a, "RGBA")
+
 def save(cv, rel):
     p = P / rel; p.parent.mkdir(parents=True, exist_ok=True); up(cv).save(p, optimize=True); return f"px3/{rel}", sha(p)
 
@@ -124,6 +146,8 @@ def main():
         for (x, y), c in FIX.get(sp, {}).items():
             if arr[y, x, 3]: arr[y, x, :3] = c
         body = place_native(Image.fromarray(arr, "RGBA"), (N - n.width) // 2, bot - n.height)
+        if sp == "daemowl":
+            body = daemowl_third_eye(body)
         base_rel, base_sha = save(body, f"species/{sp}_body.png")
         if sp not in ANCHORS:  # auto anchors from silhouette (native grid)
             ys, xs = np.nonzero(np.asarray(body)[..., 3]); t, b = int(ys.min()), int(ys.max()); cx = int(round((xs.min() + xs.max()) / 2)); hh = b - t
