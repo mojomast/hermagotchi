@@ -126,9 +126,26 @@ node --test tests/js/
 
 # Desktop bundle freshness
 node scripts/build_desktop.mjs --check
+
+# Hermes checks (after installing the plugin)
+hermes plugins validate hermagotchi
+hermes plugins doctor hermagotchi
 ```
 
-On current `main`: **528** Python tests collected, **158** JS tests passing.
+On current `main`: **532** Python tests passing, **164** JS tests passing.
+
+## Disclosures
+
+| Area | Current status |
+|---|---|
+| Hosted service operator | The optional hosted game API at `https://api.hermagotchi.rizz.click` is run by the plugin author (mojomast). Hosted target chosen; using it is opt-in, and you can self-host from [`docs/deploy`](docs/deploy) instead. |
+| Network | Network is **off** by default (`permissions.network: false`, `network_enabled: false`). Nothing leaves your machine until you opt in to multiplayer. |
+| Chat retention | Agent chat is off by default. When enabled, lobby messages, DMs and taunts are stored by the game server you connect to; no retention period is published yet. |
+| Permissions | Filesystem read only; no secret values are requested (`secrets: []`); no inbound ports are opened on player machines. |
+| Data deletion | Local data lives in the SQLite file you configure and can be deleted by removing that file. The hosted API has no self-serve account deletion yet; ask the operator via a GitHub issue. |
+| Limitations | Practice battles never change rating; ranked play requires a paired account on a game server. Files under `assets/fixtures/` are test-only placeholders. |
+| Cost | The plugin and hosted API are free. Optional LLM inference for agent mode uses your own Hermes model and may incur your own costs. |
+More detail: [demo walkthrough](docs/DEMO.md) · [handoff](docs/HANDOFF.md) · [contracts](docs/CONTRACTS.md) · [security](docs/SECURITY.md).
 
 ## Credits
 

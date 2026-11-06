@@ -196,15 +196,15 @@ def test_demo_script_is_local_only_and_documents_healthz_and_adopt() -> None:
     assert not re.search(r"curl\s+https?://(?!127\.0\.0\.1|localhost)", text)
 
 
-def test_readme_discloses_network_off_and_hosted_decision_open() -> None:
+def test_readme_discloses_network_off_and_hosted_target() -> None:
     text = README.read_text(encoding="utf-8")
     lowered = text.lower()
 
     assert re.search(
         r"network[^\n]*(default[^\n]*off|off[^\n]*default)", lowered
     ), "README must state that network is off by default"
-    assert "hosted target not chosen" in lowered
-    assert "open decision for kyle" in lowered
+    assert "hosted target chosen" in lowered
+    assert "api.hermagotchi.rizz.click" in lowered
     assert "retention" in lowered
     assert "data deletion" in lowered
     assert "permissions" in lowered
