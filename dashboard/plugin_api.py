@@ -9,6 +9,8 @@ sanitized JSON envelopes.
 
 from __future__ import annotations
 
+import json
+import mimetypes
 import os
 import re
 import sys
@@ -19,7 +21,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
@@ -85,6 +87,58 @@ PROXY_ALLOWLIST = (
     r"healthz",
 )
 _PROXY_PATTERNS = tuple(re.compile(rf"^{pattern}$") for pattern in PROXY_ALLOWLIST)
+
+_ASSETS_DIR = _ROOT / "assets"
+_PREFERRED_MANIFEST = "manifest.launch-003.json"
+_FALLBACK_MANIFEST = "manifest.json"
+_ASSET_API_SUFFIX = "assets"
+
+
+def _assets_dir() -> Path:
+    """Return the plugin's local asset root (injectable for tests)."""
+
+    return _ASSETS_DIR
+
+
+def _manifest_path() -> Path:
+    root = _assets_dir()
+    preferred = root / _PREFERRED_MANIFEST
+    if preferred.is_file():
+        return preferred
+    return root / _FALLBACK_MANIFEST
+
+
+def _resolve_asset_path(relative: str) -> Path | None:
+    """Resolve a request path inside the asset root, rejecting escapes."""
+
+    text = str(relative or "").strip()
+    if not text or "\x00" in text:
+        return None
+    normalized = text.replace("\\", "/")
+    if normalized.startswith("/"):
+        return None
+    if any(part == ".." for part in normalized.split("/")):
+        return None
+
+    root = _assets_dir().resolve()
+    try:
+        candidate = (root / normalized).resolve()
+    except (OSError, ValueError):
+        return None
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    if not candidate.is_file():
+        return None
+    return candidate
+
+
+def _asset_media_type(path: Path) -> str:
+    guessed, _encoding = mimetypes.guess_type(str(path))
+    if isinstance(guessed, str) and guessed.startswith("image/"):
+        return guessed
+    return "application/octet-stream"
 
 
 def _base_url() -> str:
@@ -437,7 +491,74 @@ def create_router(
         body: dict[str, Any] = {"ok": True, "status": "ok"}
         body.update(_scrub(payload))
         body["policy"] = policy_payload
+        body["asset_base_path"] = _ASSET_API_SUFFIX
         return body
+
+    @router.get("/assets/manifest")
+    def assets_manifest() -> Any:
+        path = _manifest_path()
+        if not path.is_file():
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "ok": False,
+                    "status": "not_found",
+                    "error": {
+                        "code": "manifest_not_found",
+                        "message": "No asset manifest is available.",
+                        "retry_after_s": 0,
+                    },
+                },
+            )
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "ok": False,
+                    "status": "unavailable",
+                    "error": {
+                        "code": "manifest_unreadable",
+                        "message": "The asset manifest could not be read.",
+                        "retry_after_s": 0,
+                    },
+                },
+            )
+        return JSONResponse(content=manifest, media_type="application/json")
+
+    @router.get("/assets/{path:path}")
+    def assets_file(path: str) -> Any:
+        candidate = _resolve_asset_path(path)
+        if candidate is None:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "ok": False,
+                    "status": "not_found",
+                    "error": {
+                        "code": "asset_not_found",
+                        "message": "No asset exists for that path.",
+                        "retry_after_s": 0,
+                    },
+                },
+            )
+        try:
+            payload = candidate.read_bytes()
+        except OSError:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "ok": False,
+                    "status": "not_found",
+                    "error": {
+                        "code": "asset_not_found",
+                        "message": "No asset exists for that path.",
+                        "retry_after_s": 0,
+                    },
+                },
+            )
+        return Response(content=payload, media_type=_asset_media_type(candidate))
 
     @router.post("/pair/start")
     async def pair_start(

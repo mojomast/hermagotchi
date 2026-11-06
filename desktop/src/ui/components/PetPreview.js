@@ -1,5 +1,13 @@
+import { useEffect, useRef, useState } from "react";
 import { jsx } from "react/jsx-runtime";
 import { buildPreviewLayers } from "../logic/shop.js";
+import { joinAssetUrl, speciesBodyPath } from "../logic/assets.js";
+import {
+  contract,
+  createPlayer,
+  findClip,
+  resolveAnimState,
+} from "../../anim/petAnimPlayer.js";
 
 function layerStyle(layer) {
   const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
@@ -24,65 +32,270 @@ function layerStyle(layer) {
   };
 }
 
+function stripStyle(url, clip, frameIndex) {
+  const count = Math.max(
+    1,
+    Number(clip && clip.frame_count) ||
+      (clip && Array.isArray(clip.frames) ? clip.frames.length : 1)
+  );
+  const position =
+    count > 1 ? (Math.max(0, frameIndex) / (count - 1)) * 100 : 0;
+  return {
+    position: "absolute",
+    inset: "0",
+    width: "100%",
+    height: "100%",
+    backgroundImage: "url(" + JSON.stringify(url) + ")",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: count * 100 + "% 100%",
+    backgroundPosition: String(position) + "% 0%",
+    imageRendering: "pixelated",
+    zIndex: "0",
+    pointerEvents: "none",
+  };
+}
+
+function followAnchors() {
+  const list =
+    contract &&
+    contract.cosmetics &&
+    Array.isArray(contract.cosmetics.follow_anchor_delta)
+      ? contract.cosmetics.follow_anchor_delta
+      : [];
+  return list.map((value) => String(value));
+}
+
+function withAnchorDelta(layer, delta, anchors, frameScale) {
+  const anchor = String(layer.anchor || layer.slot || "");
+  if (!anchors.includes(anchor)) return layer;
+  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
+  return Object.assign({}, layer, {
+    offsetPx: [
+      (Number(offset[0]) || 0) + (Number(delta[0]) || 0) * frameScale,
+      (Number(offset[1]) || 0) + (Number(delta[1]) || 0) * frameScale,
+    ],
+  });
+}
+
 /**
- * Layered, read-only pet preview. Layer order comes from the asset manifest's
- * z values (with a documented slot fallback), never from a hardcoded item list.
+ * Layered, read-only pet preview. The species base always resolves from the
+ * manifest (or the px3 convention) and animation clips come from
+ * manifest.animations.clips via the shared petAnimPlayer clock.
  */
 export function PetPreview(props = {}) {
+  const pet = props.pet || null;
+  const manifest = props.manifest || props.assetManifest || null;
+  const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
+  const species = pet && pet.species ? String(pet.species) : "";
+  const palette =
+    props.palette ||
+    (pet && pet.appearance && pet.appearance.palette) ||
+    (pet && pet.palette) ||
+    "teal";
   const layers = buildPreviewLayers({
-    pet: props.pet,
+    pet: pet,
     loadout: props.loadout,
     catalog: props.catalog,
-    manifest: props.manifest,
-    assetBaseUrl: props.assetBaseUrl || props.asset_base_url,
+    manifest: manifest,
+    assetBaseUrl: assetBaseUrl,
   });
-  const label =
-    props.label ||
-    (props.pet && props.pet.name ? props.pet.name + " preview" : "Pet preview");
-  const spriteSize = props.size || "256px";
 
-  if (layers.length === 0) {
+  let baseLayer = null;
+  const itemLayers = [];
+  for (const layer of layers) {
+    if (layer.kind === "base" && !baseLayer) {
+      baseLayer = layer;
+    } else {
+      itemLayers.push(layer);
+    }
+  }
+  if (!baseLayer && species) {
+    const path = speciesBodyPath(manifest, pet);
+    baseLayer = {
+      kind: "base",
+      id: "species." + species,
+      slot: "body",
+      label: (pet && pet.name) || "Pet",
+      url: joinAssetUrl(assetBaseUrl, path),
+      z: 0,
+      scale: 1,
+      offsetPx: [0, 0],
+      anchor: "ground",
+    };
+  }
+
+  const clips = Array.isArray(props.clips)
+    ? props.clips
+    : manifest &&
+        manifest.animations &&
+        Array.isArray(manifest.animations.clips)
+      ? manifest.animations.clips
+      : null;
+  const requestedState =
+    props.animState ||
+    (props.petState ? resolveAnimState(props.petState) : "");
+  const clip =
+    species && clips && requestedState
+      ? findClip(clips, { species: species, palette: palette, state: requestedState })
+      : null;
+  const animated = Boolean(clip && baseLayer && baseLayer.url);
+
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [anchorDelta, setAnchorDelta] = useState([0, 0]);
+  const [auraFrame, setAuraFrame] = useState(0);
+  const playerRef = useRef(null);
+  const clipId = clip ? String(clip.id || clip.path || "") : "";
+
+  useEffect(
+    function () {
+      if (!clip) {
+        playerRef.current = null;
+        setFrameIndex(0);
+        setAnchorDelta([0, 0]);
+        setAuraFrame(0);
+        return undefined;
+      }
+      const player = createPlayer(clip);
+      playerRef.current = player;
+      setFrameIndex(player.frameIndex);
+      setAnchorDelta(player.anchorDelta);
+      setAuraFrame(player.auraFrame);
+      if (typeof requestAnimationFrame !== "function") {
+        return function () {
+          playerRef.current = null;
+        };
+      }
+      let raf = 0;
+      let last = null;
+      let stopped = false;
+      function step(now) {
+        if (stopped) return;
+        const time = typeof now === "number" ? now : Date.now();
+        if (last === null) last = time;
+        const deltaMs = Math.max(0, time - last);
+        last = time;
+        player.tick(deltaMs);
+        setFrameIndex(player.frameIndex);
+        setAnchorDelta(player.anchorDelta);
+        setAuraFrame(player.auraFrame);
+        if (!(player.done && !clip.loop)) {
+          raf = requestAnimationFrame(step);
+        }
+      }
+      raf = requestAnimationFrame(step);
+      return function () {
+        stopped = true;
+        if (typeof cancelAnimationFrame === "function") {
+          cancelAnimationFrame(raf);
+        }
+        playerRef.current = null;
+      };
+    },
+    [clipId]
+  );
+
+  if (!baseLayer && itemLayers.length === 0) {
     return jsx("div", {
       className: "hg-sprite hg-sprite--empty",
       role: "img",
-      "aria-label": label,
+      "aria-label": props.label || "Pet preview",
       "data-preview-empty": "true",
-      style: { width: spriteSize, height: spriteSize },
+      style: { width: props.size || "256px", height: props.size || "256px" },
       children: "?",
     });
+  }
+
+  const label =
+    props.label ||
+    (pet && pet.name ? pet.name + " preview" : "Pet preview");
+  const spriteSize = props.size || "256px";
+  const anchors = followAnchors();
+  const numericSize = parseFloat(spriteSize);
+  const nativeSize = Number(contract && contract.native_size) || 32;
+  const frameScale =
+    Number.isFinite(numericSize) && numericSize > 0
+      ? numericSize / nativeSize
+      : 1;
+
+  const children = [];
+  if (animated) {
+    children.push(
+      jsx(
+        "div",
+        {
+          className: "hg-sprite__base hg-sprite__base--anim",
+          "data-layer-kind": "base",
+          "data-layer-id": baseLayer.id,
+          "data-layer-slot": "body",
+          "data-anim-state": requestedState,
+          "data-frame-index": String(frameIndex),
+          "aria-hidden": "true",
+          style: stripStyle(baseLayer.url, clip, frameIndex),
+        },
+        "anim:" + baseLayer.id
+      )
+    );
+  } else if (baseLayer) {
+    children.push(
+      jsx(
+        "img",
+        {
+          className: "hg-sprite__layer hg-sprite__base",
+          src: baseLayer.url,
+          alt: label,
+          "data-layer-kind": "base",
+          "data-layer-id": baseLayer.id,
+          "data-layer-slot": "body",
+          loading: "lazy",
+          decoding: "async",
+          draggable: "false",
+          style: layerStyle(baseLayer),
+        },
+        "base:" + baseLayer.id
+      )
+    );
+  }
+
+  for (const layer of itemLayers) {
+    const adjusted = animated
+      ? withAnchorDelta(layer, anchorDelta, anchors, frameScale)
+      : layer;
+    children.push(
+      jsx(
+        "img",
+        {
+          className: "hg-sprite__layer",
+          src: layer.url,
+          alt: "",
+          "aria-hidden": "true",
+          "data-layer-kind": layer.kind,
+          "data-layer-id": layer.id,
+          "data-layer-slot": layer.slot,
+          "data-aura-frame":
+            animated && layer.slot === "aura" ? String(auraFrame) : undefined,
+          loading: "lazy",
+          decoding: "async",
+          draggable: "false",
+          style: layerStyle(adjusted),
+        },
+        layer.kind + ":" + layer.id
+      )
+    );
   }
 
   return jsx("div", {
     className: "hg-sprite",
     role: "img",
     "aria-label": label,
-    "data-pet-id": (props.pet && props.pet.id) || undefined,
+    "data-pet-id": (pet && pet.id) || undefined,
+    "data-anim-state": animated ? requestedState : undefined,
+    "data-sprite-mode": animated ? "anim" : "static",
     style: {
       position: "relative",
       width: spriteSize,
       height: spriteSize,
       isolation: "isolate",
     },
-    children: layers.map((layer) =>
-      jsx(
-        "img",
-        {
-          className:
-            "hg-sprite__layer" +
-            (layer.kind === "base" ? " hg-sprite__base" : ""),
-          src: layer.url,
-          alt: layer.kind === "base" ? label : "",
-          "aria-hidden": layer.kind === "base" ? undefined : "true",
-          "data-layer-kind": layer.kind,
-          "data-layer-id": layer.id,
-          "data-layer-slot": layer.slot,
-          loading: "lazy",
-          decoding: "async",
-          draggable: "false",
-          style: layerStyle(layer),
-        },
-        layer.kind + ":" + layer.id
-      )
-    ),
+    children: children,
   });
 }

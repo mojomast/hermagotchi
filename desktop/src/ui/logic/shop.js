@@ -3,6 +3,10 @@
  * ids are never hardcoded here so new cosmetics show up automatically.
  */
 
+import { joinAssetUrl, speciesBodyPath } from "./assets.js";
+
+export { joinAssetUrl };
+
 export const SLOT_ORDER = Object.freeze([
   "head",
   "face",
@@ -133,16 +137,6 @@ export function manifestFromCatalog(catalog) {
   return null;
 }
 
-export function joinAssetUrl(baseUrl, path) {
-  if (!path) return "";
-  const value = String(path);
-  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
-  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
-  if (!base) return value;
-  if (value.startsWith("/")) return base + value;
-  return base + "/" + value.replace(/^\.?\//, "");
-}
-
 function manifestAssetMap(manifest) {
   const map = new Map();
   if (!manifest || !Array.isArray(manifest.assets)) return map;
@@ -151,12 +145,6 @@ function manifestAssetMap(manifest) {
     map.set(String(asset.id), asset);
   }
   return map;
-}
-
-function speciesBasePath(manifest, species) {
-  if (!manifest || !species || !manifest.species) return "";
-  const entry = manifest.species[species];
-  return entry && entry.base ? entry.base : "";
 }
 
 function normaliseLoadout(loadout) {
@@ -197,13 +185,18 @@ export function buildPreviewLayers(options = {}) {
   const assetMap = manifestAssetMap(manifest);
   const layers = [];
 
-  const basePath =
-    speciesBasePath(manifest, pet && pet.species) ||
+  const species = pet && pet.species ? String(pet.species) : "";
+  const speciesPath = speciesBodyPath(manifest, pet);
+  const conventionPath = species ? "px3/species/" + species + "_body.png" : "";
+  const explicitBase =
     (pet && pet.asset_url) ||
     (pet && pet.assetUrl) ||
     (pet && pet.appearance && (pet.appearance.asset_url || pet.appearance.assetUrl)) ||
     "";
-  if (basePath) {
+  const basePath = speciesPath || explicitBase;
+  const manifestDerived = Boolean(speciesPath && speciesPath !== conventionPath);
+  const includeBase = Boolean(basePath) && Boolean(baseUrl || manifestDerived || explicitBase);
+  if (includeBase) {
     layers.push({
       kind: "base",
       id: "species." + String((pet && pet.species) || "pet"),

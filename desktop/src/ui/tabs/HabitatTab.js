@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { CareMeter } from "../components/CareMeter.js";
 import { NpcHostBanner } from "../components/NpcHostBanner.js";
@@ -25,6 +25,27 @@ export const HABITAT_PLACEHOLDER = Object.freeze({
   xp: "0 / 100",
   mode: "human",
 });
+
+const CARE_ANIM = Object.freeze({
+  feed: "eat",
+  play: "happy",
+  rest: "sleep",
+});
+
+function loadoutFromPet(pet) {
+  if (!pet || typeof pet !== "object") return {};
+  const candidates = [
+    pet.loadout,
+    pet.equipment,
+    pet.appearance && pet.appearance.loadout,
+  ];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+  return {};
+}
 
 function stateForEnvelope(result) {
   if (!result || result.ok) return null;
@@ -57,7 +78,10 @@ function StubHabitat(props) {
     "data-tab": "habitat",
     children: [
       jsx(StateNotice, { state: props.uiState }),
-      jsx(NpcHostBanner, { surface: "habitat" }),
+      jsx(NpcHostBanner, {
+        surface: "habitat",
+        assetBaseUrl: props.assetBaseUrl,
+      }),
       jsxs("div", {
         className: "hg-card hg-pet-card",
         children: [
@@ -141,6 +165,43 @@ export function HabitatTab(props = {}) {
   const [error, setError] = useState("");
   const [bridgeState, setBridgeState] = useState(null);
   const [loading, setLoading] = useState(hasApi);
+  const [manifest, setManifest] = useState(
+    props.manifest || props.assetManifest || null
+  );
+  const [catalog, setCatalog] = useState(props.catalog || null);
+  const [assetBaseUrl, setAssetBaseUrl] = useState(props.assetBaseUrl || "");
+  const [loadout, setLoadout] = useState(props.loadout || {});
+  const [animState, setAnimState] = useState(props.animState || "idle");
+  const animTimer = useRef(null);
+
+  useEffect(function () {
+    return function () {
+      if (animTimer.current) clearTimeout(animTimer.current);
+    };
+  }, []);
+
+  useEffect(
+    function () {
+      const fromPet = loadoutFromPet(pet);
+      if (Object.keys(fromPet).length) {
+        setLoadout(function (previous) {
+          return Object.assign({}, fromPet, previous);
+        });
+      }
+    },
+    [pet]
+  );
+
+  function flashAnim(action) {
+    const next = CARE_ANIM[action];
+    if (!next) return;
+    setAnimState(next);
+    if (animTimer.current) clearTimeout(animTimer.current);
+    animTimer.current = setTimeout(function () {
+      setAnimState("idle");
+      animTimer.current = null;
+    }, 2000);
+  }
 
   useEffect(() => {
     if (!hasApi) return undefined;
@@ -149,6 +210,9 @@ export function HabitatTab(props = {}) {
     async function load() {
       setLoading(true);
       setError("");
+      if (!props.assetBaseUrl && api.assets && typeof api.assets.url === "function") {
+        setAssetBaseUrl(api.assets.url(""));
+      }
       let meData = null;
       let loadResult = null;
 
@@ -171,15 +235,34 @@ export function HabitatTab(props = {}) {
         petId = meData.pet.id;
       }
 
-      const requests = [api.get("/goals").catch(() => null)];
-      if (petId && !(meData && meData.pet && meData.pet.id === petId)) {
-        requests.push(api.get("/pets/" + encodeURIComponent(petId)).catch(() => null));
-      } else {
-        requests.push(Promise.resolve(null));
-      }
+      const manifestRequest =
+        api.assets && typeof api.assets.manifest === "function"
+          ? api.assets.manifest().catch(() => null)
+          : Promise.resolve(null);
+      const catalogRequest = props.catalog
+        ? Promise.resolve(null)
+        : api.get("/catalog").catch(() => null);
+      const requests = [
+        api.get("/goals").catch(() => null),
+        petId && !(meData && meData.pet && meData.pet.id === petId)
+          ? api.get("/pets/" + encodeURIComponent(petId)).catch(() => null)
+          : Promise.resolve(null),
+        manifestRequest,
+        catalogRequest,
+      ];
 
-      const [goalEnvelope, petEnvelope] = await Promise.all(requests);
+      const [goalEnvelope, petEnvelope, manifestEnvelope, catalogEnvelope] =
+        await Promise.all(requests);
       if (!alive) return;
+
+      const manifestResult = readEnvelope(manifestEnvelope);
+      if (manifestResult.ok && manifestResult.data) {
+        setManifest(manifestResult.data);
+      }
+      const catalogResult = readEnvelope(catalogEnvelope);
+      if (catalogResult.ok && catalogResult.data) {
+        setCatalog(catalogResult.data);
+      }
 
       const goalResult = readEnvelope(goalEnvelope);
       if (goalResult.ok) {
@@ -204,17 +287,18 @@ export function HabitatTab(props = {}) {
     return function cleanup() {
       alive = false;
     };
-  }, [api, hasApi, requestedPetId]);
+  }, [api, hasApi, requestedPetId, props.assetBaseUrl, props.catalog]);
 
   const uiState =
     props.state || props.uiState || bridgeState || UI_STATES.READY;
   if (!hasApi) {
-    return jsx(StubHabitat, { uiState });
+    return jsx(StubHabitat, {
+      uiState,
+      assetBaseUrl: props.assetBaseUrl,
+    });
   }
 
   const view = habitatView({ pet, me, goal });
-  const loadout = props.loadout || {};
-  const manifest = props.manifest || props.assetManifest || null;
 
   async function adopt(event) {
     if (event && typeof event.preventDefault === "function") event.preventDefault();
@@ -252,6 +336,7 @@ export function HabitatTab(props = {}) {
         return;
       }
       setPet((previous) => petFromCareResponse(result.data, previous));
+      flashAnim(action);
     } catch (_error) {
       setError("Care could not be completed.");
     } finally {
@@ -264,7 +349,10 @@ export function HabitatTab(props = {}) {
     "data-tab": "habitat",
     children: [
       jsx(StateNotice, { state: uiState }),
-      jsx(NpcHostBanner, { surface: "habitat" }),
+      jsx(NpcHostBanner, {
+        surface: "habitat",
+        assetBaseUrl: assetBaseUrl,
+      }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
@@ -276,9 +364,10 @@ export function HabitatTab(props = {}) {
             children: jsx(PetPreview, {
               pet,
               loadout,
-              catalog: props.catalog,
+              catalog,
               manifest,
-              assetBaseUrl: props.assetBaseUrl,
+              assetBaseUrl,
+              animState,
               label: view.name + " preview",
             }),
           }),

@@ -193,7 +193,41 @@ export function createApiClient(options) {
     return basePath + normalizePath(path);
   }
 
+  function safeAssetPath(relativePath) {
+    if (typeof relativePath !== "string") return "";
+    let value = relativePath.trim();
+    if (!value) return "";
+    value = value.replace(/^\/+/, "");
+    if (value.startsWith("assets/")) {
+      value = value.slice("assets/".length);
+    }
+    const parts = [];
+    for (const part of value.split("/")) {
+      if (!part || part === ".") continue;
+      if (part === "..") {
+        parts.pop();
+        continue;
+      }
+      parts.push(part);
+    }
+    return parts.join("/");
+  }
+
+  function assetsUrl(relativePath) {
+    const relative = safeAssetPath(relativePath);
+    const root = basePath + "/assets";
+    return relative ? root + "/" + relative : root;
+  }
+
   return {
+    assets: {
+      manifest: function manifest() {
+        return request("GET", assetsUrl("manifest"), {});
+      },
+      url: function url(relativePath) {
+        return assetsUrl(relativePath);
+      },
+    },
     basePath: basePath,
     get: function get(path) {
       return request("GET", proxyUrl(path), {});

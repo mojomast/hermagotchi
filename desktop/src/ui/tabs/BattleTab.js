@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
 import { NpcHostBanner } from "../components/NpcHostBanner.js";
+import { PetPreview } from "../components/PetPreview.js";
 import { TurnLog } from "../components/TurnLog.js";
 import {
   battleParticipantsFromMatch,
@@ -22,6 +23,19 @@ function challengeLine(challenge) {
   const mode = challenge.mode || "casual";
   const label = mode.charAt(0).toUpperCase() + mode.slice(1);
   return label + " challenge";
+}
+
+function battleAnimState(replay) {
+  const events = replay && Array.isArray(replay.events) ? replay.events : [];
+  let state = "idle";
+  for (const event of events) {
+    const status = event && event.status_delta ? event.status_delta : {};
+    const damage = Number(status.damage || (event && event.damage) || 0);
+    if (damage <= 0) continue;
+    if (event.actor === "a") state = "attack";
+    else if (event.actor === "b") state = "hurt";
+  }
+  return state;
 }
 
 function ChallengeRow(props) {
@@ -81,7 +95,10 @@ function StubBattle(props) {
     "data-tab": "battle",
     children: [
       jsx(StateNotice, { state: props.state }),
-      jsx(NpcHostBanner, { surface: "battle" }),
+      jsx(NpcHostBanner, {
+        surface: "battle",
+        assetBaseUrl: props.assetBaseUrl,
+      }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -141,6 +158,35 @@ export function BattleTab(props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
+  const [manifest, setManifest] = useState(
+    props.manifest || props.assetManifest || null
+  );
+  const [assetBaseUrl, setAssetBaseUrl] = useState(props.assetBaseUrl || "");
+
+  useEffect(
+    function () {
+      if (!api || !api.assets) return undefined;
+      if (!props.assetBaseUrl && typeof api.assets.url === "function") {
+        setAssetBaseUrl(api.assets.url(""));
+      }
+      if (props.manifest || typeof api.assets.manifest !== "function") {
+        return undefined;
+      }
+      let alive = true;
+      api.assets.manifest().then(
+        function (envelope) {
+          if (alive && envelope && envelope.ok && envelope.data) {
+            setManifest(envelope.data);
+          }
+        },
+        function () {}
+      );
+      return function () {
+        alive = false;
+      };
+    },
+    [api, props.assetBaseUrl, props.manifest]
+  );
 
   async function refreshInbox() {
     if (!api || typeof api.get !== "function") return;
@@ -222,7 +268,10 @@ export function BattleTab(props = {}) {
   }
 
   if (!api) {
-    return jsx(StubBattle, { state: uiState });
+    return jsx(StubBattle, {
+      state: uiState,
+      assetBaseUrl: props.assetBaseUrl,
+    });
   }
 
   const data = inbox || {};
@@ -235,13 +284,19 @@ export function BattleTab(props = {}) {
     : {};
   const summary =
     replay && practiceMatch ? replaySummary(replay, participants) : null;
+  const previewPet = props.pet || (practiceMatch && practiceMatch.pet) || null;
+  const previewLoadout = props.loadout || {};
+  const previewAnimState = battleAnimState(replay);
 
   return jsxs("section", {
     className: "hg-battle",
     "data-tab": "battle",
     children: [
       jsx(StateNotice, { state: uiState }),
-      jsx(NpcHostBanner, { surface: "battle" }),
+      jsx(NpcHostBanner, {
+        surface: "battle",
+        assetBaseUrl: assetBaseUrl,
+      }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
@@ -347,6 +402,22 @@ export function BattleTab(props = {}) {
                       " · hash ",
                       String(summary.replayHash || "").slice(0, 12),
                     ],
+                  })
+                : null,
+              previewPet
+                ? jsx("div", {
+                    className: "hg-pet-card__art",
+                    "data-battle-anim-state": previewAnimState,
+                    children: jsx(PetPreview, {
+                      pet: previewPet,
+                      loadout: previewLoadout,
+                      catalog: props.catalog,
+                      manifest,
+                      assetBaseUrl,
+                      animState: previewAnimState,
+                      label:
+                        (previewPet.name || "Pet") + " battle preview",
+                    }),
                   })
                 : null,
               jsx("button", {
