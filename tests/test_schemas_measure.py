@@ -7,6 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+pytest = __import__("pytest")
+pytest.importorskip("tiktoken")
+
 ROOT = Path(__file__).resolve().parents[1]
 EVALS = ROOT / "evals"
 
