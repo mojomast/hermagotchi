@@ -5,7 +5,10 @@ import { npcHostLine } from "../npcLines.js";
 import { StateNotice, UI_STATES } from "../states.js";
 import {
   CHAT_BLOCKS_PATH,
+  CHAT_DM_TARGET_MAX_CHARS,
+  CHAT_INBOX_PATH,
   CHAT_MESSAGES_PATH,
+  CHAT_MESSAGE_MAX_CHARS,
   CHAT_REPORT_PATH,
   CHAT_REPORT_REASON,
   chatActionNotice,
@@ -13,10 +16,16 @@ import {
   chatModerationHost,
   chatNoticeFromEnvelope,
   isChatEnabled,
+  isTauntMessage,
+  markInboxRead,
+  markInboxReadRequest,
   mergeMessages,
   messageFromEnvelope,
+  normalizeInbox,
   normalizeMessages,
+  tauntSummary,
   validateChatDraft,
+  validateDmTarget,
 } from "../logic/chat.js";
 
 function ChatOffStub(props) {
@@ -65,10 +74,180 @@ function ChatOffStub(props) {
   });
 }
 
+function InboxCard(props) {
+  const inbox = props.inbox || { items: [], unreadCount: 0 };
+  const count = Number(inbox.unreadCount) || 0;
+  const items = Array.isArray(inbox.items) ? inbox.items : [];
+
+  return jsxs("div", {
+    className: "hg-card hg-inbox",
+    "data-section": "chat-inbox",
+    children: [
+      jsxs("header", {
+        className: "hg-card__header",
+        children: [
+          jsxs("h3", {
+            children: [
+              "Inbox ",
+              jsx("span", {
+                className:
+                  count > 0
+                    ? "hg-badge hg-inbox__badge hg-inbox__badge--unread"
+                    : "hg-badge hg-inbox__badge",
+                "data-inbox-unread": String(count),
+                children: count > 0 ? String(count) + " unread" : "Clear",
+              }),
+            ],
+          }),
+          jsxs("div", {
+            className: "hg-actions hg-actions--tight",
+            children: [
+              jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                onClick: props.onRefresh,
+                disabled: props.busy,
+                children: "Refresh inbox",
+              }),
+              jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                onClick: props.onOpen,
+                disabled: props.busy,
+                "data-inbox-open": props.open ? "true" : "false",
+                children: props.open ? "Hide inbox" : "Open inbox",
+              }),
+            ],
+          }),
+        ],
+      }),
+      jsx("p", {
+        className: "hg-muted",
+        children:
+          "Unread direct messages, @mentions and taunt notices. Opening the inbox marks them read.",
+      }),
+      props.open
+        ? items.length
+          ? jsx("ul", {
+              className: "hg-inbox__list hg-chat__thread",
+              children: items.map(function (item) {
+                return jsxs(
+                  "li",
+                  {
+                    className:
+                      "hg-inbox__item hg-inbox__item--" + item.kind +
+                      (item.unread ? " hg-inbox__item--unread" : ""),
+                    "data-inbox-id": item.id,
+                    "data-inbox-kind": item.kind,
+                    children: [
+                      jsxs("div", {
+                        className: "hg-row hg-row--between",
+                        children: [
+                          jsx("strong", {
+                            children:
+                              (item.kind === "mention" ? "@mention" : item.kind.toUpperCase()) +
+                              (item.from ? " · " + item.from : ""),
+                          }),
+                          jsx("span", {
+                            className: "hg-muted",
+                            children: item.created_at || "",
+                          }),
+                        ],
+                      }),
+                      jsx("p", {
+                        className: "hg-inbox__preview",
+                        children: item.body || "",
+                      }),
+                    ],
+                  },
+                  item.id
+                );
+              }),
+            })
+          : jsx("p", {
+              className: "hg-muted",
+              "data-placeholder": "chat-inbox-empty",
+              children: "No unread messages.",
+            })
+        : null,
+    ],
+  });
+}
+
+function TauntActions(props) {
+  return jsxs("div", {
+    className: "hg-actions hg-actions--tight",
+    children: [
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: props.busy,
+        onClick: function () {
+          props.onReport(props.message);
+        },
+        children: "Report",
+      }),
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: props.busy,
+        onClick: function () {
+          props.onBlock(props.message);
+        },
+        children: "Block",
+      }),
+    ],
+  });
+}
+
 function MessageRow(props) {
   const message = props.message;
   const busy = props.busy;
   const actor = message.actor_mode === "agent" ? "Agent" : "Player";
+
+  if (isTauntMessage(message)) {
+    const summary = tauntSummary(message.match_context);
+    return jsxs("li", {
+      className: "hg-log__item hg-taunt",
+      "data-message-id": message.id,
+      "data-actor-mode": message.actor_mode,
+      "data-message-kind": "taunt",
+      children: [
+        jsxs("div", {
+          className: "hg-taunt__bubble",
+          children: [
+            jsxs("div", {
+              className: "hg-row hg-row--between",
+              children: [
+                jsx("strong", { children: actor + " taunt" }),
+                jsx("span", {
+                  className: "hg-muted",
+                  children: message.created_at || "Unknown time",
+                }),
+              ],
+            }),
+            jsx("p", {
+              className: "hg-taunt__body",
+              children: message.body,
+            }),
+            summary
+              ? jsx("p", {
+                  className: "hg-taunt__match",
+                  "data-taunt-match": "true",
+                  children: summary,
+                })
+              : null,
+            jsx(TauntActions, {
+              message,
+              busy,
+              onReport: props.onReport,
+              onBlock: props.onBlock,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
 
   return jsxs("li", {
     className: "hg-log__item",
@@ -122,10 +301,20 @@ function ChatLive(props) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
+  const [dmTarget, setDmTarget] = useState("");
   const [composerError, setComposerError] = useState("");
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [inbox, setInbox] = useState({
+    items: [],
+    unreadCount: 0,
+    total: 0,
+    dms: [],
+    mentions: [],
+  });
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxBusy, setInboxBusy] = useState(false);
 
   useEffect(
     function () {
@@ -157,6 +346,73 @@ function ChatLive(props) {
     [api, refreshTick]
   );
 
+  useEffect(
+    function pollInbox() {
+      let cancelled = false;
+      if (!api || typeof api.get !== "function") {
+        return undefined;
+      }
+      async function load() {
+        try {
+          const envelope = await api.get(CHAT_INBOX_PATH);
+          if (!cancelled && envelope && envelope.ok === true) {
+            setInbox(normalizeInbox(envelope));
+          }
+        } catch (_error) {
+          /* Inbox polling stays quiet; the lobby notice owns errors. */
+        }
+      }
+      load();
+      const timer = setInterval(load, 30000);
+      return function () {
+        cancelled = true;
+        clearInterval(timer);
+      };
+    },
+    [api]
+  );
+
+  async function refreshInbox() {
+    if (!api || typeof api.get !== "function") return;
+    setInboxBusy(true);
+    try {
+      const envelope = await api.get(CHAT_INBOX_PATH);
+      if (envelope && envelope.ok === true) {
+        setInbox(normalizeInbox(envelope));
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setInboxBusy(false);
+    }
+  }
+
+  async function openInbox() {
+    if (inboxOpen) {
+      setInboxOpen(false);
+      return;
+    }
+    setInboxOpen(true);
+    const unreadIds = (inbox.items || [])
+      .filter(function (item) {
+        return item.unread;
+      })
+      .map(function (item) {
+        return item.id;
+      });
+    if (!unreadIds.length) return;
+    setInbox(function (current) {
+      return markInboxRead(current);
+    });
+    try {
+      await markInboxReadRequest(api, unreadIds);
+    } catch (_error) {
+      /* Local read state is still useful if the bridge cannot persist it. */
+    }
+  }
+
   async function submitMessage(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -166,13 +422,18 @@ function ChatLive(props) {
       setComposerError(checked.error);
       return;
     }
+    const checkedTarget = validateDmTarget(dmTarget);
+    if (!checkedTarget.ok) {
+      setComposerError(checkedTarget.error);
+      return;
+    }
 
     setComposerError("");
     setBusy(true);
     try {
       const envelope = await api.post(
         CHAT_MESSAGES_PATH,
-        chatMessagePayload(checked.value)
+        chatMessagePayload(checked.value, checkedTarget.value)
       );
       if (envelope && envelope.ok === true) {
         const sent = messageFromEnvelope(envelope);
@@ -287,13 +548,21 @@ function ChatLive(props) {
             host: moderationHost,
           })
         : jsx(NpcHostBanner, { surface: "chat" }),
-      notice && notice.message
+      notice && (notice.message || notice.hostLine)
         ? jsx("p", {
             className: notice.kind === "moderation" ? "hg-muted" : "hg-error",
             "data-chat-notice": notice.code,
-            children: notice.message,
+            role: "status",
+            children: notice.message || notice.hostLine,
           })
         : null,
+      jsx(InboxCard, {
+        inbox,
+        open: inboxOpen,
+        busy: inboxBusy,
+        onOpen: openInbox,
+        onRefresh: refreshInbox,
+      }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -331,12 +600,30 @@ function ChatLive(props) {
                   jsx("textarea", {
                     className: "hg-input",
                     rows: "3",
-                    maxLength: String(400),
+                    maxLength: String(CHAT_MESSAGE_MAX_CHARS),
                     value: draft,
                     disabled: busy,
                     placeholder: "Write a plain-text lobby message",
                     onChange: function (event) {
                       setDraft(event.target.value);
+                    },
+                  }),
+                ],
+              }),
+              jsxs("label", {
+                className: "hg-field hg-chat__dm-target",
+                children: [
+                  jsx("span", { children: "Direct message to (optional)" }),
+                  jsx("input", {
+                    className: "hg-input",
+                    type: "text",
+                    maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
+                    value: dmTarget,
+                    disabled: busy,
+                    placeholder: "Player or pet name — blank keeps the lobby",
+                    "data-chat-dm-target": "true",
+                    onChange: function (event) {
+                      setDmTarget(event.target.value);
                     },
                   }),
                 ],

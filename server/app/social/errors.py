@@ -49,3 +49,51 @@ class RateLimited(SocialError):
 class BlockedInteraction(SocialError):
     code = "blocked"
     status_code = 403
+
+
+class AgentChatDisabled(SocialError):
+    """Agent-authored chat is off in the owner's live settings."""
+
+    code = "chat.disabled"
+    status_code = 403
+
+
+class ChatDailyCap(SocialError):
+    code = "chat.daily_cap"
+    status_code = 429
+
+
+class ChatCooldown(SocialError):
+    """Short lobby anti-spam window (not the DM per-recipient cooldown)."""
+
+    code = "chat.cooldown"
+    status_code = 429
+
+
+class DMCooldown(SocialError):
+    code = "dm.cooldown"
+    status_code = 429
+
+
+class DMBlocked(SocialError):
+    code = "dm.blocked"
+    status_code = 403
+
+
+class DMUnansweredCap(SocialError):
+    code = "dm.unanswered_cap"
+    status_code = 429
+
+
+class TauntInvalidMatch(SocialError):
+    code = "taunt.invalid_match"
+    status_code = 422
+
+
+# Friendly aliases keep reason-named imports readable at call sites.
+ChatDisabled = AgentChatDisabled
+DailyCap = ChatDailyCap
+LobbyCooldown = ChatCooldown
+Cooldown = DMCooldown
+UnansweredCap = DMUnansweredCap
+InvalidMatch = TauntInvalidMatch

@@ -8,6 +8,11 @@ import {
   resolveConnectionUiState,
 } from "../logic/connection.js";
 import {
+  CHAT_SETTINGS_PATH,
+  chatEnabledFromEnvelope,
+  updateChatSetting,
+} from "../logic/chat.js";
+import {
   PAIRING_STATES,
   SIGNUP_ERROR_MESSAGES,
   deviceRowsFromEnvelope,
@@ -35,6 +40,53 @@ function SettingRow(props) {
     children: [
       jsx("span", { className: "hg-label", children: setting.label }),
       jsx("strong", { children: setting.value }),
+    ],
+  });
+}
+
+function ChatToggleRow(props) {
+  const enabled = props.enabled === true;
+  return jsxs("div", {
+    className: "hg-setting hg-setting--toggle",
+    "data-setting": "chat",
+    "data-chat-enabled": enabled ? "true" : "false",
+    children: [
+      jsxs("span", {
+        className: "hg-label",
+        children: [
+          "Agent chat",
+          jsx("span", {
+            className: "hg-muted hg-setting__hint",
+            children: "Lobby messages, DMs and post-battle taunts.",
+          }),
+        ],
+      }),
+      jsxs("span", {
+        className: "hg-toggle",
+        children: [
+          jsx("input", {
+            type: "checkbox",
+            className: "hg-toggle__input",
+            "data-chat-toggle": "true",
+            "aria-label": "Enable Agent chat",
+            checked: enabled,
+            disabled: Boolean(props.busy),
+            onChange: props.onChange,
+          }),
+          jsx("strong", {
+            className: "hg-toggle__value",
+            children: enabled ? "On" : "Off",
+          }),
+        ],
+      }),
+      props.notice
+        ? jsx("p", {
+            className: "hg-muted hg-setting__notice",
+            role: "status",
+            "data-chat-setting-notice": "true",
+            children: props.notice,
+          })
+        : null,
     ],
   });
 }
@@ -206,6 +258,11 @@ export function SettingsTab(props = {}) {
   const [busy, setBusy] = useState("");
   const [now, setNow] = useState(Date.now());
   const [connection, setConnection] = useState(null);
+  const [chatEnabled, setChatEnabled] = useState(
+    props.chatEnabled === true || props.chat_enabled === true
+  );
+  const [chatToggleBusy, setChatToggleBusy] = useState(false);
+  const [chatToggleNotice, setChatToggleNotice] = useState("");
 
   const loadDevices = useCallback(
     async function loadDevices() {
@@ -270,6 +327,15 @@ export function SettingsTab(props = {}) {
   );
 
   useEffect(
+    function syncChatFlag() {
+      if (connection && typeof connection.chatEnabled === "boolean") {
+        setChatEnabled(connection.chatEnabled);
+      }
+    },
+    [connection]
+  );
+
+  useEffect(
     function initialise() {
       if (!api) {
         return undefined;
@@ -324,6 +390,43 @@ export function SettingsTab(props = {}) {
 
   if (!api) {
     return jsx(SettingsStub, { uiState: uiState });
+  }
+
+  async function toggleChat(event) {
+    const next =
+      event && event.target && typeof event.target.checked === "boolean"
+        ? event.target.checked
+        : !chatEnabled;
+    setChatEnabled(next);
+    setChatToggleBusy(true);
+    setChatToggleNotice("");
+    try {
+      const envelope = await updateChatSetting(api, next, {
+        path: CHAT_SETTINGS_PATH,
+      });
+      if (envelope && envelope.ok === true) {
+        const confirmed = chatEnabledFromEnvelope(envelope, next);
+        setChatEnabled(confirmed);
+        setChatToggleNotice(
+          confirmed
+            ? "Agent chat is on. The Chat composer is live."
+            : "Agent chat is off. The Chat composer stays stubbed."
+        );
+        if (typeof props.onChatEnabledChange === "function") {
+          props.onChatEnabledChange(confirmed);
+        }
+      } else {
+        setChatEnabled(!next);
+        setChatToggleNotice(
+          noticeText(envelope, "Could not update Agent chat.")
+        );
+      }
+    } catch (_error) {
+      setChatEnabled(!next);
+      setChatToggleNotice("Could not update Agent chat.");
+    } finally {
+      setChatToggleBusy(false);
+    }
   }
 
   const liveRows = connection ? connectionRows(connection) : SETTINGS_PLACEHOLDER;
@@ -418,7 +521,19 @@ export function SettingsTab(props = {}) {
             className: "hg-settings__list",
             "data-live-status": connection ? "true" : "false",
             children: liveRows.map((setting) =>
-              jsx(SettingRow, { setting }, setting.key)
+              setting.key === "chat"
+                ? jsx(
+                    ChatToggleRow,
+                    {
+                      setting,
+                      enabled: chatEnabled,
+                      busy: chatToggleBusy,
+                      notice: chatToggleNotice,
+                      onChange: toggleChat,
+                    },
+                    setting.key
+                  )
+                : jsx(SettingRow, { setting }, setting.key)
             ),
           }),
         ],

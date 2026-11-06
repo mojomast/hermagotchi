@@ -13,9 +13,9 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
-- Branch: `feat/hackathon`
-- **Deploy tip SHA (full):** `73d2dbf1cfdbec519adea2e15caf9a83f3f85ae6`
-- Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — previous W11 tip; use the full SHA recorded in prior deploy notes if available.
+- Branch: `hgt/w13-agent-chat` (PR into `feat/hackathon`; switch pin branch to `feat/hackathon` after merge)
+- **Deploy tip SHA (full):** `525058968fda581732c868661a9061fa0e119c6b`
+- Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — W11 tip; W12+W13 not yet live. Use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
 1. Run `df -h /` and `df -h /var` (and the filesystem that holds `/opt/hermagotchi` and `/var/lib/hermagotchi` if different).
@@ -87,11 +87,17 @@ agent_chat_enabled) for the pane composer; that is a client/plugin policy, not a
 server env. If a future HERMAGOTCHI_CHAT_ENABLED gate is added, document it here
 before enabling (default should remain on for production once introduced).
 
-Forward-only migration added on this tip:
+Forward-only migrations on this tip (apply in order; startup migrate is fine):
 - server/app/migrations/0011_starter_and_rate_limits.sql
 - server/app/migrations/0012_economy_reprice_mythic.sql (epic/legendary reprice + mythic rarity)
   - one-time 300 Bit economy.starter_grant for eligible pre-existing accounts
   - auth_rate_hits / auth_rate_locks tables (approve lockout + pair/start limits durable across workers)
+- server/app/migrations/0013_agent_chat.sql (W13 agent chat)
+  - chat_read_cursors for inbox read markers
+  - account_chat_settings (agent_chat_enabled toggle)
+  - chats.kind / match_id / match_context_json for taunts
+  - No new VPS env vars. Caps: 20 lobby + 10 DM/day when enabled; 60s cooldown; unanswered DM cap 2.
+  - New routes: GET /v1/chat/inbox, POST /v1/chat/taunt; PATCH /v1/me policy/chat-settings for the toggle.
 
 ## W11 verification (after this tip)
 After restart + migration:
@@ -102,6 +108,15 @@ After restart + migration:
 5. Five wrong approve attempts for the same IP or code lock across uvicorn workers (DB-backed).
 6. Resolved match JSON includes winner, result, final_hp, rounds on the match object.
 7. Shop thumbnails are served by the desktop asset bridge (px3/thumbs/*_thumb.png); live API has no /assets route — do not expect GET /v1/assets/... on the VPS.
+
+
+## W13 verification (after this tip)
+After restart + migration 0013:
+1. curl -fsS https://api.hermagotchi.rizz.click/healthz → 200
+2. PATCH chat settings enable → GET /v1/me shows chat_enabled/agent_chat_enabled true.
+3. POST /v1/chat/taunt with a real finished match (phase=post) → 201 with match_context.
+4. GET /v1/chat/inbox returns unread DMs; reason codes on denied agent sends include chat.disabled / chat.daily_cap / chat.cooldown / dm.cooldown / dm.blocked / dm.unanswered_cap / taunt.invalid_match.
+5. W11/W12 checks above still pass (starter grant, practice caps, mythic catalog).
 
 ## Rollback
 If health checks fail or pairing is broken:

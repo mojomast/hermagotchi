@@ -19,11 +19,13 @@ except ImportError:  # Imported from a checkout with the plugin root on sys.path
 try:  # Imported as part of a plugin package.
     from .agent_policy import (
         DEFAULT_POLICY as _AGENT_DEFAULT_POLICY,
+        check_budget as _check_budget,
         check_mutation as _check_mutation,
     )
 except ImportError:  # Imported from a checkout with the plugin root on sys.path.
     from agent_policy import (
         DEFAULT_POLICY as _AGENT_DEFAULT_POLICY,
+        check_budget as _check_budget,
         check_mutation as _check_mutation,
     )
 
@@ -43,7 +45,7 @@ MUTATING_OPS: dict[str, set[str]] = {
     "hermagotchi_challenge": {"invite", "respond", "submit_tactics"},
     "hermagotchi_battle": {"practice", "claim"},
     "hermagotchi_shop": {"buy", "equip"},
-    "hermagotchi_social": {"send", "block", "report"},
+    "hermagotchi_social": {"send", "block", "report", "taunt"},
     "hermagotchi_meta": {"claim_bounty"},
 }
 
@@ -135,6 +137,8 @@ class FakeGameClient:
         self.auth_devices: list[dict[str, Any]] = []
         self.used_user_codes: set[str] = set()
         self.expired_user_codes: set[str] = set()
+        self.chat_usage: dict[str, int] = {"lobby": 0, "dm": 0}
+        self.chat_usage_day = self._today()
 
     # -- dispatch ---------------------------------------------------------
     def execute(self, tool: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -169,7 +173,10 @@ class FakeGameClient:
                 self.policy, self._policy_action(tool, op, args)
             )
             if policy_code != "ok":
-                return _error(policy_code, correlation_id)
+                return _error(
+                    self._map_policy_error(tool, op, policy_code),
+                    correlation_id,
+                )
 
         result = handler(args, correlation_id)
         if mutating and idem_key is not None and result["ok"]:
@@ -208,6 +215,60 @@ class FakeGameClient:
                 return "battle.ranked"
         return action
 
+    def _map_policy_error(self, tool: str, op: str, code: str) -> str:
+        """Map generic policy codes onto the chat surface for taunts."""
+
+        if tool == "hermagotchi_social" and op == "taunt":
+            if code == "chat_disabled":
+                return "chat.disabled"
+            if code == "budget_exhausted":
+                return "chat.daily_cap"
+        return code
+
+    def _today(self) -> str:
+        return datetime.now(timezone.utc).date().isoformat()
+
+    def _chat_used(self, kind: str) -> int:
+        if self.chat_usage_day != self._today():
+            self.chat_usage = {"lobby": 0, "dm": 0}
+            self.chat_usage_day = self._today()
+        return int(self.chat_usage.get(kind, 0))
+
+    def _chat_record(self, kind: str) -> None:
+        self._chat_used(kind)
+        self.chat_usage[kind] = int(self.chat_usage.get(kind, 0)) + 1
+
+    def _chat_budget_error(
+        self, kind: str, cid: str, code: str = "budget_exhausted"
+    ) -> dict[str, Any] | None:
+        if _check_budget(self.policy, kind, self._chat_used(kind)) != "ok":
+            return _error(code, cid)
+        return None
+
+    def _self_account_id(self) -> str:
+        if self.auth_session is not None:
+            return str(self.auth_session.get("account_id") or "self")
+        if self.pet is not None:
+            return str(self.pet.get("pet_id") or "self")
+        return "self"
+
+    def _resolve_target_id(self, target: Any) -> str | None:
+        if not isinstance(target, str):
+            return None
+        value = target.strip()
+        if not value or len(value) > 64:
+            return None
+        if self.pet is not None and value in {
+            self.pet.get("pet_id"),
+            self.pet.get("name"),
+        }:
+            return str(self.pet.get("pet_id") or value)
+        return value
+
+    def _dm_channel_id(self, target_id: str) -> str:
+        ids = sorted({self._self_account_id(), target_id})
+        return "dm:" + ":".join(ids)
+
     def _handlers(self) -> dict[tuple[str, str], Callable[[dict[str, Any], str], dict[str, Any]]]:
         return {
             ("hermagotchi_status", "me"): self._status_me,
@@ -240,6 +301,8 @@ class FakeGameClient:
             ("hermagotchi_social", "send"): self._social_send,
             ("hermagotchi_social", "block"): self._social_block,
             ("hermagotchi_social", "report"): self._social_report,
+            ("hermagotchi_social", "inbox"): self._social_inbox,
+            ("hermagotchi_social", "taunt"): self._social_taunt,
             ("hermagotchi_meta", "leaderboard"): self._meta_leaderboard,
             ("hermagotchi_meta", "bounties"): self._meta_bounties,
             ("hermagotchi_meta", "claim_bounty"): self._meta_claim_bounty,
@@ -794,23 +857,92 @@ class FakeGameClient:
         blocked = self._require_network(cid)
         if blocked:
             return blocked
-        channel_id = args.get("channel_id")
         body = args.get("body")
-        if not isinstance(channel_id, str) or not isinstance(body, str) or not body.strip():
+        if not isinstance(body, str) or not body.strip() or len(body) > 500:
             return _error("invalid_arguments", cid)
-        if len(body) > 500:
-            return _error("invalid_arguments", cid)
+
+        target = args.get("target")
+        target_id: str | None = None
+        if target is not None:
+            target_id = self._resolve_target_id(target)
+            if target_id is None:
+                return _error("invalid_arguments", cid)
+            channel_id = self._dm_channel_id(target_id)
+            kind = "dm"
+        else:
+            channel_id = args.get("channel_id")
+            if args.get("lobby") is True:
+                channel_id = "lobby"
+            if not isinstance(channel_id, str) or not channel_id.strip():
+                return _error("invalid_arguments", cid)
+            channel_id = channel_id.strip()
+            kind = "lobby"
+
+        budget_error = self._chat_budget_error(kind, cid)
+        if budget_error is not None:
+            return budget_error
+        self._chat_record(kind)
+
+        message = {
+            "message_id": self._next_id("msg"),
+            "channel_id": channel_id,
+            "body": body,
+            "created_at": _now(),
+        }
+        if target_id is not None:
+            message["target_id"] = target_id
+            message["dm"] = True
+        return _ok({"message": message}, cid)
+
+    def _social_inbox(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
+        # Offline read stub matching the hosted inbox shape.
         return _ok(
             {
-                "message": {
-                    "message_id": self._next_id("msg"),
-                    "channel_id": channel_id,
-                    "body": body,
-                    "created_at": _now(),
-                }
+                "unread": [],
+                "mentions": [],
+                "count": 0,
             },
             cid,
         )
+
+    def _social_taunt(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
+        blocked = self._require_network(cid)
+        if blocked:
+            return blocked
+        match_id = args.get("match_id")
+        body = args.get("body")
+        phase = args.get("phase")
+        if (
+            not isinstance(match_id, str)
+            or not match_id.strip()
+            or not isinstance(body, str)
+            or not body.strip()
+            or len(body) > 500
+            or phase not in ("pre", "post")
+        ):
+            return _error("invalid_arguments", cid)
+
+        budget_error = self._chat_budget_error("lobby", cid, "chat.daily_cap")
+        if budget_error is not None:
+            return budget_error
+        self._chat_record("lobby")
+
+        match_id = match_id.strip()
+        message = {
+            "message_id": self._next_id("msg"),
+            "channel_id": f"match:{match_id}",
+            "match_id": match_id,
+            "body": body,
+            "phase": phase,
+            "created_at": _now(),
+        }
+        match_context = {
+            "match_id": match_id,
+            "phase": phase,
+            "status": "stub",
+            "opponent": None,
+        }
+        return _ok({"message": message, "match_context": match_context}, cid)
 
     def _social_block(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         blocked = self._require_network(cid)

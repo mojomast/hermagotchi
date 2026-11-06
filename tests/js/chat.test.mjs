@@ -6,19 +6,31 @@ import test from "node:test";
 
 import {
   CHAT_BLOCKS_PATH,
+  CHAT_INBOX_PATH,
   CHAT_MESSAGES_PATH,
   CHAT_MESSAGE_MAX_CHARS,
   CHAT_REPORT_PATH,
+  CHAT_SETTINGS_PATH,
+  CHAT_TAUNTS_PATH,
+  CHAT_TAUNT_MAX_CHARS,
   chatActionNotice,
   chatMessagePayload,
   chatModerationHost,
   chatNoticeFromEnvelope,
   isChatEnabled,
+  isTauntMessage,
+  markInboxRead,
   mergeMessages,
   messageFromEnvelope,
+  normalizeInbox,
   normalizeMessages,
   shouldShowChatStub,
+  tauntMessagePayload,
+  tauntSummary,
+  updateChatSetting,
   validateChatDraft,
+  validateDmTarget,
+  validateTauntDraft,
 } from "../../desktop/src/ui/logic/chat.js";
 import {
   DEFAULT_CHAT_CHANNEL,
@@ -244,4 +256,171 @@ test("ChatTab renders message bodies as text and never injects HTML", () => {
   assert.doesNotMatch(source, /["'`]\/chat\/messages["'`]/);
   assert.match(source, /NpcHostBanner/);
   assert.match(source, /Chat is off by default/);
+});
+
+test("inbox normalizes DMs, mentions and unread counts", () => {
+  const inbox = normalizeInbox({
+    ok: true,
+    status: "ok",
+    data: {
+      unread_count: 2,
+      items: [
+        {
+          id: "n1",
+          kind: "dm",
+          from: "Ada",
+          preview: "hello there",
+          created_at: "2026-11-06T00:00:00.000Z",
+          read: false,
+        },
+        {
+          id: "n2",
+          type: "mention",
+          body: "@you rematch?",
+          created_at: "2026-11-06T00:00:01.000Z",
+          unread: true,
+        },
+        {
+          id: "n3",
+          kind: "dm",
+          body: "old news",
+          created_at: "2026-11-05T00:00:00.000Z",
+          read: true,
+        },
+      ],
+    },
+  });
+
+  assert.equal(inbox.items.length, 3);
+  assert.equal(inbox.unreadCount, 2);
+  assert.equal(inbox.dms.length, 2);
+  assert.equal(inbox.mentions.length, 1);
+  assert.equal(inbox.items[0].from, "Ada");
+  assert.equal(inbox.items[1].kind, "mention");
+  assert.equal(inbox.items[2].unread, false);
+
+  const marked = markInboxRead(inbox);
+  assert.equal(marked.unreadCount, 0);
+  assert.ok(marked.items.every((item) => item.read === true && item.unread === false));
+  assert.equal(inbox.items[0].unread, true);
+  assert.equal(CHAT_INBOX_PATH, "/chat/inbox");
+});
+
+test("composer accepts an optional DM target but defaults to the lobby", () => {
+  assert.deepEqual(chatMessagePayload("hello"), {
+    body: "hello",
+    actor_mode: "human",
+  });
+  assert.deepEqual(chatMessagePayload("hello", "  Ada  "), {
+    body: "hello",
+    actor_mode: "human",
+    dm_target: "Ada",
+  });
+  assert.equal(validateDmTarget("").ok, true);
+  assert.equal(validateDmTarget("x".repeat(65)).ok, false);
+  assert.equal(validateDmTarget("Ada").value, "Ada");
+});
+
+test("taunts carry a short match summary and a post phase", () => {
+  const messages = normalizeMessages({
+    ok: true,
+    data: {
+      messages: [
+        {
+          id: "t1",
+          body: "GG, that was close.",
+          kind: "taunt",
+          match_context: {
+            winner: "a",
+            winner_name: "Wisp",
+            final_hp: { a: 22, b: 0 },
+          },
+        },
+      ],
+    },
+  });
+  assert.equal(messages.length, 1);
+  assert.equal(isTauntMessage(messages[0]), true);
+  assert.match(tauntSummary(messages[0].match_context), /Wisp/);
+  assert.match(tauntSummary(messages[0].match_context), /22-0/);
+  assert.match(tauntSummary({ winner: "b", hp: { a: 0, b: 37 } }), /Side b/);
+  assert.match(tauntSummary({ winner: "b", hp: { a: 0, b: 37 } }), /0-37/);
+
+  assert.deepEqual(validateTauntDraft("   "), {
+    ok: false,
+    error: "Taunt cannot be empty.",
+  });
+  assert.equal(validateTauntDraft("x".repeat(CHAT_TAUNT_MAX_CHARS)).ok, true);
+  assert.equal(validateTauntDraft("x".repeat(CHAT_TAUNT_MAX_CHARS + 1)).ok, false);
+
+  const payload = tauntMessagePayload("nice fight", {
+    phase: "post",
+    match_context: { winner: "a", winner_name: "Wisp", hp: { a: 12, b: 0 } },
+    match_id: "match-1",
+  });
+  assert.equal(payload.kind, "taunt");
+  assert.equal(payload.phase, "post");
+  assert.equal(payload.match_id, "match-1");
+  assert.equal(payload.match_context.winner_name, "Wisp");
+  assert.equal(CHAT_TAUNTS_PATH, "/chat/taunts");
+});
+
+test("machine reason codes become plain chat notices", () => {
+  const cases = {
+    chat_disabled: /Settings/,
+    daily_cap: /tomorrow/i,
+    cooldown: /7s/,
+    unanswered_cap: /unanswered/i,
+    invalid_taunt: /taunt/i,
+  };
+  for (const [code, expected] of Object.entries(cases)) {
+    const notice = chatNoticeFromEnvelope({
+      ok: false,
+      status: "http_error",
+      error: {
+        code,
+        message: "server says " + code,
+        retry_after_s: code === "cooldown" ? 7 : 0,
+      },
+    });
+    assert.equal(notice.kind, "moderation", code);
+    assert.equal(notice.code, code);
+    assert.match(notice.hostLine, expected, code);
+    assert.equal(notice.message, "server says " + code);
+  }
+});
+
+test("updateChatSetting PATCHes the bridge chat-settings route", async () => {
+  const calls = [];
+  const api = {
+    patch(path, body) {
+      calls.push({ path, body });
+      return Promise.resolve({
+        ok: true,
+        status: "ok",
+        data: { policy: { chat_enabled: true } },
+      });
+    },
+  };
+  const envelope = await updateChatSetting(api, true);
+  assert.equal(envelope.ok, true);
+  assert.deepEqual(calls, [
+    { path: CHAT_SETTINGS_PATH, body: { chat_enabled: true } },
+  ]);
+  assert.equal(CHAT_SETTINGS_PATH, "/me/chat-settings");
+});
+
+test("ChatTab wires the inbox badge, taunt bubbles and DM target", () => {
+  const source = readFileSync(
+    path.join(ROOT, "desktop/src/ui/tabs/ChatTab.js"),
+    "utf8"
+  );
+  assert.ok(source.includes("CHAT_INBOX_PATH"));
+  assert.ok(source.includes("normalizeInbox"));
+  assert.ok(source.includes("markInboxRead"));
+  assert.ok(source.includes("hg-inbox__badge"));
+  assert.ok(source.includes("hg-taunt"));
+  assert.ok(source.includes("tauntSummary"));
+  assert.ok(source.includes("data-chat-dm-target"));
+  assert.ok(source.includes("validateDmTarget"));
 });

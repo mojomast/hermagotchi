@@ -7,9 +7,19 @@ import { TurnLog } from "../components/TurnLog.js";
 import {
   battleParticipantsFromMatch,
   battleSummary,
+  battleTauntContext,
+  battleTaunts,
   rewardCapNotice,
   rewardCapReason,
 } from "../logic/battle.js";
+import {
+  CHAT_TAUNT_MAX_CHARS,
+  CHAT_TAUNTS_PATH,
+  chatNoticeFromEnvelope,
+  tauntMessagePayload,
+  tauntSummary,
+  validateTauntDraft,
+} from "../logic/chat.js";
 
 export const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 export const PRACTICE_BOT_NAME = "Teknium";
@@ -162,6 +172,10 @@ export function BattleTab(props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
+  const [tauntDraft, setTauntDraft] = useState("");
+  const [tauntBusy, setTauntBusy] = useState(false);
+  const [tauntNotice, setTauntNotice] = useState("");
+  const [sentTaunts, setSentTaunts] = useState([]);
   const [manifest, setManifest] = useState(
     props.manifest || props.assetManifest || null
   );
@@ -296,6 +310,83 @@ export function BattleTab(props = {}) {
   const previewAnimState = battleAnimState(replay);
   const capNotice = rewardCapNotice(practice);
   const capReason = rewardCapReason(practice);
+  const opponentTaunts = battleTaunts(practice);
+
+  async function submitTaunt(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    const checked = validateTauntDraft(tauntDraft);
+    if (!checked.ok) {
+      setTauntNotice(checked.error);
+      return;
+    }
+    if (!api || typeof api.post !== "function" || !practiceMatch) return;
+    setTauntBusy(true);
+    setTauntNotice("");
+    try {
+      const context = battleTauntContext(practiceMatch, summary || {});
+      const envelope = await api.post(
+        CHAT_TAUNTS_PATH,
+        tauntMessagePayload(checked.value, {
+          phase: "post",
+          match_context: context,
+          match_id: practiceMatch.id,
+        })
+      );
+      if (envelope && envelope.ok === true) {
+        const sent =
+          envelope.data && envelope.data.taunt
+            ? envelope.data.taunt
+            : {
+                id: "sent-" + String(sentTaunts.length + 1),
+                body: checked.value,
+                kind: "taunt",
+                phase: "post",
+                actor_mode: "human",
+                match_context: context,
+              };
+        setSentTaunts(function (current) {
+          return [...current, sent];
+        });
+        setTauntDraft("");
+        setTauntNotice("Taunt sent.");
+      } else {
+        const mapped = chatNoticeFromEnvelope(envelope);
+        setTauntNotice(
+          (mapped && (mapped.message || mapped.hostLine)) ||
+            envelopeMessage(envelope)
+        );
+      }
+    } catch (_error) {
+      const mapped = chatNoticeFromEnvelope(null);
+      setTauntNotice((mapped && mapped.hostLine) || "Taunt was not sent.");
+    } finally {
+      setTauntBusy(false);
+    }
+  }
+
+  function renderTauntRow(taunt, key) {
+    const summaryLine = tauntSummary(taunt.match_context);
+    return jsxs(
+      "li",
+      {
+        className: "hg-taunt hg-taunt--row",
+        "data-taunt-id": taunt.id || "",
+        children: [
+          jsx("strong", { children: "Taunt" }),
+          jsx("p", { className: "hg-taunt__body", children: taunt.body }),
+          summaryLine
+            ? jsx("p", {
+                className: "hg-muted hg-taunt__match",
+                children: summaryLine,
+              })
+            : null,
+        ],
+      },
+      key
+    );
+  }
 
   return jsxs("section", {
     className: "hg-battle",
@@ -448,6 +539,79 @@ export function BattleTab(props = {}) {
                 },
                 children: "Replay match",
               }),
+              jsxs("form", {
+                className: "hg-taunt__compose",
+                "data-taunt-phase": "post",
+                onSubmit: submitTaunt,
+                children: [
+                  jsx("h4", { children: "Taunt after the match" }),
+                  jsx("p", {
+                    className: "hg-muted",
+                    children:
+                      "Short, display-only trash talk. Sent with phase post and the match summary.",
+                  }),
+                  jsxs("label", {
+                    className: "hg-field",
+                    children: [
+                      jsx("span", { children: "Taunt" }),
+                      jsx("input", {
+                        className: "hg-input",
+                        type: "text",
+                        maxLength: String(CHAT_TAUNT_MAX_CHARS),
+                        value: tauntDraft,
+                        disabled: tauntBusy,
+                        placeholder: "Keep it short and clean",
+                        "data-taunt-input": "true",
+                        onChange: function (event) {
+                          setTauntDraft(event.target.value);
+                        },
+                      }),
+                    ],
+                  }),
+                  tauntNotice
+                    ? jsx("p", {
+                        className: "hg-muted",
+                        role: "status",
+                        "data-taunt-notice": "true",
+                        children: tauntNotice,
+                      })
+                    : null,
+                  jsx("button", {
+                    type: "submit",
+                    className: "hg-btn hg-btn--primary",
+                    disabled: tauntBusy,
+                    "data-taunt-submit": "true",
+                    children: tauntBusy ? "Sending..." : "Send taunt",
+                  }),
+                ],
+              }),
+            ],
+          })
+        : null,
+      opponentTaunts.length || sentTaunts.length
+        ? jsxs("div", {
+            className: "hg-card hg-taunt-log",
+            "data-section": "battle-taunts",
+            children: [
+              jsx("h3", { children: "Taunts" }),
+              opponentTaunts.length
+                ? jsx("ul", {
+                    className: "hg-taunt__list",
+                    "aria-label": "Opponent taunts",
+                    children: opponentTaunts.map(function (taunt, index) {
+                      return renderTauntRow(taunt, "opponent-" + (taunt.id || index));
+                    }),
+                  })
+                : null,
+              sentTaunts.length
+                ? jsx("ul", {
+                    className: "hg-taunt__list",
+                    "aria-label": "Your taunts",
+                    children: sentTaunts.map(function (taunt, index) {
+                      return renderTauntRow(taunt, "sent-" + (taunt.id || index));
+                    }),
+                  })
+                : null,
             ],
           })
         : null,

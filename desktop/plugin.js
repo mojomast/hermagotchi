@@ -2010,7 +2010,101 @@ function replaySummary(replay = {}, participants = {}) {
   return battleSummary({}, replay, participants);
 }
 
-  return { "TYPE_ORDER": TYPE_ORDER, "EFFECTIVENESS": EFFECTIVENESS, "EFFECTIVENESS_TEXT": EFFECTIVENESS_TEXT, "typeMultiplier": typeMultiplier, "multiplierValue": multiplierValue, "effectivenessLabel": effectivenessLabel, "effectivenessText": effectivenessText, "effectivenessForTypes": effectivenessForTypes, "eventEffectiveness": eventEffectiveness, "REWARD_CAP_NOTICES": REWARD_CAP_NOTICES, "rewardCapReason": rewardCapReason, "rewardCapNotice": rewardCapNotice, "moveLabel": moveLabel, "battleParticipantsFromMatch": battleParticipantsFromMatch, "formatTurnLog": formatTurnLog, "battleSummary": battleSummary, "replaySummary": replaySummary };
+function _tauntText(value) {
+  return typeof value === "string" ? value : "";
+}
+
+/** Coerce one server taunt row into the display shape. */
+function normalizeTaunt(item) {
+  if (!item || typeof item !== "object") return null;
+  const body =
+    _tauntText(item.body) || _tauntText(item.text) || _tauntText(item.taunt);
+  if (!body) return null;
+  const matchContext =
+    item.match_context && typeof item.match_context === "object"
+      ? item.match_context
+      : item.matchContext && typeof item.matchContext === "object"
+        ? item.matchContext
+        : null;
+  return {
+    id:
+      _tauntText(item.id) ||
+      _tauntText(item.account_id) + ":" + body.slice(0, 24),
+    body,
+    account_id: _tauntText(item.account_id) || null,
+    actor_mode: item.actor_mode === "agent" ? "agent" : "human",
+    created_at: _tauntText(item.created_at),
+    kind: "taunt",
+    phase: _tauntText(item.phase) || null,
+    match_context: matchContext,
+  };
+}
+
+/** Collect opponent taunts from a practice response, match or replay. */
+function battleTaunts(source) {
+  if (!source || typeof source !== "object") return [];
+  const containers = [
+    source,
+    source.data,
+    source.match,
+    source.replay,
+    source.data && source.data.match,
+    source.data && source.data.replay,
+  ].filter(Boolean);
+  const seen = new Set();
+  const rows = [];
+  for (const container of containers) {
+    if (!container) continue;
+    const lists = [
+      container.taunts,
+      container.opponent_taunts,
+      container.opponentTaunts,
+    ];
+    for (const list of lists) {
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        const taunt = normalizeTaunt(item);
+        if (!taunt || seen.has(taunt.id)) continue;
+        seen.add(taunt.id);
+        rows.push(taunt);
+      }
+    }
+  }
+  return rows;
+}
+
+/** Match summary passed with a post-battle taunt. */
+function battleTauntContext(match = {}, summary = {}) {
+  const source = match && typeof match === "object" ? match : {};
+  const header =
+    source.match_context && typeof source.match_context === "object"
+      ? source.match_context
+      : {};
+  return {
+    match_id: source.id || header.match_id || null,
+    winner:
+      summary && summary.winner !== undefined && summary.winner !== null
+        ? summary.winner
+        : source.winner !== undefined
+          ? source.winner
+          : header.winner || null,
+    winner_name:
+      (summary && summary.winnerName) || header.winner_name || null,
+    hp:
+      (summary && summary.finalHp) ||
+      source.final_hp ||
+      header.hp ||
+      null,
+    rounds:
+      summary && summary.rounds !== undefined && summary.rounds !== null
+        ? summary.rounds
+        : source.rounds !== undefined
+          ? source.rounds
+          : header.rounds || 0,
+  };
+}
+
+  return { "TYPE_ORDER": TYPE_ORDER, "EFFECTIVENESS": EFFECTIVENESS, "EFFECTIVENESS_TEXT": EFFECTIVENESS_TEXT, "typeMultiplier": typeMultiplier, "multiplierValue": multiplierValue, "effectivenessLabel": effectivenessLabel, "effectivenessText": effectivenessText, "effectivenessForTypes": effectivenessForTypes, "eventEffectiveness": eventEffectiveness, "REWARD_CAP_NOTICES": REWARD_CAP_NOTICES, "rewardCapReason": rewardCapReason, "rewardCapNotice": rewardCapNotice, "moveLabel": moveLabel, "battleParticipantsFromMatch": battleParticipantsFromMatch, "formatTurnLog": formatTurnLog, "battleSummary": battleSummary, "replaySummary": replaySummary, "normalizeTaunt": normalizeTaunt, "battleTaunts": battleTaunts, "battleTauntContext": battleTauntContext };
 })();
 
 // desktop/src/ui/components/TurnLog.js
@@ -2124,8 +2218,615 @@ function TurnLog(props = {}) {
   return { "TurnLog": TurnLog };
 })();
 
-// desktop/src/ui/tabs/BattleTab.js
+// desktop/src/ui/logic/chat.js
 const __m12 = (function () {
+  const npcHostLine = __m2["npcHostLine"];
+/** Pure chat helpers shared by the Desktop Chat tab and its tests. */
+
+
+const CHAT_CHANNEL_ID = "lobby";
+const CHAT_MESSAGES_PATH = "/chat/channels/lobby/messages";
+const CHAT_BLOCKS_PATH = "/blocks";
+const CHAT_REPORT_PATH = "/moderation/report";
+const CHAT_INBOX_PATH = "/chat/inbox";
+const CHAT_INBOX_READ_PATH = "/chat/inbox/read";
+const CHAT_TAUNTS_PATH = "/chat/taunts";
+const CHAT_SETTINGS_PATH = "/me/chat-settings";
+const CHAT_POLICY_PATH = "/me/policy";
+const CHAT_MESSAGE_MAX_CHARS = 400;
+const CHAT_TAUNT_MAX_CHARS = 90;
+const CHAT_DM_TARGET_MAX_CHARS = 64;
+const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
+
+const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
+
+function flagValue(value) {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0 || value === null || value === undefined) {
+    return false;
+  }
+  return TRUE_FLAGS.has(String(value).trim().toLowerCase());
+}
+
+/**
+ * Return whether the owner enabled chat.
+ *
+ * The policy/status payload uses ``chat_enabled``; accepted aliases keep the
+ * Desktop pane compatible with the host's camelCase props.
+ */
+function isChatEnabled(props = {}) {
+  const source = props || {};
+  const candidates = [
+    source.chatEnabled,
+    source.chat_enabled,
+    source.features && source.features.chat,
+    source.features && source.features.chat_enabled,
+    source.policy && source.policy.chat_enabled,
+    source.permissions && source.permissions.chat,
+    source.status && source.status.policy && source.status.policy.chat_enabled,
+    source.status &&
+      source.status.me &&
+      source.status.me.policy &&
+      source.status.me.policy.chat_enabled,
+  ];
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null) {
+      return flagValue(candidate);
+    }
+  }
+  return false;
+}
+
+function shouldShowChatStub(props = {}) {
+  const source = props || {};
+  return !source.api || !isChatEnabled(source);
+}
+
+function normalText(value, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function normalNullableText(value) {
+  return typeof value === "string" ? value : null;
+}
+
+/** Coerce one server chat row into the display shape without interpreting it. */
+function normalizeMessage(item) {
+  if (!item || typeof item !== "object") return null;
+  const id = normalText(item.id);
+  if (!id) return null;
+  const matchContext = normalizeMatchContext(item.match_context || item.matchContext);
+  return {
+    id,
+    channel_id: normalText(item.channel_id, CHAT_CHANNEL_ID),
+    account_id: normalText(item.account_id),
+    actor_mode: item.actor_mode === "agent" ? "agent" : "human",
+    body: normalText(item.body),
+    kind: normalText(item.kind),
+    phase: normalNullableText(item.phase),
+    match_context: matchContext,
+    created_at: normalText(item.created_at),
+    deleted_at: normalNullableText(item.deleted_at),
+  };
+}
+
+/** Read the message list from either a bridge envelope or decoded data. */
+function normalizeMessages(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const rows = Array.isArray(payload.messages) ? payload.messages : [];
+  return rows.map(normalizeMessage).filter(Boolean);
+}
+
+/** Read the message returned by a send envelope. */
+function messageFromEnvelope(envelope) {
+  if (!envelope || envelope.ok !== true || !envelope.data) return null;
+  return normalizeMessage(envelope.data.message);
+}
+
+/** Merge messages by id and sort oldest first. */
+function mergeMessages(existing, incoming) {
+  const byId = new Map();
+  for (const message of [...(existing || []), ...(incoming || [])]) {
+    const normalized = normalizeMessage(message);
+    if (normalized) byId.set(normalized.id, normalized);
+  }
+  return [...byId.values()].sort(function (left, right) {
+    if (left.created_at === right.created_at) {
+      return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
+    }
+    return left.created_at < right.created_at ? -1 : 1;
+  });
+}
+
+/** Validate a composer draft before it is sent to the bridge. */
+function validateChatDraft(draft) {
+  const value = typeof draft === "string" ? draft.trim() : "";
+  if (!value) {
+    return { ok: false, error: "Message cannot be empty." };
+  }
+  if (value.length > CHAT_MESSAGE_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `Message cannot exceed ${CHAT_MESSAGE_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+/** Validate an optional direct-message target (player or pet name). */
+function validateDmTarget(target) {
+  const value = typeof target === "string" ? target.trim() : "";
+  if (!value) return { ok: true, value: "" };
+  if (value.length > CHAT_DM_TARGET_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `DM target cannot exceed ${CHAT_DM_TARGET_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+/** Plain text is always sent as display data; the server owns sanitization. */
+function chatMessagePayload(value, target) {
+  const payload = { body: String(value || ""), actor_mode: "human" };
+  const checked = validateDmTarget(target);
+  if (checked.ok && checked.value) {
+    payload.dm_target = checked.value;
+  }
+  return payload;
+}
+
+/** Validate a short taunt draft before it is sent to the bridge. */
+function validateTauntDraft(draft) {
+  const value = typeof draft === "string" ? draft.trim() : "";
+  if (!value) {
+    return { ok: false, error: "Taunt cannot be empty." };
+  }
+  if (value.length > CHAT_TAUNT_MAX_CHARS) {
+    return {
+      ok: false,
+      error: `Taunt cannot exceed ${CHAT_TAUNT_MAX_CHARS} characters.`,
+    };
+  }
+  return { ok: true, value };
+}
+
+function normalizeMatchContext(source) {
+  if (!source || typeof source !== "object") return null;
+  const hp = source.hp || source.final_hp || source.finalHp || null;
+  return {
+    match_id: normalNullableText(source.match_id || source.matchId),
+    winner: normalNullableText(source.winner),
+    winner_name: normalNullableText(source.winner_name || source.winnerName),
+    hp: hp && typeof hp === "object" ? { ...hp } : null,
+    rounds:
+      source.rounds === undefined || source.rounds === null
+        ? null
+        : Number(source.rounds) || 0,
+  };
+}
+
+function formatHp(hp) {
+  if (!hp || typeof hp !== "object") return "";
+  const a = Number(hp.a);
+  const b = Number(hp.b);
+  if (Number.isFinite(a) && Number.isFinite(b)) return `${a}-${b}`;
+  return "";
+}
+
+/** Short display-only callout for a taunt's match summary. */
+function tauntSummary(matchContext) {
+  const context = normalizeMatchContext(matchContext);
+  if (!context) return "";
+  const winner =
+    context.winner_name ||
+    (context.winner ? `Side ${context.winner}` : "Draw");
+  const hp = formatHp(context.hp);
+  return "Winner: " + winner + (hp ? " · HP " + hp : "");
+}
+
+/** A taunt bubble is any message tagged as a taunt or carrying match context. */
+function isTauntMessage(message) {
+  if (!message || typeof message !== "object") return false;
+  return (
+    message.kind === "taunt" ||
+    message.kind === "match_context" ||
+    Boolean(message.match_context)
+  );
+}
+
+/** Build the payload used by the Battle tab post-match taunt composer. */
+function tauntMessagePayload(value, options = {}) {
+  const opts = options && typeof options === "object" ? options : {};
+  const phase = opts.phase === "pre" ? "pre" : "post";
+  const payload = {
+    body: String(value || ""),
+    kind: "taunt",
+    phase,
+  };
+  const context = normalizeMatchContext(opts.match_context || opts.matchContext);
+  if (context) payload.match_context = context;
+  if (opts.match_id) payload.match_id = String(opts.match_id);
+  return payload;
+}
+
+function inboxRows(payload) {
+  const candidates = [
+    payload.inbox,
+    payload.items,
+    payload.entries,
+    payload.threads,
+    payload.dms,
+    payload.messages,
+    payload.notifications,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  return [];
+}
+
+function inboxFromName(item) {
+  const source = item && typeof item === "object" ? item : {};
+  return (
+    normalText(source.from) ||
+    normalText(source.sender) ||
+    normalText(source.player) ||
+    normalText(source.pet_name) ||
+    normalText(source.petName) ||
+    normalText(source.actor_name) ||
+    normalText(source.account_id)
+  );
+}
+
+/** Coerce one inbox row (DM, mention or taunt notification) for display. */
+function normalizeInboxItem(item) {
+  if (!item || typeof item !== "object") return null;
+  const body =
+    normalText(item.preview) ||
+    normalText(item.body) ||
+    normalText(item.text) ||
+    normalText(item.message);
+  const channelId = normalText(item.channel_id || item.channelId);
+  const id =
+    normalText(item.id) ||
+    normalText(item.notification_id) ||
+    (channelId ? channelId + ":" + normalText(item.created_at) : "");
+  if (!id && !body) return null;
+  const rawKind = normalText(item.kind || item.type).toLowerCase();
+  const kind =
+    rawKind === "dm" || rawKind === "direct"
+      ? "dm"
+      : rawKind === "mention" || rawKind === "@mention"
+        ? "mention"
+        : rawKind === "taunt"
+          ? "taunt"
+          : channelId.indexOf("dm:") === 0
+            ? "dm"
+            : /(^|\s)@[A-Za-z0-9_]/.test(body)
+              ? "mention"
+              : "notice";
+  return {
+    id: id || body,
+    kind,
+    channel_id: channelId || null,
+    account_id: normalText(item.account_id || item.accountId) || null,
+    from: inboxFromName(item) || null,
+    body,
+    created_at: normalText(item.created_at),
+    read: item.read === true || item.unread === false,
+    unread: item.unread === true || item.read === false,
+    match_context: normalizeMatchContext(
+      item.match_context || item.matchContext
+    ),
+  };
+}
+
+/** Read an inbox envelope into unread counts and display rows. */
+function normalizeInbox(envelopeOrData) {
+  if (!envelopeOrData || typeof envelopeOrData !== "object") {
+    return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
+  }
+  const payload =
+    envelopeOrData.data && typeof envelopeOrData.data === "object"
+      ? envelopeOrData.data
+      : envelopeOrData;
+  const items = inboxRows(payload).map(normalizeInboxItem).filter(Boolean);
+  const explicitUnread = Number(
+    payload.unread_count !== undefined
+      ? payload.unread_count
+      : payload.unreadCount !== undefined
+        ? payload.unreadCount
+        : payload.unread
+  );
+  const derivedUnread = items.filter(function (item) {
+    return item.unread;
+  }).length;
+  const unreadCount =
+    Number.isFinite(explicitUnread) && explicitUnread >= 0
+      ? Math.trunc(explicitUnread)
+      : derivedUnread;
+  return {
+    items,
+    unreadCount,
+    total:
+      Number.isFinite(Number(payload.total)) && Number(payload.total) >= 0
+        ? Math.trunc(Number(payload.total))
+        : items.length,
+    dms: items.filter(function (item) {
+      return item.kind === "dm";
+    }),
+    mentions: items.filter(function (item) {
+      return item.kind === "mention";
+    }),
+  };
+}
+
+/** Mark every inbox row read locally without mutating the input. */
+function markInboxRead(inbox) {
+  if (!inbox || typeof inbox !== "object") {
+    return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
+  }
+  const items = (Array.isArray(inbox.items) ? inbox.items : []).map(
+    function (item) {
+      return { ...item, read: true, unread: false };
+    }
+  );
+  return {
+    ...inbox,
+    items,
+    unreadCount: 0,
+    dms: items.filter(function (item) {
+      return item.kind === "dm";
+    }),
+    mentions: items.filter(function (item) {
+      return item.kind === "mention";
+    }),
+  };
+}
+
+/** Best-effort bridge call telling the server the inbox was opened. */
+function markInboxReadRequest(api, ids) {
+  const list = (Array.isArray(ids) ? ids : []).filter(Boolean).map(String);
+  if (!list.length) return Promise.resolve(null);
+  if (api && typeof api.post === "function") {
+    return api.post(CHAT_INBOX_READ_PATH, { ids: list });
+  }
+  if (api && typeof api.patch === "function") {
+    return api.patch(CHAT_INBOX_READ_PATH, { ids: list });
+  }
+  return Promise.resolve(null);
+}
+
+/** Payload for the owner Agent-chat toggle. */
+function chatSettingsPayload(enabled) {
+  return { chat_enabled: enabled === true };
+}
+
+/** Read the confirmed chat flag from a settings/policy envelope. */
+function chatEnabledFromEnvelope(envelope, fallback = false) {
+  if (!envelope || envelope.ok !== true) return fallback;
+  const data =
+    envelope.data && typeof envelope.data === "object"
+      ? envelope.data
+      : envelope;
+  const candidates = [
+    data.chat_enabled,
+    data.chatEnabled,
+    data.policy && data.policy.chat_enabled,
+    data.settings && data.settings.chat_enabled,
+    data.me && data.me.policy && data.me.policy.chat_enabled,
+  ];
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null) {
+      return flagValue(candidate);
+    }
+  }
+  return fallback;
+}
+
+/**
+ * PATCH the owner chat setting through the local bridge.
+ *
+ * api.js exposes ``patch`` on newer bridges; older bridges fall back to a POST
+ * to the same bridge-relative route so the toggle still works in tests.
+ */
+function updateChatSetting(api, enabled, options = {}) {
+  const opts = options && typeof options === "object" ? options : {};
+  const path = opts.path || CHAT_SETTINGS_PATH;
+  const payload = chatSettingsPayload(enabled);
+  if (api && typeof api.patch === "function") {
+    return api.patch(path, payload);
+  }
+  if (api && typeof api.post === "function") {
+    return api.post(path, payload);
+  }
+  return Promise.resolve({
+    ok: false,
+    status: "offline",
+    error: {
+      code: "network_error",
+      message: "Could not reach the local Hermagotchi bridge.",
+    },
+  });
+}
+
+const MODERATION_CODES = new Set([
+  "blocked",
+  "blocked_interaction",
+  "forbidden",
+  "rate_limited",
+  "empty_message",
+  "message_too_long",
+  "validation_error",
+  "chat_disabled",
+  "agent_chat_disabled",
+  "chat_off",
+  "daily_cap",
+  "chat_daily_cap",
+  "agent_chat_daily_cap",
+  "daily_message_cap",
+  "cooldown",
+  "chat_cooldown",
+  "taunt_cooldown",
+  "unanswered_cap",
+  "taunt_unanswered_cap",
+  "unanswered_taunt_cap",
+  "invalid_taunt",
+  "taunt_invalid",
+  "taunt_rejected",
+]);
+
+const AUTH_CODES = new Set(["auth_missing", "unauthorized", "expired", "disabled"]);
+
+function cleanCode(value) {
+  return typeof value === "string" ? value.slice(0, 64) : "";
+}
+
+function moderationLine(code, retryAfterS) {
+  const base = npcHostLine("chat.moderation");
+  const seconds = Number(retryAfterS);
+  if (code === "rate_limited") {
+    return seconds > 0
+      ? `Easy there. Try again in ${Math.ceil(seconds)}s.`
+      : "Easy there. Slow down before sending again.";
+  }
+  if (
+    code === "cooldown" ||
+    code === "chat_cooldown" ||
+    code === "taunt_cooldown"
+  ) {
+    return seconds > 0
+      ? `Cooldown. Try again in ${Math.ceil(seconds)}s.`
+      : "Cooldown. Give it a moment before the next taunt.";
+  }
+  if (
+    code === "chat_disabled" ||
+    code === "agent_chat_disabled" ||
+    code === "chat_off"
+  ) {
+    return "Chat is off. Enable Agent chat in Settings first.";
+  }
+  if (
+    code === "daily_cap" ||
+    code === "chat_daily_cap" ||
+    code === "agent_chat_daily_cap" ||
+    code === "daily_message_cap"
+  ) {
+    return "Daily chat cap reached. Try again tomorrow.";
+  }
+  if (
+    code === "unanswered_cap" ||
+    code === "taunt_unanswered_cap" ||
+    code === "unanswered_taunt_cap"
+  ) {
+    return "Too many unanswered taunts. Wait for a reply first.";
+  }
+  if (
+    code === "invalid_taunt" ||
+    code === "taunt_invalid" ||
+    code === "taunt_rejected"
+  ) {
+    return "That taunt was rejected. Keep it short and clean.";
+  }
+  if (code === "blocked" || code === "blocked_interaction") {
+    return "That message was blocked. Stay calm. Stay open.";
+  }
+  if (
+    code === "empty_message" ||
+    code === "message_too_long" ||
+    code === "validation_error"
+  ) {
+    return "That message was rejected. Keep it short and kind.";
+  }
+  if (code === "auth_missing" || code === "unauthorized" || code === "expired") {
+    return "Pair this device before sending lobby messages.";
+  }
+  if (code === "offline" || code === "unavailable" || code === "network_disabled") {
+    return "The lobby is unavailable right now. Try again later.";
+  }
+  return base ? base.line : "The message was not sent.";
+}
+
+/** Turn a failed bridge envelope into a display-only moderation notice. */
+function chatNoticeFromEnvelope(envelope) {
+  if (envelope && envelope.ok === true) return null;
+  const source = envelope && typeof envelope === "object" ? envelope : {};
+  const status = cleanCode(source.status) || "unavailable";
+  const error = source.error && typeof source.error === "object" ? source.error : {};
+  const code = cleanCode(error.code) || cleanCode(source.status) || "unavailable";
+  const retryAfterS = Number(error.retry_after_s);
+  const message = normalText(error.message).slice(0, 240);
+  const kind = AUTH_CODES.has(code)
+    ? "auth"
+    : MODERATION_CODES.has(code)
+      ? "moderation"
+      : "error";
+  return {
+    kind,
+    status,
+    code,
+    retryAfterS: Number.isFinite(retryAfterS) && retryAfterS > 0 ? retryAfterS : null,
+    message,
+    hostLine: moderationLine(code, retryAfterS),
+  };
+}
+
+/** Build a notice for a successful block or report. */
+function chatActionNotice(kind) {
+  if (kind === "blocked") {
+    return {
+      kind: "moderation",
+      status: "ok",
+      code: "blocked",
+      retryAfterS: null,
+      message: "That account is blocked.",
+      hostLine: "Blocked. Their messages are hidden now.",
+    };
+  }
+  if (kind === "reported") {
+    return {
+      kind: "moderation",
+      status: "ok",
+      code: "reported",
+      retryAfterS: null,
+      message: "The report is queued for review.",
+      hostLine: "Report sent. A moderator will review it.",
+    };
+  }
+  return null;
+}
+
+/** Nous Girl hosts every moderation notice; the line never renders markup. */
+function chatModerationHost(notice) {
+  const base = npcHostLine("chat.moderation");
+  if (!base) return null;
+  const line = notice && typeof notice.hostLine === "string" && notice.hostLine
+    ? notice.hostLine
+    : base.line;
+  return {
+    id: base.id,
+    name: base.name,
+    context: base.context,
+    line,
+    displayOnly: true,
+  };
+}
+
+/** Provider for the normal lobby banner. */
+function chatHost() {
+  return npcHostLine("chat");
+}
+
+  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
+})();
+
+// desktop/src/ui/tabs/BattleTab.js
+const __m13 = (function () {
   const useEffect = __ext2;
   const useState = __ext4;
   const jsx = __ext0;
@@ -2137,8 +2838,16 @@ const __m12 = (function () {
   const TurnLog = __m11["TurnLog"];
   const battleParticipantsFromMatch = __m10["battleParticipantsFromMatch"];
   const battleSummary = __m10["battleSummary"];
+  const battleTauntContext = __m10["battleTauntContext"];
+  const battleTaunts = __m10["battleTaunts"];
   const rewardCapNotice = __m10["rewardCapNotice"];
   const rewardCapReason = __m10["rewardCapReason"];
+  const CHAT_TAUNT_MAX_CHARS = __m12["CHAT_TAUNT_MAX_CHARS"];
+  const CHAT_TAUNTS_PATH = __m12["CHAT_TAUNTS_PATH"];
+  const chatNoticeFromEnvelope = __m12["chatNoticeFromEnvelope"];
+  const tauntMessagePayload = __m12["tauntMessagePayload"];
+  const tauntSummary = __m12["tauntSummary"];
+  const validateTauntDraft = __m12["validateTauntDraft"];
 
 const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 const PRACTICE_BOT_NAME = "Teknium";
@@ -2291,6 +3000,10 @@ function BattleTab(props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
+  const [tauntDraft, setTauntDraft] = useState("");
+  const [tauntBusy, setTauntBusy] = useState(false);
+  const [tauntNotice, setTauntNotice] = useState("");
+  const [sentTaunts, setSentTaunts] = useState([]);
   const [manifest, setManifest] = useState(
     props.manifest || props.assetManifest || null
   );
@@ -2425,6 +3138,83 @@ function BattleTab(props = {}) {
   const previewAnimState = battleAnimState(replay);
   const capNotice = rewardCapNotice(practice);
   const capReason = rewardCapReason(practice);
+  const opponentTaunts = battleTaunts(practice);
+
+  async function submitTaunt(event) {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    const checked = validateTauntDraft(tauntDraft);
+    if (!checked.ok) {
+      setTauntNotice(checked.error);
+      return;
+    }
+    if (!api || typeof api.post !== "function" || !practiceMatch) return;
+    setTauntBusy(true);
+    setTauntNotice("");
+    try {
+      const context = battleTauntContext(practiceMatch, summary || {});
+      const envelope = await api.post(
+        CHAT_TAUNTS_PATH,
+        tauntMessagePayload(checked.value, {
+          phase: "post",
+          match_context: context,
+          match_id: practiceMatch.id,
+        })
+      );
+      if (envelope && envelope.ok === true) {
+        const sent =
+          envelope.data && envelope.data.taunt
+            ? envelope.data.taunt
+            : {
+                id: "sent-" + String(sentTaunts.length + 1),
+                body: checked.value,
+                kind: "taunt",
+                phase: "post",
+                actor_mode: "human",
+                match_context: context,
+              };
+        setSentTaunts(function (current) {
+          return [...current, sent];
+        });
+        setTauntDraft("");
+        setTauntNotice("Taunt sent.");
+      } else {
+        const mapped = chatNoticeFromEnvelope(envelope);
+        setTauntNotice(
+          (mapped && (mapped.message || mapped.hostLine)) ||
+            envelopeMessage(envelope)
+        );
+      }
+    } catch (_error) {
+      const mapped = chatNoticeFromEnvelope(null);
+      setTauntNotice((mapped && mapped.hostLine) || "Taunt was not sent.");
+    } finally {
+      setTauntBusy(false);
+    }
+  }
+
+  function renderTauntRow(taunt, key) {
+    const summaryLine = tauntSummary(taunt.match_context);
+    return jsxs(
+      "li",
+      {
+        className: "hg-taunt hg-taunt--row",
+        "data-taunt-id": taunt.id || "",
+        children: [
+          jsx("strong", { children: "Taunt" }),
+          jsx("p", { className: "hg-taunt__body", children: taunt.body }),
+          summaryLine
+            ? jsx("p", {
+                className: "hg-muted hg-taunt__match",
+                children: summaryLine,
+              })
+            : null,
+        ],
+      },
+      key
+    );
+  }
 
   return jsxs("section", {
     className: "hg-battle",
@@ -2577,6 +3367,79 @@ function BattleTab(props = {}) {
                 },
                 children: "Replay match",
               }),
+              jsxs("form", {
+                className: "hg-taunt__compose",
+                "data-taunt-phase": "post",
+                onSubmit: submitTaunt,
+                children: [
+                  jsx("h4", { children: "Taunt after the match" }),
+                  jsx("p", {
+                    className: "hg-muted",
+                    children:
+                      "Short, display-only trash talk. Sent with phase post and the match summary.",
+                  }),
+                  jsxs("label", {
+                    className: "hg-field",
+                    children: [
+                      jsx("span", { children: "Taunt" }),
+                      jsx("input", {
+                        className: "hg-input",
+                        type: "text",
+                        maxLength: String(CHAT_TAUNT_MAX_CHARS),
+                        value: tauntDraft,
+                        disabled: tauntBusy,
+                        placeholder: "Keep it short and clean",
+                        "data-taunt-input": "true",
+                        onChange: function (event) {
+                          setTauntDraft(event.target.value);
+                        },
+                      }),
+                    ],
+                  }),
+                  tauntNotice
+                    ? jsx("p", {
+                        className: "hg-muted",
+                        role: "status",
+                        "data-taunt-notice": "true",
+                        children: tauntNotice,
+                      })
+                    : null,
+                  jsx("button", {
+                    type: "submit",
+                    className: "hg-btn hg-btn--primary",
+                    disabled: tauntBusy,
+                    "data-taunt-submit": "true",
+                    children: tauntBusy ? "Sending..." : "Send taunt",
+                  }),
+                ],
+              }),
+            ],
+          })
+        : null,
+      opponentTaunts.length || sentTaunts.length
+        ? jsxs("div", {
+            className: "hg-card hg-taunt-log",
+            "data-section": "battle-taunts",
+            children: [
+              jsx("h3", { children: "Taunts" }),
+              opponentTaunts.length
+                ? jsx("ul", {
+                    className: "hg-taunt__list",
+                    "aria-label": "Opponent taunts",
+                    children: opponentTaunts.map(function (taunt, index) {
+                      return renderTauntRow(taunt, "opponent-" + (taunt.id || index));
+                    }),
+                  })
+                : null,
+              sentTaunts.length
+                ? jsx("ul", {
+                    className: "hg-taunt__list",
+                    "aria-label": "Your taunts",
+                    children: sentTaunts.map(function (taunt, index) {
+                      return renderTauntRow(taunt, "sent-" + (taunt.id || index));
+                    }),
+                  })
+                : null,
             ],
           })
         : null,
@@ -2594,255 +3457,6 @@ function BattleTab(props = {}) {
   return { "CHALLENGE_INBOX_PLACEHOLDER": CHALLENGE_INBOX_PLACEHOLDER, "PRACTICE_BOT_NAME": PRACTICE_BOT_NAME, "BattleTab": BattleTab };
 })();
 
-// desktop/src/ui/logic/chat.js
-const __m13 = (function () {
-  const npcHostLine = __m2["npcHostLine"];
-/** Pure chat helpers shared by the Desktop Chat tab and its tests. */
-
-
-const CHAT_CHANNEL_ID = "lobby";
-const CHAT_MESSAGES_PATH = "/chat/channels/lobby/messages";
-const CHAT_BLOCKS_PATH = "/blocks";
-const CHAT_REPORT_PATH = "/moderation/report";
-const CHAT_MESSAGE_MAX_CHARS = 400;
-const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
-
-const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
-
-function flagValue(value) {
-  if (value === true || value === 1) return true;
-  if (value === false || value === 0 || value === null || value === undefined) {
-    return false;
-  }
-  return TRUE_FLAGS.has(String(value).trim().toLowerCase());
-}
-
-/**
- * Return whether the owner enabled chat.
- *
- * The policy/status payload uses ``chat_enabled``; accepted aliases keep the
- * Desktop pane compatible with the host's camelCase props.
- */
-function isChatEnabled(props = {}) {
-  const source = props || {};
-  const candidates = [
-    source.chatEnabled,
-    source.chat_enabled,
-    source.features && source.features.chat,
-    source.features && source.features.chat_enabled,
-    source.policy && source.policy.chat_enabled,
-    source.permissions && source.permissions.chat,
-    source.status && source.status.policy && source.status.policy.chat_enabled,
-    source.status &&
-      source.status.me &&
-      source.status.me.policy &&
-      source.status.me.policy.chat_enabled,
-  ];
-  for (const candidate of candidates) {
-    if (candidate !== undefined && candidate !== null) {
-      return flagValue(candidate);
-    }
-  }
-  return false;
-}
-
-function shouldShowChatStub(props = {}) {
-  const source = props || {};
-  return !source.api || !isChatEnabled(source);
-}
-
-function normalText(value, fallback = "") {
-  return typeof value === "string" ? value : fallback;
-}
-
-function normalNullableText(value) {
-  return typeof value === "string" ? value : null;
-}
-
-/** Coerce one server chat row into the display shape without interpreting it. */
-function normalizeMessage(item) {
-  if (!item || typeof item !== "object") return null;
-  const id = normalText(item.id);
-  if (!id) return null;
-  return {
-    id,
-    channel_id: normalText(item.channel_id, CHAT_CHANNEL_ID),
-    account_id: normalText(item.account_id),
-    actor_mode: item.actor_mode === "agent" ? "agent" : "human",
-    body: normalText(item.body),
-    created_at: normalText(item.created_at),
-    deleted_at: normalNullableText(item.deleted_at),
-  };
-}
-
-/** Read the message list from either a bridge envelope or decoded data. */
-function normalizeMessages(envelopeOrData) {
-  if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
-  const payload =
-    envelopeOrData.data && typeof envelopeOrData.data === "object"
-      ? envelopeOrData.data
-      : envelopeOrData;
-  const rows = Array.isArray(payload.messages) ? payload.messages : [];
-  return rows.map(normalizeMessage).filter(Boolean);
-}
-
-/** Read the message returned by a send envelope. */
-function messageFromEnvelope(envelope) {
-  if (!envelope || envelope.ok !== true || !envelope.data) return null;
-  return normalizeMessage(envelope.data.message);
-}
-
-/** Merge messages by id and sort oldest first. */
-function mergeMessages(existing, incoming) {
-  const byId = new Map();
-  for (const message of [...(existing || []), ...(incoming || [])]) {
-    const normalized = normalizeMessage(message);
-    if (normalized) byId.set(normalized.id, normalized);
-  }
-  return [...byId.values()].sort(function (left, right) {
-    if (left.created_at === right.created_at) {
-      return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
-    }
-    return left.created_at < right.created_at ? -1 : 1;
-  });
-}
-
-/** Validate a composer draft before it is sent to the bridge. */
-function validateChatDraft(draft) {
-  const value = typeof draft === "string" ? draft.trim() : "";
-  if (!value) {
-    return { ok: false, error: "Message cannot be empty." };
-  }
-  if (value.length > CHAT_MESSAGE_MAX_CHARS) {
-    return {
-      ok: false,
-      error: `Message cannot exceed ${CHAT_MESSAGE_MAX_CHARS} characters.`,
-    };
-  }
-  return { ok: true, value };
-}
-
-/** Plain text is always sent as display data; the server owns sanitization. */
-function chatMessagePayload(value) {
-  return { body: String(value || ""), actor_mode: "human" };
-}
-
-const MODERATION_CODES = new Set([
-  "blocked",
-  "blocked_interaction",
-  "forbidden",
-  "rate_limited",
-  "empty_message",
-  "message_too_long",
-  "validation_error",
-]);
-
-const AUTH_CODES = new Set(["auth_missing", "unauthorized", "expired", "disabled"]);
-
-function cleanCode(value) {
-  return typeof value === "string" ? value.slice(0, 64) : "";
-}
-
-function moderationLine(code, retryAfterS) {
-  const base = npcHostLine("chat.moderation");
-  if (code === "rate_limited") {
-    const seconds = Number(retryAfterS);
-    return seconds > 0
-      ? `Easy there. Try again in ${Math.ceil(seconds)}s.`
-      : "Easy there. Slow down before sending again.";
-  }
-  if (code === "blocked" || code === "blocked_interaction") {
-    return "That message was blocked. Stay calm. Stay open.";
-  }
-  if (
-    code === "empty_message" ||
-    code === "message_too_long" ||
-    code === "validation_error"
-  ) {
-    return "That message was rejected. Keep it short and kind.";
-  }
-  if (code === "auth_missing" || code === "unauthorized" || code === "expired") {
-    return "Pair this device before sending lobby messages.";
-  }
-  if (code === "offline" || code === "unavailable" || code === "network_disabled") {
-    return "The lobby is unavailable right now. Try again later.";
-  }
-  return base ? base.line : "The message was not sent.";
-}
-
-/** Turn a failed bridge envelope into a display-only moderation notice. */
-function chatNoticeFromEnvelope(envelope) {
-  if (envelope && envelope.ok === true) return null;
-  const source = envelope && typeof envelope === "object" ? envelope : {};
-  const status = cleanCode(source.status) || "unavailable";
-  const error = source.error && typeof source.error === "object" ? source.error : {};
-  const code = cleanCode(error.code) || cleanCode(source.status) || "unavailable";
-  const retryAfterS = Number(error.retry_after_s);
-  const message = normalText(error.message).slice(0, 240);
-  const kind = AUTH_CODES.has(code)
-    ? "auth"
-    : MODERATION_CODES.has(code)
-      ? "moderation"
-      : "error";
-  return {
-    kind,
-    status,
-    code,
-    retryAfterS: Number.isFinite(retryAfterS) && retryAfterS > 0 ? retryAfterS : null,
-    message,
-    hostLine: moderationLine(code, retryAfterS),
-  };
-}
-
-/** Build a notice for a successful block or report. */
-function chatActionNotice(kind) {
-  if (kind === "blocked") {
-    return {
-      kind: "moderation",
-      status: "ok",
-      code: "blocked",
-      retryAfterS: null,
-      message: "That account is blocked.",
-      hostLine: "Blocked. Their messages are hidden now.",
-    };
-  }
-  if (kind === "reported") {
-    return {
-      kind: "moderation",
-      status: "ok",
-      code: "reported",
-      retryAfterS: null,
-      message: "The report is queued for review.",
-      hostLine: "Report sent. A moderator will review it.",
-    };
-  }
-  return null;
-}
-
-/** Nous Girl hosts every moderation notice; the line never renders markup. */
-function chatModerationHost(notice) {
-  const base = npcHostLine("chat.moderation");
-  if (!base) return null;
-  const line = notice && typeof notice.hostLine === "string" && notice.hostLine
-    ? notice.hostLine
-    : base.line;
-  return {
-    id: base.id,
-    name: base.name,
-    context: base.context,
-    line,
-    displayOnly: true,
-  };
-}
-
-/** Provider for the normal lobby banner. */
-function chatHost() {
-  return npcHostLine("chat");
-}
-
-  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "chatMessagePayload": chatMessagePayload, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
-})();
-
 // desktop/src/ui/tabs/ChatTab.js
 const __m14 = (function () {
   const useEffect = __ext2;
@@ -2853,19 +3467,28 @@ const __m14 = (function () {
   const npcHostLine = __m2["npcHostLine"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CHAT_BLOCKS_PATH = __m13["CHAT_BLOCKS_PATH"];
-  const CHAT_MESSAGES_PATH = __m13["CHAT_MESSAGES_PATH"];
-  const CHAT_REPORT_PATH = __m13["CHAT_REPORT_PATH"];
-  const CHAT_REPORT_REASON = __m13["CHAT_REPORT_REASON"];
-  const chatActionNotice = __m13["chatActionNotice"];
-  const chatMessagePayload = __m13["chatMessagePayload"];
-  const chatModerationHost = __m13["chatModerationHost"];
-  const chatNoticeFromEnvelope = __m13["chatNoticeFromEnvelope"];
-  const isChatEnabled = __m13["isChatEnabled"];
-  const mergeMessages = __m13["mergeMessages"];
-  const messageFromEnvelope = __m13["messageFromEnvelope"];
-  const normalizeMessages = __m13["normalizeMessages"];
-  const validateChatDraft = __m13["validateChatDraft"];
+  const CHAT_BLOCKS_PATH = __m12["CHAT_BLOCKS_PATH"];
+  const CHAT_DM_TARGET_MAX_CHARS = __m12["CHAT_DM_TARGET_MAX_CHARS"];
+  const CHAT_INBOX_PATH = __m12["CHAT_INBOX_PATH"];
+  const CHAT_MESSAGES_PATH = __m12["CHAT_MESSAGES_PATH"];
+  const CHAT_MESSAGE_MAX_CHARS = __m12["CHAT_MESSAGE_MAX_CHARS"];
+  const CHAT_REPORT_PATH = __m12["CHAT_REPORT_PATH"];
+  const CHAT_REPORT_REASON = __m12["CHAT_REPORT_REASON"];
+  const chatActionNotice = __m12["chatActionNotice"];
+  const chatMessagePayload = __m12["chatMessagePayload"];
+  const chatModerationHost = __m12["chatModerationHost"];
+  const chatNoticeFromEnvelope = __m12["chatNoticeFromEnvelope"];
+  const isChatEnabled = __m12["isChatEnabled"];
+  const isTauntMessage = __m12["isTauntMessage"];
+  const markInboxRead = __m12["markInboxRead"];
+  const markInboxReadRequest = __m12["markInboxReadRequest"];
+  const mergeMessages = __m12["mergeMessages"];
+  const messageFromEnvelope = __m12["messageFromEnvelope"];
+  const normalizeInbox = __m12["normalizeInbox"];
+  const normalizeMessages = __m12["normalizeMessages"];
+  const tauntSummary = __m12["tauntSummary"];
+  const validateChatDraft = __m12["validateChatDraft"];
+  const validateDmTarget = __m12["validateDmTarget"];
 
 function ChatOffStub(props) {
   const uiState = props.uiState || UI_STATES.NETWORK_OFF;
@@ -2913,10 +3536,180 @@ function ChatOffStub(props) {
   });
 }
 
+function InboxCard(props) {
+  const inbox = props.inbox || { items: [], unreadCount: 0 };
+  const count = Number(inbox.unreadCount) || 0;
+  const items = Array.isArray(inbox.items) ? inbox.items : [];
+
+  return jsxs("div", {
+    className: "hg-card hg-inbox",
+    "data-section": "chat-inbox",
+    children: [
+      jsxs("header", {
+        className: "hg-card__header",
+        children: [
+          jsxs("h3", {
+            children: [
+              "Inbox ",
+              jsx("span", {
+                className:
+                  count > 0
+                    ? "hg-badge hg-inbox__badge hg-inbox__badge--unread"
+                    : "hg-badge hg-inbox__badge",
+                "data-inbox-unread": String(count),
+                children: count > 0 ? String(count) + " unread" : "Clear",
+              }),
+            ],
+          }),
+          jsxs("div", {
+            className: "hg-actions hg-actions--tight",
+            children: [
+              jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                onClick: props.onRefresh,
+                disabled: props.busy,
+                children: "Refresh inbox",
+              }),
+              jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                onClick: props.onOpen,
+                disabled: props.busy,
+                "data-inbox-open": props.open ? "true" : "false",
+                children: props.open ? "Hide inbox" : "Open inbox",
+              }),
+            ],
+          }),
+        ],
+      }),
+      jsx("p", {
+        className: "hg-muted",
+        children:
+          "Unread direct messages, @mentions and taunt notices. Opening the inbox marks them read.",
+      }),
+      props.open
+        ? items.length
+          ? jsx("ul", {
+              className: "hg-inbox__list hg-chat__thread",
+              children: items.map(function (item) {
+                return jsxs(
+                  "li",
+                  {
+                    className:
+                      "hg-inbox__item hg-inbox__item--" + item.kind +
+                      (item.unread ? " hg-inbox__item--unread" : ""),
+                    "data-inbox-id": item.id,
+                    "data-inbox-kind": item.kind,
+                    children: [
+                      jsxs("div", {
+                        className: "hg-row hg-row--between",
+                        children: [
+                          jsx("strong", {
+                            children:
+                              (item.kind === "mention" ? "@mention" : item.kind.toUpperCase()) +
+                              (item.from ? " · " + item.from : ""),
+                          }),
+                          jsx("span", {
+                            className: "hg-muted",
+                            children: item.created_at || "",
+                          }),
+                        ],
+                      }),
+                      jsx("p", {
+                        className: "hg-inbox__preview",
+                        children: item.body || "",
+                      }),
+                    ],
+                  },
+                  item.id
+                );
+              }),
+            })
+          : jsx("p", {
+              className: "hg-muted",
+              "data-placeholder": "chat-inbox-empty",
+              children: "No unread messages.",
+            })
+        : null,
+    ],
+  });
+}
+
+function TauntActions(props) {
+  return jsxs("div", {
+    className: "hg-actions hg-actions--tight",
+    children: [
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: props.busy,
+        onClick: function () {
+          props.onReport(props.message);
+        },
+        children: "Report",
+      }),
+      jsx("button", {
+        type: "button",
+        className: "hg-btn",
+        disabled: props.busy,
+        onClick: function () {
+          props.onBlock(props.message);
+        },
+        children: "Block",
+      }),
+    ],
+  });
+}
+
 function MessageRow(props) {
   const message = props.message;
   const busy = props.busy;
   const actor = message.actor_mode === "agent" ? "Agent" : "Player";
+
+  if (isTauntMessage(message)) {
+    const summary = tauntSummary(message.match_context);
+    return jsxs("li", {
+      className: "hg-log__item hg-taunt",
+      "data-message-id": message.id,
+      "data-actor-mode": message.actor_mode,
+      "data-message-kind": "taunt",
+      children: [
+        jsxs("div", {
+          className: "hg-taunt__bubble",
+          children: [
+            jsxs("div", {
+              className: "hg-row hg-row--between",
+              children: [
+                jsx("strong", { children: actor + " taunt" }),
+                jsx("span", {
+                  className: "hg-muted",
+                  children: message.created_at || "Unknown time",
+                }),
+              ],
+            }),
+            jsx("p", {
+              className: "hg-taunt__body",
+              children: message.body,
+            }),
+            summary
+              ? jsx("p", {
+                  className: "hg-taunt__match",
+                  "data-taunt-match": "true",
+                  children: summary,
+                })
+              : null,
+            jsx(TauntActions, {
+              message,
+              busy,
+              onReport: props.onReport,
+              onBlock: props.onBlock,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
 
   return jsxs("li", {
     className: "hg-log__item",
@@ -2970,10 +3763,20 @@ function ChatLive(props) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
+  const [dmTarget, setDmTarget] = useState("");
   const [composerError, setComposerError] = useState("");
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [inbox, setInbox] = useState({
+    items: [],
+    unreadCount: 0,
+    total: 0,
+    dms: [],
+    mentions: [],
+  });
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxBusy, setInboxBusy] = useState(false);
 
   useEffect(
     function () {
@@ -3005,6 +3808,73 @@ function ChatLive(props) {
     [api, refreshTick]
   );
 
+  useEffect(
+    function pollInbox() {
+      let cancelled = false;
+      if (!api || typeof api.get !== "function") {
+        return undefined;
+      }
+      async function load() {
+        try {
+          const envelope = await api.get(CHAT_INBOX_PATH);
+          if (!cancelled && envelope && envelope.ok === true) {
+            setInbox(normalizeInbox(envelope));
+          }
+        } catch (_error) {
+          /* Inbox polling stays quiet; the lobby notice owns errors. */
+        }
+      }
+      load();
+      const timer = setInterval(load, 30000);
+      return function () {
+        cancelled = true;
+        clearInterval(timer);
+      };
+    },
+    [api]
+  );
+
+  async function refreshInbox() {
+    if (!api || typeof api.get !== "function") return;
+    setInboxBusy(true);
+    try {
+      const envelope = await api.get(CHAT_INBOX_PATH);
+      if (envelope && envelope.ok === true) {
+        setInbox(normalizeInbox(envelope));
+      } else {
+        setNotice(chatNoticeFromEnvelope(envelope));
+      }
+    } catch (_error) {
+      setNotice(chatNoticeFromEnvelope(null));
+    } finally {
+      setInboxBusy(false);
+    }
+  }
+
+  async function openInbox() {
+    if (inboxOpen) {
+      setInboxOpen(false);
+      return;
+    }
+    setInboxOpen(true);
+    const unreadIds = (inbox.items || [])
+      .filter(function (item) {
+        return item.unread;
+      })
+      .map(function (item) {
+        return item.id;
+      });
+    if (!unreadIds.length) return;
+    setInbox(function (current) {
+      return markInboxRead(current);
+    });
+    try {
+      await markInboxReadRequest(api, unreadIds);
+    } catch (_error) {
+      /* Local read state is still useful if the bridge cannot persist it. */
+    }
+  }
+
   async function submitMessage(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -3014,13 +3884,18 @@ function ChatLive(props) {
       setComposerError(checked.error);
       return;
     }
+    const checkedTarget = validateDmTarget(dmTarget);
+    if (!checkedTarget.ok) {
+      setComposerError(checkedTarget.error);
+      return;
+    }
 
     setComposerError("");
     setBusy(true);
     try {
       const envelope = await api.post(
         CHAT_MESSAGES_PATH,
-        chatMessagePayload(checked.value)
+        chatMessagePayload(checked.value, checkedTarget.value)
       );
       if (envelope && envelope.ok === true) {
         const sent = messageFromEnvelope(envelope);
@@ -3135,13 +4010,21 @@ function ChatLive(props) {
             host: moderationHost,
           })
         : jsx(NpcHostBanner, { surface: "chat" }),
-      notice && notice.message
+      notice && (notice.message || notice.hostLine)
         ? jsx("p", {
             className: notice.kind === "moderation" ? "hg-muted" : "hg-error",
             "data-chat-notice": notice.code,
-            children: notice.message,
+            role: "status",
+            children: notice.message || notice.hostLine,
           })
         : null,
+      jsx(InboxCard, {
+        inbox,
+        open: inboxOpen,
+        busy: inboxBusy,
+        onOpen: openInbox,
+        onRefresh: refreshInbox,
+      }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -3179,12 +4062,30 @@ function ChatLive(props) {
                   jsx("textarea", {
                     className: "hg-input",
                     rows: "3",
-                    maxLength: String(400),
+                    maxLength: String(CHAT_MESSAGE_MAX_CHARS),
                     value: draft,
                     disabled: busy,
                     placeholder: "Write a plain-text lobby message",
                     onChange: function (event) {
                       setDraft(event.target.value);
+                    },
+                  }),
+                ],
+              }),
+              jsxs("label", {
+                className: "hg-field hg-chat__dm-target",
+                children: [
+                  jsx("span", { children: "Direct message to (optional)" }),
+                  jsx("input", {
+                    className: "hg-input",
+                    type: "text",
+                    maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
+                    value: dmTarget,
+                    disabled: busy,
+                    placeholder: "Player or pet name — blank keeps the lobby",
+                    "data-chat-dm-target": "true",
+                    onChange: function (event) {
+                      setDmTarget(event.target.value);
                     },
                   }),
                 ],
@@ -4920,6 +5821,9 @@ const __m21 = (function () {
   const connectionRows = __m0["connectionRows"];
   const deriveConnectionStatus = __m0["deriveConnectionStatus"];
   const resolveConnectionUiState = __m0["resolveConnectionUiState"];
+  const CHAT_SETTINGS_PATH = __m12["CHAT_SETTINGS_PATH"];
+  const chatEnabledFromEnvelope = __m12["chatEnabledFromEnvelope"];
+  const updateChatSetting = __m12["updateChatSetting"];
   const PAIRING_STATES = __m20["PAIRING_STATES"];
   const SIGNUP_ERROR_MESSAGES = __m20["SIGNUP_ERROR_MESSAGES"];
   const deviceRowsFromEnvelope = __m20["deviceRowsFromEnvelope"];
@@ -4946,6 +5850,53 @@ function SettingRow(props) {
     children: [
       jsx("span", { className: "hg-label", children: setting.label }),
       jsx("strong", { children: setting.value }),
+    ],
+  });
+}
+
+function ChatToggleRow(props) {
+  const enabled = props.enabled === true;
+  return jsxs("div", {
+    className: "hg-setting hg-setting--toggle",
+    "data-setting": "chat",
+    "data-chat-enabled": enabled ? "true" : "false",
+    children: [
+      jsxs("span", {
+        className: "hg-label",
+        children: [
+          "Agent chat",
+          jsx("span", {
+            className: "hg-muted hg-setting__hint",
+            children: "Lobby messages, DMs and post-battle taunts.",
+          }),
+        ],
+      }),
+      jsxs("span", {
+        className: "hg-toggle",
+        children: [
+          jsx("input", {
+            type: "checkbox",
+            className: "hg-toggle__input",
+            "data-chat-toggle": "true",
+            "aria-label": "Enable Agent chat",
+            checked: enabled,
+            disabled: Boolean(props.busy),
+            onChange: props.onChange,
+          }),
+          jsx("strong", {
+            className: "hg-toggle__value",
+            children: enabled ? "On" : "Off",
+          }),
+        ],
+      }),
+      props.notice
+        ? jsx("p", {
+            className: "hg-muted hg-setting__notice",
+            role: "status",
+            "data-chat-setting-notice": "true",
+            children: props.notice,
+          })
+        : null,
     ],
   });
 }
@@ -5117,6 +6068,11 @@ function SettingsTab(props = {}) {
   const [busy, setBusy] = useState("");
   const [now, setNow] = useState(Date.now());
   const [connection, setConnection] = useState(null);
+  const [chatEnabled, setChatEnabled] = useState(
+    props.chatEnabled === true || props.chat_enabled === true
+  );
+  const [chatToggleBusy, setChatToggleBusy] = useState(false);
+  const [chatToggleNotice, setChatToggleNotice] = useState("");
 
   const loadDevices = useCallback(
     async function loadDevices() {
@@ -5181,6 +6137,15 @@ function SettingsTab(props = {}) {
   );
 
   useEffect(
+    function syncChatFlag() {
+      if (connection && typeof connection.chatEnabled === "boolean") {
+        setChatEnabled(connection.chatEnabled);
+      }
+    },
+    [connection]
+  );
+
+  useEffect(
     function initialise() {
       if (!api) {
         return undefined;
@@ -5235,6 +6200,43 @@ function SettingsTab(props = {}) {
 
   if (!api) {
     return jsx(SettingsStub, { uiState: uiState });
+  }
+
+  async function toggleChat(event) {
+    const next =
+      event && event.target && typeof event.target.checked === "boolean"
+        ? event.target.checked
+        : !chatEnabled;
+    setChatEnabled(next);
+    setChatToggleBusy(true);
+    setChatToggleNotice("");
+    try {
+      const envelope = await updateChatSetting(api, next, {
+        path: CHAT_SETTINGS_PATH,
+      });
+      if (envelope && envelope.ok === true) {
+        const confirmed = chatEnabledFromEnvelope(envelope, next);
+        setChatEnabled(confirmed);
+        setChatToggleNotice(
+          confirmed
+            ? "Agent chat is on. The Chat composer is live."
+            : "Agent chat is off. The Chat composer stays stubbed."
+        );
+        if (typeof props.onChatEnabledChange === "function") {
+          props.onChatEnabledChange(confirmed);
+        }
+      } else {
+        setChatEnabled(!next);
+        setChatToggleNotice(
+          noticeText(envelope, "Could not update Agent chat.")
+        );
+      }
+    } catch (_error) {
+      setChatEnabled(!next);
+      setChatToggleNotice("Could not update Agent chat.");
+    } finally {
+      setChatToggleBusy(false);
+    }
   }
 
   const liveRows = connection ? connectionRows(connection) : SETTINGS_PLACEHOLDER;
@@ -5329,7 +6331,19 @@ function SettingsTab(props = {}) {
             className: "hg-settings__list",
             "data-live-status": connection ? "true" : "false",
             children: liveRows.map((setting) =>
-              jsx(SettingRow, { setting }, setting.key)
+              setting.key === "chat"
+                ? jsx(
+                    ChatToggleRow,
+                    {
+                      setting,
+                      enabled: chatEnabled,
+                      busy: chatToggleBusy,
+                      notice: chatToggleNotice,
+                      onChange: toggleChat,
+                    },
+                    setting.key
+                  )
+                : jsx(SettingRow, { setting }, setting.key)
             ),
           }),
         ],
@@ -6227,7 +7241,7 @@ const __m24 = (function () {
   const jsxs = __ext1;
   const deriveConnectionStatus = __m0["deriveConnectionStatus"];
   const resolveConnectionUiState = __m0["resolveConnectionUiState"];
-  const BattleTab = __m12["BattleTab"];
+  const BattleTab = __m13["BattleTab"];
   const ChatTab = __m14["ChatTab"];
   const HabitatTab = __m17["HabitatTab"];
   const LeaderboardTab = __m19["LeaderboardTab"];
@@ -6860,11 +7874,11 @@ const __m27 = (function () {
 
 
 
-  return { "HermagotchiPane": __m24["HermagotchiPane"], "TAB_IDS": __m24["TAB_IDS"], "TAB_LABELS": __m24["TAB_LABELS"], "TAB_COMPONENTS": __m24["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m26["PANE_ID"], "PANE_TITLE": __m26["PANE_TITLE"], "createPaneContribution": __m26["createPaneContribution"], "registerHermagotchiPane": __m26["registerHermagotchiPane"], "createDesktopPlugin": __m26["createDesktopPlugin"], "HabitatTab": __m17["HabitatTab"], "HABITAT_PLACEHOLDER": __m17["HABITAT_PLACEHOLDER"], "BattleTab": __m12["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m12["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m22["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m22["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m19["LeaderboardTab"], "ChatTab": __m14["ChatTab"], "SettingsTab": __m21["SettingsTab"], "SETTINGS_PLACEHOLDER": __m21["SETTINGS_PLACEHOLDER"], "CareMeter": __m15["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m2["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m2["NPC_NAMES"], "npcHostLine": __m2["npcHostLine"] };
+  return { "HermagotchiPane": __m24["HermagotchiPane"], "TAB_IDS": __m24["TAB_IDS"], "TAB_LABELS": __m24["TAB_LABELS"], "TAB_COMPONENTS": __m24["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m26["PANE_ID"], "PANE_TITLE": __m26["PANE_TITLE"], "createPaneContribution": __m26["createPaneContribution"], "registerHermagotchiPane": __m26["registerHermagotchiPane"], "createDesktopPlugin": __m26["createDesktopPlugin"], "HabitatTab": __m17["HabitatTab"], "HABITAT_PLACEHOLDER": __m17["HABITAT_PLACEHOLDER"], "BattleTab": __m13["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m13["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m22["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m22["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m19["LeaderboardTab"], "ChatTab": __m14["ChatTab"], "SettingsTab": __m21["SettingsTab"], "SETTINGS_PLACEHOLDER": __m21["SETTINGS_PLACEHOLDER"], "CareMeter": __m15["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m2["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m2["NPC_NAMES"], "npcHostLine": __m2["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;

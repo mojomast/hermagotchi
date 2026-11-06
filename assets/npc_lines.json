@@ -470,6 +470,43 @@
             "claw_key": "boss",
             "note": "stripped Shredclaw! prefix"
           }
+        ],
+        "lobby.upset": [
+          {
+            "text": "150 rating gap? Southpaw Check: the underdog riffed louder!",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "Upset! They quantized the favorite to two bits!",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "Giant slayer! Run it LOCALLY and loud!",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "Rating gap said no. Power chord said yes!",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          },
+          {
+            "text": "They never saw that riff coming. Full precision upset!",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "new"
+          }
         ]
       }
     }

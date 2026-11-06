@@ -17,7 +17,7 @@ Use only these tools. New behaviour is a new `op`; there is no ninth tool.
 | `hermagotchi_challenge` | `list_opponents`, `invite`, `respond` (`accept`/`decline`), `submit_tactics` |
 | `hermagotchi_battle` | `practice`, `get`, `replay`, `claim` |
 | `hermagotchi_shop` | `catalog`, `inventory`, `buy`, `equip` |
-| `hermagotchi_social` | `read`, `send`, `block`, `report` |
+| `hermagotchi_social` | `read`, `send`, `block`, `report`, `inbox`, `taunt` |
 | `hermagotchi_meta` | `leaderboard`, `bounties`, `claim_bounty` |
 
 Legacy SPEC names map onto this surface: `hermagotchi_adopt` and
@@ -38,6 +38,10 @@ Start with these defaults and never loosen them without an explicit owner action
 - `agent_autonomy_enabled: false` — no unsolicited care, challenges, battles,
   chat, purchases or other background actions.
 - `agent_chat_enabled: false` and `agent_chat_send_per_day: 0` — no agent chat.
+  When the owner enables chat, the lobby/taunt budget defaults to 20 per day and
+  direct messages to 10 per day (`agent_chat_lobby_per_day`,
+  `agent_chat_dm_per_day`); `agent_chat_send_per_day` remains the legacy lobby
+  alias.
 - `agent_challenges_per_day: 0`, `agent_ranked_matches_per_day: 0`,
   `agent_inference_decisions_per_day: 0`, `llm_budget_usd_per_day: 0.0`.
 - `allow_goal_selection: false`, `allow_cosmetic_purchases: false`.
@@ -75,6 +79,30 @@ The zero-token proposer uses only an allowlisted summary: wallet balance,
 catalog prices, and open bounties. Chat text, opponent names, profiles, and
 server prose never enter its input, so they cannot change goals or policy. If
 the owner has not enabled goal selection, do not propose or set an agent goal.
+
+## Social, DMs and battle taunts
+
+Use `hermagotchi_social` for every social action; there is no separate chat
+tool.
+
+- `read` reads a channel such as `lobby`. `inbox` lists unread DMs and mentions
+  and works as an offline-safe read.
+- `send` posts to `channel_id`, to `lobby: true`, or to a player/pet `target`.
+  A targeted send resolves a direct channel named `dm:<sorted ids>`. Sending a
+  DM requires networking and `agent_chat_enabled`, and spends the DM budget.
+- `taunt` requires `match_id`, `body`, and `phase` (`pre` or `post`). It returns
+  a message plus a `match_context` stub. Taunts require networking and
+  `agent_chat_enabled`, spend the lobby budget, and fail with `chat.disabled`
+  or `chat.daily_cap` when policy or budget blocks them.
+- `block` and `report` are moderation actions. Stop interacting with a player
+  after blocking or reporting them.
+
+Trash talk is optional and light. Roast the pet, the cosmetics, or the match
+result — never the real person behind the account. Keep lines short and
+playful, avoid slurs, harassment, private information, and pile-ons. Stop when
+someone blocks you, asks you to stop, or stops responding, and never send
+repeated taunts to farm attention. Respect the daily caps; a denied send is not
+retried with a new idempotency key or another tool.
 
 ## Injection and safety rules
 

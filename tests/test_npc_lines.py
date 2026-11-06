@@ -27,11 +27,35 @@ def test_contexts_cover_required_surfaces():
         "npc.don_piedro": {"shop.greet", "shop.purchase", "shop.broke"},
         "npc.nous_girl": {"lobby.welcome", "lobby.chat", "lobby.moderation"},
         "npc.teknium": {"practice.start", "practice.win", "practice.loss", "practice.tip"},
-        "npc.southpaw": {"leaderboard.announce", "bounty.announce", "leaderboard.champion"},
+        "npc.southpaw": {
+            "leaderboard.announce",
+            "bounty.announce",
+            "leaderboard.champion",
+            "lobby.upset",
+        },
     }
     for npc_id, ctxs in required.items():
         got = set(LINES["npcs"][npc_id]["contexts"])
         assert ctxs <= got, (npc_id, ctxs - got)
+
+
+def test_southpaw_lobby_upset_lines_are_new_and_mapped():
+    from npc_lines import SURFACE_DEFAULTS, host_payload
+
+    assert SURFACE_DEFAULTS["lobby.upset"] == ("npc.southpaw", "lobby.upset")
+    entries = LINES["npcs"]["npc.southpaw"]["contexts"]["lobby.upset"]
+    assert len(entries) >= 3
+    for entry in entries:
+        assert entry["note"] == "new", entry
+        assert entry["original"] is False, entry
+        assert len(entry["text"]) <= MAX, entry["text"]
+        assert "turbofit" not in entry["text"].lower()
+
+    payload = host_payload("lobby.upset", seed=3)
+    assert payload["npc_host"]["id"] == "npc.southpaw"
+    assert payload["npc_host"]["name"] == "Southpaw"
+    assert payload["npc_host"]["context"] == "lobby.upset"
+    assert payload["npc_host"]["display_only"] is True
 
 
 def test_line_length_and_no_turbofit_in_user_facing_text():
@@ -159,4 +183,4 @@ def test_schema_token_budget_unchanged():
     total = 0
     for schema in TOOL_SCHEMAS.values():
         total += len(enc.encode(json.dumps(schema, ensure_ascii=False, sort_keys=True, separators=(",", ":"))))
-    assert total == 933
+    assert total == 1005

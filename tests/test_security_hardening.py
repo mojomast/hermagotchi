@@ -79,6 +79,8 @@ def test_default_policy_is_fail_closed_and_matches_contract_defaults() -> None:
     assert DEFAULT_POLICY.agent_autonomy_enabled is False
     assert DEFAULT_POLICY.agent_chat_enabled is False
     assert DEFAULT_POLICY.agent_chat_send_per_day == 0
+    assert DEFAULT_POLICY.agent_chat_lobby_per_day == 20
+    assert DEFAULT_POLICY.agent_chat_dm_per_day == 10
     assert DEFAULT_POLICY.agent_challenges_per_day == 0
     assert DEFAULT_POLICY.agent_ranked_matches_per_day == 0
     assert DEFAULT_POLICY.agent_inference_decisions_per_day == 0
@@ -89,6 +91,7 @@ def test_default_policy_is_fail_closed_and_matches_contract_defaults() -> None:
 
     for action in (
         "social.send",
+        "social.taunt",
         "shop.buy",
         "shop.equip",
         "goals.set.agent",
@@ -99,8 +102,11 @@ def test_default_policy_is_fail_closed_and_matches_contract_defaults() -> None:
     ):
         assert check_mutation(DEFAULT_POLICY, action) == "network_disabled"
 
+    assert check_mutation(DEFAULT_POLICY, "social.inbox") == "ok"
+
     online = Policy(network_enabled=True)
     assert check_mutation(online, "social.send") == "chat_disabled"
+    assert check_mutation(online, "social.taunt") == "chat_disabled"
     assert check_mutation(online, "shop.buy") == "cosmetic_purchases_disabled"
     assert check_mutation(online, "goals.set.agent") == "goal_selection_disabled"
     assert check_mutation(online, "challenge.invite") == "autonomy_disabled"
@@ -130,6 +136,24 @@ def test_offline_tool_calls_stay_read_only_and_block_remote_mutations() -> None:
     )
     assert send["ok"] is False
     assert send["error_code"] == "network_disabled"
+
+    taunt = handle_tool(
+        "hermagotchi_social",
+        {
+            "op": "taunt",
+            "match_id": "match_1",
+            "body": "nice crown",
+            "phase": "pre",
+            "idempotency_key": "hardening-taunt-1",
+        },
+    )
+    assert taunt["ok"] is False
+    assert taunt["error_code"] == "network_disabled"
+
+    inbox = handle_tool("hermagotchi_social", {"op": "inbox"})
+    assert inbox["ok"] is True
+    assert isinstance(inbox["data"]["unread"], list)
+    assert isinstance(inbox["data"]["mentions"], list)
 
     buy = handle_tool(
         "hermagotchi_shop",
