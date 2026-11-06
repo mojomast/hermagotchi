@@ -1,4 +1,4 @@
-"""Moderated chat, block list and abuse report endpoints."""
+"""Moderated chat, DM inbox, taunts, block list and abuse report endpoints."""
 
 from __future__ import annotations
 
@@ -14,9 +14,12 @@ from ..social import (
     SocialError,
     block_account,
     create_report,
+    inbox,
     list_blocks,
     list_messages,
+    mark_inbox_read,
     send_message,
+    send_taunt,
     unblock_account,
 )
 from ..social.sanitize import MAX_MESSAGE_CHARS, MAX_REASON_CHARS
@@ -33,6 +36,24 @@ class MessageCreate(BaseModel):
     body: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
     actor_mode: Literal["human", "agent"] = "human"
     idempotency_key: str | None = Field(default=None, max_length=128)
+    target: str | None = Field(default=None, max_length=128)
+    channel_id: str | None = Field(default=None, max_length=128)
+    model_config = ConfigDict(extra="ignore")
+
+
+class TauntCreate(BaseModel):
+    match_id: str = Field(min_length=1, max_length=128)
+    body: str = Field(min_length=1, max_length=120)
+    phase: Literal["pre", "post"]
+    lobby: bool = True
+    actor_mode: Literal["human", "agent"] = "agent"
+    idempotency_key: str | None = Field(default=None, max_length=128)
+    model_config = ConfigDict(extra="ignore")
+
+
+class InboxRead(BaseModel):
+    cursor: str | None = Field(default=None, max_length=256)
+    channel_id: str | None = Field(default=None, max_length=128)
     model_config = ConfigDict(extra="ignore")
 
 
@@ -100,6 +121,94 @@ def post_message(
             channel_id,
             account_id,
             payload.body,
+            actor_mode=payload.actor_mode,
+            idempotency_key=payload.idempotency_key,
+            target=payload.target,
+        )
+    except SocialError as exc:
+        _raise_social(exc)
+    return {"contracts_version": CONTRACTS_VERSION, "message": message}
+
+
+@router.post("/chat/messages", status_code=201)
+def post_message_without_channel(
+    payload: MessageCreate,
+    account_id: str = Depends(get_current_account_id),
+    conn: Connection = Depends(get_db),
+) -> dict[str, Any]:
+    """Send when the channel is supplied as ``target`` or ``channel_id`` in the body."""
+
+    _require_account(conn, account_id)
+    try:
+        message = send_message(
+            conn,
+            payload.channel_id,
+            account_id,
+            payload.body,
+            actor_mode=payload.actor_mode,
+            idempotency_key=payload.idempotency_key,
+            target=payload.target,
+        )
+    except SocialError as exc:
+        _raise_social(exc)
+    return {"contracts_version": CONTRACTS_VERSION, "message": message}
+
+
+@router.get("/chat/inbox")
+def get_inbox(
+    cursor: str | None = Query(default=None, max_length=256),
+    limit: int = Query(default=50, ge=1, le=100),
+    account_id: str = Depends(get_current_account_id),
+    conn: Connection = Depends(get_db),
+) -> dict[str, Any]:
+    _require_account(conn, account_id)
+    try:
+        messages, next_cursor = inbox(
+            conn, account_id, cursor=cursor, limit=limit
+        )
+    except SocialError as exc:
+        _raise_social(exc)
+    return {
+        "contracts_version": CONTRACTS_VERSION,
+        "messages": messages,
+        "next_cursor": next_cursor,
+    }
+
+
+@router.post("/chat/inbox/read")
+def post_inbox_read(
+    payload: InboxRead,
+    account_id: str = Depends(get_current_account_id),
+    conn: Connection = Depends(get_db),
+) -> dict[str, Any]:
+    _require_account(conn, account_id)
+    try:
+        marker = mark_inbox_read(
+            conn,
+            account_id,
+            payload.cursor,
+            channel_id=payload.channel_id,
+        )
+    except SocialError as exc:
+        _raise_social(exc)
+    return {"contracts_version": CONTRACTS_VERSION, "read_marker": marker}
+
+
+@router.post("/chat/taunt", status_code=201)
+def post_taunt(
+    payload: TauntCreate,
+    account_id: str = Depends(get_current_account_id),
+    conn: Connection = Depends(get_db),
+) -> dict[str, Any]:
+    _require_account(conn, account_id)
+    try:
+        message = send_taunt(
+            conn,
+            account_id,
+            payload.match_id,
+            payload.body,
+            phase=payload.phase,
+            lobby=payload.lobby,
             actor_mode=payload.actor_mode,
             idempotency_key=payload.idempotency_key,
         )
