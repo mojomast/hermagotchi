@@ -7,13 +7,15 @@ export function CareMeter(props = {}) {
   const percent = Math.round((value / max) * 100);
 
   return jsxs("div", {
-    className: "hg-meter",
+    className: value === 0 ? "hg-meter hg-meter--empty" : "hg-meter",
     "data-meter": label.toLowerCase(),
+    "data-meter-value": String(value),
     role: "meter",
     "aria-label": label,
     "aria-valuemin": "0",
     "aria-valuemax": String(max),
     "aria-valuenow": String(value),
+    "aria-valuetext": value + " of " + max,
     children: [
       jsxs("div", {
         className: "hg-meter__head",
