@@ -1,0 +1,704 @@
+{
+  "schema": "hermagotchi-art-ext-v2",
+  "asset_pack_id": "launch-002",
+  "pixel_factor": 4,
+  "native_size": 128,
+  "outline_rgb": [
+    20,
+    26,
+    51
+  ],
+  "markings": [
+    "none",
+    "freckles",
+    "circuit",
+    "stripes"
+  ],
+  "species": {
+    "byteblob": {
+      "concept": "Round gumdrop slime-robot, antenna, cream screen belly; sturdy/defensive.",
+      "source": "source/px_byteblob_v1.jpg",
+      "anchors_native": {
+        "head": [
+          64,
+          43
+        ],
+        "face": [
+          64,
+          61
+        ],
+        "back": [
+          64,
+          74
+        ],
+        "front": [
+          64,
+          67
+        ],
+        "ground": [
+          64,
+          112
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "aqua": {
+          "path": "px/palettes/byteblob_aqua.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "afa872f3db850716ceae7923f61c887911e011bacbd80f4a12f07c2f2e2bae08"
+        },
+        "ember": {
+          "path": "px/palettes/byteblob_ember.png",
+          "hsv_shift": [
+            -170,
+            1.05,
+            1.0
+          ],
+          "sha256": "f86e43e1de1a07296a4c3f651f42c1aace161b856cbc58e8283a350f57438314"
+        },
+        "plum": {
+          "path": "px/palettes/byteblob_plum.png",
+          "hsv_shift": [
+            95,
+            0.9,
+            0.95
+          ],
+          "sha256": "8c21687bfa584c2629070d7538b418828da3773a4c4d085b5c89da7d85eeac12"
+        },
+        "mint": {
+          "path": "px/palettes/byteblob_mint.png",
+          "hsv_shift": [
+            -35,
+            0.8,
+            1.05
+          ],
+          "sha256": "8cc70fb0e1676caf4d09fd27d70b2282dd279daf0b5ba50adc6dfc534c405500"
+        }
+      },
+      "default_palette": "aqua",
+      "markings": {
+        "freckles": {
+          "path": "px/markings/byteblob_freckles.png",
+          "z": 5,
+          "sha256": "7e67dfd8ff0bf18ec187020d9914f7fae1186b8f041435a813bed709c3237968"
+        },
+        "circuit": {
+          "path": "px/markings/byteblob_circuit.png",
+          "z": 5,
+          "sha256": "f473e84b8db8fb5eb208f2903bae27117bd3fb4c0f04847091af2eac26a63b3b"
+        },
+        "stripes": {
+          "path": "px/markings/byteblob_stripes.png",
+          "z": 5,
+          "sha256": "0e010554834cdc996e418c7935a325802c2a7f8fae07007da7783e11c6c52056"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "afa872f3db850716ceae7923f61c887911e011bacbd80f4a12f07c2f2e2bae08"
+    },
+    "patchfox": {
+      "concept": "Sitting fox familiar, tall ears, plume tail, stitched eye patch; nimble.",
+      "source": "source/px_patchfox_v1.jpg",
+      "anchors_native": {
+        "head": [
+          60,
+          44
+        ],
+        "face": [
+          60,
+          55
+        ],
+        "back": [
+          60,
+          74
+        ],
+        "front": [
+          60,
+          71
+        ],
+        "ground": [
+          64,
+          112
+        ]
+      },
+      "item_scale": 0.75,
+      "palettes": {
+        "sunset": {
+          "path": "px/palettes/patchfox_sunset.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "947e88bbd9af3fc032b9e8ae132bcc5ed360454e2374512da82d1a8a96d964be"
+        },
+        "arctic": {
+          "path": "px/palettes/patchfox_arctic.png",
+          "hsv_shift": [
+            180,
+            0.3,
+            1.1
+          ],
+          "sha256": "2cf08068ba495312ee5bd06313a2b3e2914775ab4bfd2ef74a310a31d33eb90c"
+        },
+        "midnight": {
+          "path": "px/palettes/patchfox_midnight.png",
+          "hsv_shift": [
+            205,
+            0.75,
+            0.75
+          ],
+          "sha256": "b8e7c82512312442499bcb983103c3c2b6bbb8b1ed51beee8db10d6c56269ecb"
+        },
+        "rose": {
+          "path": "px/palettes/patchfox_rose.png",
+          "hsv_shift": [
+            -28,
+            0.85,
+            1.0
+          ],
+          "sha256": "bc6735da747bb6de576ca4252ac725bf0fcbb29ac44ebc4d7f4dd00a21956ae0"
+        }
+      },
+      "default_palette": "sunset",
+      "markings": {
+        "freckles": {
+          "path": "px/markings/patchfox_freckles.png",
+          "z": 5,
+          "sha256": "47de421d867ba186e41f431add2aff62ac40c06c1ad46e8207aaa8655ee9b359"
+        },
+        "circuit": {
+          "path": "px/markings/patchfox_circuit.png",
+          "z": 5,
+          "sha256": "876b7317d3270b69edd3cdc6d50e3c83b8fc0ff119e39ed8be1cdf9758814aea"
+        },
+        "stripes": {
+          "path": "px/markings/patchfox_stripes.png",
+          "z": 5,
+          "sha256": "45c502eb493c9741084470b313638f6456975031d5c606f1b9c91f8c01935368"
+        }
+      },
+      "ear_overlays": {
+        "sunset": {
+          "path": "px/overlays/patchfox_ears_sunset.png",
+          "z": 35,
+          "when_slot_equipped": "head",
+          "sha256": "03abfb44761c7427db23e4b2620bd4ef200e441881d3f6f6746e5e26e3d5b16d"
+        },
+        "arctic": {
+          "path": "px/overlays/patchfox_ears_arctic.png",
+          "z": 35,
+          "when_slot_equipped": "head",
+          "sha256": "7dd79089911f82452c7799d569693894baf39e0d8ba3dfb97aa5f394188dbfb8"
+        },
+        "midnight": {
+          "path": "px/overlays/patchfox_ears_midnight.png",
+          "z": 35,
+          "when_slot_equipped": "head",
+          "sha256": "b73c4f7cb54fa21a72293018502cc03246720468cc5c132b92addc69ccfb884c"
+        },
+        "rose": {
+          "path": "px/overlays/patchfox_ears_rose.png",
+          "z": 35,
+          "when_slot_equipped": "head",
+          "sha256": "41b15a5938eaad3b229e27be89a0dd227dae89b5743b40a759930f9349ed01fc"
+        }
+      },
+      "base_sha256": "947e88bbd9af3fc032b9e8ae132bcc5ed360454e2374512da82d1a8a96d964be"
+    },
+    "nullgeist": {
+      "concept": "Floating lavender glitch ghost, wisp tail, glowing eyes; status/control.",
+      "source": "source/px_nullgeist_v1.jpg",
+      "anchors_native": {
+        "head": [
+          64,
+          43
+        ],
+        "face": [
+          64,
+          58
+        ],
+        "back": [
+          64,
+          70
+        ],
+        "front": [
+          64,
+          76
+        ],
+        "ground": [
+          64,
+          115
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "lavender": {
+          "path": "px/palettes/nullgeist_lavender.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "5f7cc1842bcffae2ea13ec6672dd46b4f9c3dca51b29d02f22b2024cb56bd5d7"
+        },
+        "spectral_teal": {
+          "path": "px/palettes/nullgeist_spectral_teal.png",
+          "hsv_shift": [
+            -100,
+            1.0,
+            1.0
+          ],
+          "sha256": "12345434bc28aa82f9faa50d6615fe536c90cc961e051706269e9c72531c251c"
+        },
+        "crimson": {
+          "path": "px/palettes/nullgeist_crimson.png",
+          "hsv_shift": [
+            75,
+            1.0,
+            0.95
+          ],
+          "sha256": "82bc179d3ead6dfe2209d44f1ee765315a3f9826b58edef17c7bfa8677e52380"
+        },
+        "slate": {
+          "path": "px/palettes/nullgeist_slate.png",
+          "hsv_shift": [
+            0,
+            0.25,
+            0.9
+          ],
+          "sha256": "798603a45bf840a579f86a144caf7b3170bc47ba70405e2ca1da15abca3a7d56"
+        }
+      },
+      "default_palette": "lavender",
+      "markings": {
+        "freckles": {
+          "path": "px/markings/nullgeist_freckles.png",
+          "z": 5,
+          "sha256": "8ae73ad159228a00bccf875f50358af38c9864c8be9712cc24eab0d3163ad96c"
+        },
+        "circuit": {
+          "path": "px/markings/nullgeist_circuit.png",
+          "z": 5,
+          "sha256": "f6895cadaa784cfb0b62638076200630b97a770ad917a7463883ac45d1e163d0"
+        },
+        "stripes": {
+          "path": "px/markings/nullgeist_stripes.png",
+          "z": 5,
+          "sha256": "77aef664a57d065f93eb14d7df60e3aa154ae4b3f660d6e7321ab677c5893802"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "5f7cc1842bcffae2ea13ec6672dd46b4f9c3dca51b29d02f22b2024cb56bd5d7"
+    }
+  },
+  "items": {
+    "hat.binary_crown": {
+      "source": "source/px_item_crown_v1.jpg",
+      "attach": "bottom",
+      "colors": 12,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.propeller_beanie": {
+      "source": "source/px_item_beanie_v1.jpg",
+      "attach": "bottom",
+      "colors": 12,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.syntax_wizard": {
+      "source": "source/px_item_wizard_v1.jpg",
+      "attach": "bottom",
+      "colors": 12,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.pixel_shades": {
+      "source": "source/item_pixel_shades_v1.jpg",
+      "attach": "cy",
+      "colors": 6,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.gold_monocle": {
+      "source": "source/px_item_monocle_v1.jpg",
+      "attach": "cy",
+      "colors": 10,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.circuit_wings": {
+      "source": "source/px_item_wings_v1.jpg",
+      "attach": "cy",
+      "colors": 10,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -2,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.tiny_jetpack": {
+      "source": "source/px_item_jetpack_v1.jpg",
+      "attach": "cy",
+      "colors": 12,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -4,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -6,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -6,
+            0.9
+          ]
+        }
+      }
+    },
+    "aura.ember_halo": {
+      "source": "source/px_item_aura_flame_v1.jpg",
+      "attach": "cy",
+      "colors": 10,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            2,
+            2,
+            1.25
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "aura.data_orbit": {
+      "source": "source/item_aura_datacubes_v1.jpg",
+      "attach": "cy",
+      "colors": 10,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            2,
+            0,
+            1.25
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.cozy_scarf": {
+      "source": "source/px_item_scarf_v1.jpg",
+      "attach": "top",
+      "colors": 10,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -2,
+            0.85
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.25
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -2,
+            0.9
+          ]
+        }
+      }
+    },
+    "emote.heart_bubble": {
+      "source": "source/item_emote_heart_v1.jpg",
+      "attach": "cy",
+      "colors": 6,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "habitat.plush_cushion": {
+      "source": "source/item_habitat_cushion_v1.jpg",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            4,
+            0,
+            1.25
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            0.8
+          ]
+        }
+      }
+    },
+    "title.royal_ribbon": {
+      "source": "source/item_title_banner_v1.jpg",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            4,
+            0,
+            1.25
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    }
+  }
+}

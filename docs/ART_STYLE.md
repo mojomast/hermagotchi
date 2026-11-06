@@ -6,3 +6,10 @@
 **Canvas:** 512×512 RGBA, baseline y=448, safe x 65..447 / y 75..450. Item attach point is at (256,256).
 **Species:** Byteblob (round gumdrop slime-robot, antenna, screen belly). Patchfox (sitting fox familiar, tall ears, plume tail, stitched cheek patch). Nullgeist (floating ghost, curling wisp tail, glitch cubes). Each species has its own silhouette.
 **Palettes (procedural HSV):** byteblob aqua/ember/plum/mint; patchfox sunset/arctic/midnight/rose; nullgeist lavender/spectral_teal/crimson/slate.
+
+## launch-002 (current): 16-bit pixel art
+- Prompt core: "16-bit SNES-era pixel art game sprite … chunky visible square pixels, crisp 1-pixel dark navy outline, limited 16-color palette, 2-3 step flat shading ramps, no anti-aliasing, strictly front-facing, centered … flat #00FF00 background". The matching launch-001 image is passed as a reference.
+- Native grid: 128×128, upscaled ×4 to 512 with nearest neighbour. Baseline at native y=112. Attach point at native (64,64).
+- Palettes: 20–24 colours per species, 6–12 per item. One shared outline #141a33. Binary alpha only. No dithering gradients.
+- Variants: colour-index swaps only. Eyes, whites and creams, Patchfox's patch, Byteblob's belly and Nullgeist's cyan eyes are protected.
+- Files: `assets/px/**`, `assets/manifest.launch-002.json`, `assets/art_ext.launch-002.json`, `scripts/asset_pixel*.py`. launch-001 is kept unchanged.

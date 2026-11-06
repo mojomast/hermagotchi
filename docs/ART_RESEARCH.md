@@ -10,3 +10,17 @@ Short notes on the practices this pipeline uses and why.
 - **Markings.** These are procedural overlays (freckles, circuit, stripes), seeded and clipped to the eroded body alpha at z=5.
 - **Anchor detection.** We started from body alpha bounds plus the eye line, then hand-tuned by checking composites (`scripts/asset_compose.py`). They are recorded per species.
 - **QA.** The run includes `scripts/asset_validate.py` (dimensions, alpha, safe region, sha256) and a 100-look seeded contact sheet, `assets/contact_sheet_100.png`, which we inspected by eye.
+
+## launch-002: 16-bit pixel art (SNES-era)
+
+- **Generate, then make it true pixel art.** The image tool only gives "pixel-looking" output. It has an inconsistent pixel size, anti-aliasing and soft gradients, so we convert every layer the same way:
+  1. Chroma key.
+  2. Crop, then downscale with premultiplied BOX resampling onto a native 128×128 grid. Bodies are 72 to 88 native px tall.
+  3. Threshold alpha at 0.5 so it is binary, with no semi-transparent edges.
+  4. Quantize with FASTOCTREE and no dither, to 20–24 colours per species and 6–12 per item. Octree keeps small accent colours such as eye glints, which median-cut dropped.
+  5. Snap all dark colours to one shared outline colour (#141a33), and force a crisp 1px outline on the silhouette.
+  6. Nearest-neighbour upscale ×4 to the 512 canvas.
+- **One grid for all layers.** The compositor works on the native 128 grid and upscales once at the end. Anchors and offsets are whole native pixels (multiples of 4 canvas px). Item scale corrections use nearest resampling at native size, so cosmetics always sit on the same grid as bodies.
+- **Palette variants by colour-index swap.** We build a LUT over the sprite's unique colours. Protected entries never change: the outline, low-saturation and dark colours (eye blacks, whites, creams, Patchfox's patch, Byteblob's screen belly) and Nullgeist's cyan eye ramp. This fixes the launch-001 problem where eyes and the patch shifted hue.
+- **Occlusion.** Patchfox gets an ear-tip overlay at z=35, drawn only when a head item is equipped, so hats sit between the ears instead of covering them.
+- **Consistency.** Each pixel regeneration passed the matching approved launch-001 image as a reference, so concepts and proportions carry over between packs.
