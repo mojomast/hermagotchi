@@ -14,7 +14,7 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
 - Branch: `feat/hackathon`
-- **Deploy tip SHA (full):** `73d2dbf1cfdbec519adea2e15caf9a83f3f85ae6`
+- **Deploy tip SHA (full):** `d43d890363b58d107e1184b3ee36251e87aa7cc2`
 - Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — previous W11 tip; use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
