@@ -67,7 +67,10 @@ test("styles.css lays out the shop grid, turn log columns and portraits", () => 
   );
   assert.match(STYLES, /\.hg-log__item\s*\{[^}]*display:\s*grid/s);
   assert.match(STYLES, /\.hg-log__item\s*\{[^}]*grid-template-areas/s);
-  assert.match(STYLES, /\.hg-npc-host__portrait\s*\{[^}]*width:\s*(?:48|56|64)px/s);
+  assert.match(STYLES, /\.hg-npc-host__portrait\s*\{[^}]*width:\s*180px/s);
+  assert.match(STYLES, /\.hg-npc-host--compact\s+\.hg-npc-host__portrait\s*\{[^}]*width:\s*64px/s);
+  assert.match(STYLES, /\.hg-npc-host--featured/);
+  assert.match(STYLES, /\.hg-npc-host__speech/);
   assert.match(STYLES, /\.hg-shop-card__thumb[^{]*\{[^}]*image-rendering:\s*pixelated/s);
 });
 

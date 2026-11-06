@@ -73,7 +73,7 @@ function ChatOffStub(props) {
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "chat" }),
+      jsx(NpcHostBanner, { surface: "chat", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -1326,6 +1326,7 @@ function ChatLive(props) {
       jsx(NpcHostBanner, {
         surface: notice ? "chat.moderation" : "chat",
         host: hubHost,
+        api: props.api,
         assetBaseUrl: props.assetBaseUrl,
       }),
       notice && (notice.message || notice.hostLine)

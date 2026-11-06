@@ -83,7 +83,7 @@ function StubShop(props) {
       props.uiState && props.uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: props.uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "shop" }),
+      jsx(NpcHostBanner, { surface: "shop", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -534,7 +534,7 @@ export function ShopTab(props = {}) {
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "shop" }),
+      jsx(NpcHostBanner, { surface: "shop", api: api, assetBaseUrl: props.assetBaseUrl || assetBase }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,

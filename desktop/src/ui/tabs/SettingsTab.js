@@ -215,7 +215,7 @@ function SettingsStub(props) {
       props.uiState && props.uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: props.uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "settings" }),
+      jsx(NpcHostBanner, { surface: "settings", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -507,7 +507,7 @@ export function SettingsTab(props = {}) {
       liveState && liveState !== UI_STATES.READY
         ? jsx(StateNotice, { state: liveState })
         : null,
-      jsx(NpcHostBanner, { surface: "settings" }),
+      jsx(NpcHostBanner, { surface: "settings", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       jsxs("div", {
         className: "hg-card",
         children: [

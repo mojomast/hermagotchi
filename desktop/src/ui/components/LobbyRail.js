@@ -155,7 +155,7 @@ function LobbyStub(props) {
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "chat" }),
+      jsx(NpcHostBanner, { surface: "chat", size: "compact", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       jsx("p", { className: "hg-lobby-rail__stub-title", children: "Chat is off by default" }),
       jsx("p", {
         className: "hg-muted",
@@ -447,8 +447,11 @@ export function LobbyRail(props = {}) {
               ? jsx(NpcHostBanner, {
                   surface: "chat.moderation",
                   host: moderationHost,
+                  size: "compact",
+                  api: props.api,
+                  assetBaseUrl: props.assetBaseUrl,
                 })
-              : jsx(NpcHostBanner, { surface: "chat" }),
+              : jsx(NpcHostBanner, { surface: "chat", size: "compact", api: props.api, assetBaseUrl: props.assetBaseUrl }),
             notice && (notice.message || notice.hostLine)
               ? jsx("p", {
                   className:

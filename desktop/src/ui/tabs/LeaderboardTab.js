@@ -22,7 +22,7 @@ function StubLeaderboard(props) {
     "data-tab": "leaderboard",
     children: [
       jsx(StateNotice, { state: props.state }),
-      jsx(NpcHostBanner, { surface: "leaderboard" }),
+      jsx(NpcHostBanner, { surface: "leaderboard", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -213,7 +213,7 @@ export function LeaderboardTab(props = {}) {
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "leaderboard" }),
+      jsx(NpcHostBanner, { surface: "leaderboard", api: props.api, assetBaseUrl: props.assetBaseUrl }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
