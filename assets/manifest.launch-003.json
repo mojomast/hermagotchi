@@ -474,7 +474,7 @@
       ],
       "scale": 1.25,
       "notes": "Orbit of yellow/orange data bits. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "4fa9b77f84a0fc7604ce1eea16642334523571b796fba5bdc4528b312e8aab50"
+      "sha256": "7b6e6ed94abfa4384267e00b2deb5b302a726b9493b98f4a51846303419dc2d1"
     },
     {
       "id": "aura.ember_halo",
@@ -984,7 +984,7 @@
       ],
       "scale": 1.0,
       "notes": "Happy-Path Smile. Hand-authored 32-grid cosmetic.",
-      "sha256": "d516b3925df46f039da55136b2b1949c0a5ffe057fe51fcc90d85a3330e8cb91"
+      "sha256": "669b393855e344946f49cbde44e70280072a34045dcceba7ddd64269da9054d5"
     },
     {
       "id": "face.hex_specs",
@@ -1069,7 +1069,7 @@
       ],
       "scale": 1.0,
       "notes": "Pixel Mustache. Hand-authored 32-grid cosmetic.",
-      "sha256": "b7f9f82e3abdecd8d04d740df7a45c3d2a29ec01afcc3530009730dd8ed2eecb"
+      "sha256": "eb289db97a5ac2691b2ad03677bac663a740e1384d463894b8cd6a94cb06e9e3"
     },
     {
       "id": "face.pixel_shades",
@@ -1086,7 +1086,7 @@
       ],
       "scale": 1.0,
       "notes": "Black shades with glints. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "6da1b562a836ac67401e1c41259c9a09d189e41453c44cee9cdcb3ef188b4913"
+      "sha256": "380a3abe640050b0793dff72dc1350e5915a1853caa09e96c43c24f287fd4ed0"
     },
     {
       "id": "face.privacy_mask",
@@ -1460,7 +1460,7 @@
       ],
       "scale": 1.0,
       "notes": "Silk Commit Tie. Hand-authored 32-grid cosmetic.",
-      "sha256": "d205f2b1c092ec85b65cd56c26a8f16011da511662872e82c51e060c541d294d"
+      "sha256": "4d79451413e27ae8bdbde53a144263f4400bfabef765cba7d36434d4f647a5e0"
     },
     {
       "id": "front.toast",
@@ -1685,7 +1685,7 @@
       ],
       "scale": 1.0,
       "notes": "Lambda Tiara. Hand-authored 32-grid cosmetic.",
-      "sha256": "776536845eeb0fb5f720005ef49854a9b1aa3aa291aacf0ca2b2c0bdc148dafb",
+      "sha256": "a186471084ddaa825f42dfc2f87bb99b264c9c197188c68ad42de685856eff69",
       "occludes": [
         "ear_base"
       ]
