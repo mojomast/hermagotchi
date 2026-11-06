@@ -92,6 +92,57 @@ export function itemView(item) {
   };
 }
 
+export const SHOP_THUMB_DIR = "px3/thumbs";
+export const SHOP_THUMB_SUFFIX = "_thumb.png";
+
+function shortAssetName(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const base = text.includes(".") ? text.slice(text.lastIndexOf(".") + 1) : text;
+  return base
+    .replace(/\.[a-z0-9]+$/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function manifestAssetFor(manifest, item) {
+  if (!manifest || !Array.isArray(manifest.assets) || !item) return null;
+  const wanted = new Set(
+    [item.assetId, item.asset_id, item.id].filter(Boolean).map((value) => String(value))
+  );
+  for (const asset of manifest.assets) {
+    if (!asset || typeof asset !== "object") continue;
+    const candidates = [asset.id, asset.asset_id, asset.assetId]
+      .filter(Boolean)
+      .map((value) => String(value));
+    if (candidates.some((value) => wanted.has(value))) return asset;
+  }
+  return null;
+}
+
+/**
+ * Shop thumbnails live beside the pixel pack so the desktop bridge can serve
+ * them from its local asset base.  Every item falls back to the id convention,
+ * which keeps future catalog rows visible without a code change.
+ */
+export function itemThumbPath(item, manifest) {
+  if (!item || typeof item !== "object") return "";
+  const asset = manifestAssetFor(manifest, item);
+  const source =
+    item.assetId || item.asset_id || (asset && asset.id) || item.id;
+  const shortName = shortAssetName(source);
+  if (shortName) {
+    return SHOP_THUMB_DIR + "/" + shortName + SHOP_THUMB_SUFFIX;
+  }
+  const fallback = item.assetUrl || item.asset_url || (asset && asset.path) || "";
+  return fallback ? String(fallback) : "";
+}
+
+export function itemThumbUrl(assetBase, item, manifest) {
+  return joinAssetUrl(assetBase || "", itemThumbPath(item, manifest));
+}
+
 export function groupCatalogBySlot(catalog) {
   const groups = new Map();
   for (const raw of catalogItems(catalog)) {

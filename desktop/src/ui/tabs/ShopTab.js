@@ -7,11 +7,22 @@ import { extractPetId } from "../logic/habitat.js";
 import {
   groupCatalogBySlot,
   itemAvailability,
-  joinAssetUrl,
+  itemThumbUrl,
   manifestFromCatalog,
   normaliseWallet,
   readEnvelope,
 } from "../logic/shop.js";
+
+const SLOT_MARKS = Object.freeze({
+  head: "HAT",
+  face: "FACE",
+  back: "BACK",
+  front: "HAND",
+  aura: "AURA",
+  emote: "EMOTE",
+  habitat: "HOME",
+  title: "TITLE",
+});
 
 export const SHOP_PLACEHOLDER_ITEMS = Object.freeze([
   { id: "placeholder.crown", name: "Binary Crown", slot: "head", priceBits: 2000 },
@@ -118,51 +129,9 @@ function StubShop(props) {
   });
 }
 
-function manifestAssetFor(manifest, item) {
-  if (!manifest || !Array.isArray(manifest.assets) || !item) {
-    return null;
-  }
-  const wanted = new Set(
-    [item.assetId, item.id].filter(Boolean).map((value) => String(value))
-  );
-  for (const asset of manifest.assets) {
-    if (!asset || typeof asset !== "object") continue;
-    const candidates = [asset.id, asset.asset_id, asset.assetId]
-      .filter(Boolean)
-      .map((value) => String(value));
-    if (candidates.some((value) => wanted.has(value))) {
-      return asset;
-    }
-  }
-  return null;
-}
-
-function itemThumbPath(item, manifest) {
-  const asset = manifestAssetFor(manifest, item);
-  if (asset && asset.path) {
-    return String(asset.path);
-  }
-  if (item.assetUrl) {
-    return String(item.assetUrl);
-  }
-  const id = String((item && (item.assetId || item.id)) || "");
-  const shortName = id.includes(".") ? id.slice(id.lastIndexOf(".") + 1) : id;
-  return shortName ? "px3/items/" + shortName + ".png" : "";
-}
-
-function joinShopAssetUrl(assetBase, relativePath) {
-  if (!relativePath) return "";
-  const value = String(relativePath);
-  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
-  const base = typeof assetBase === "string" ? assetBase.replace(/\/+$/, "") : "";
-  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
-  if (!base) return relative;
-  if (!relative) return base;
-  return base + "/" + relative;
-}
-
-function itemThumbUrl(assetBase, item, manifest) {
-  return joinShopAssetUrl(assetBase || "", itemThumbPath(item, manifest));
+function itemInitial(name) {
+  const text = String(name || "").trim();
+  return text ? text.slice(0, 1).toUpperCase() : "?";
 }
 
 function ShopCard(props) {
@@ -172,6 +141,14 @@ function ShopCard(props) {
   const thumb = props.thumb;
   const equipped = availability.equipped;
   const selected = Boolean(props.selected);
+  const [thumbState, setThumbState] = useState(thumb ? "loading" : "empty");
+
+  useEffect(() => {
+    setThumbState(thumb ? "loading" : "empty");
+  }, [thumb]);
+
+  const showImage = Boolean(thumb) && thumbState !== "error";
+  const blank = thumbState === "loaded" ? "false" : "true";
 
   return jsxs("article", {
     className:
@@ -190,18 +167,45 @@ function ShopCard(props) {
     children: [
       jsx("div", {
         className: "hg-shop-card__thumb",
-        children: thumb
+        "data-blank": blank,
+        "data-thumb-state": thumbState,
+        children: showImage
           ? jsx("img", {
               className: "hg-shop-card__image",
               src: thumb,
               alt: item.name,
+              "data-blank": blank,
               loading: "lazy",
               decoding: "async",
               draggable: "false",
+              onLoad: function () {
+                setThumbState("loaded");
+              },
+              onError: function () {
+                setThumbState("error");
+              },
             })
-          : jsx("span", {
-              className: "hg-shop-card__thumb-empty",
-              "aria-hidden": "true",
+          : jsxs("span", {
+              className: "hg-shop-card__thumb-fallback",
+              "data-slot": item.slot,
+              role: "img",
+              "aria-label": item.name + " (" + item.slotLabel + ") preview",
+              children: [
+                jsx("span", {
+                  className: "hg-shop-card__thumb-icon",
+                  "aria-hidden": "true",
+                  children: SLOT_MARKS[item.slot] || "ITEM",
+                }),
+                jsx("span", {
+                  className: "hg-shop-card__thumb-initial",
+                  "aria-hidden": "true",
+                  children: itemInitial(item.name),
+                }),
+                jsx("span", {
+                  className: "hg-shop-card__thumb-label",
+                  children: item.slotLabel,
+                }),
+              ],
             }),
       }),
       jsx("h4", { className: "hg-shop-card__name", children: item.name }),

@@ -550,17 +550,21 @@
   width: 100%;
   aspect-ratio: 1 / 1;
   min-height: 96px;
-  border: 1px dashed var(--hg-border);
-  /* Mid-tone so sparse pixel cosmetics stay readable */
+  border: 2px solid var(--hg-border);
+  /* Light checkerboard keeps sparse and near-dark aura art visible. */
   background:
-    linear-gradient(45deg, #1c2440 25%, transparent 25%),
-    linear-gradient(-45deg, #1c2440 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #1c2440 75%),
-    linear-gradient(-45deg, transparent 75%, #1c2440 75%);
-  background-color: #243056;
+    linear-gradient(45deg, #d7dded 25%, transparent 25%),
+    linear-gradient(-45deg, #d7dded 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d7dded 75%),
+    linear-gradient(-45deg, transparent 75%, #d7dded 75%);
+  background-color: #f2f5fc;
   background-size: 12px 12px;
   background-position: 0 0, 0 6px, 6px -6px, -6px 0;
   overflow: hidden;
+}
+
+.hg-shop-card__thumb[data-blank="true"] {
+  border-style: dashed;
 }
 
 .hg-shop-card__thumb img,
@@ -570,6 +574,40 @@
   object-fit: contain;
   image-rendering: crisp-edges;
   image-rendering: pixelated;
+}
+
+.hg-shop-card__thumb-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  background: rgba(12, 18, 32, 0.82);
+  color: #f2f5fc;
+  text-align: center;
+}
+
+.hg-shop-card__thumb-icon {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--hg-accent, #5dffb0);
+}
+
+.hg-shop-card__thumb-initial {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hg-shop-card__thumb-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #c9d2ea;
 }
 
 .hg-shop-card__thumb-empty {

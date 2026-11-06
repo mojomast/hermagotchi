@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   SLOT_ORDER,
@@ -7,6 +10,8 @@ import {
   catalogItems,
   groupCatalogBySlot,
   itemAvailability,
+  itemThumbPath,
+  itemThumbUrl,
   itemView,
   joinAssetUrl,
   loadoutItemId,
@@ -15,7 +20,17 @@ import {
   normaliseWallet,
   readEnvelope,
   removeFromLoadout,
+  SHOP_THUMB_DIR,
 } from "../../desktop/src/ui/logic/shop.js";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const LAUNCH_MANIFEST = JSON.parse(
+  readFileSync(path.join(ROOT, "assets", "manifest.launch-003.json"), "utf8")
+);
+const SHOP_TAB_SOURCE = readFileSync(
+  path.join(ROOT, "desktop", "src", "ui", "tabs", "ShopTab.js"),
+  "utf8"
+);
 
 const CATALOG = {
   contracts_version: "contracts-v1",
@@ -244,4 +259,69 @@ test("readEnvelope is safe for bridge failures", () => {
   assert.equal(result.status, "offline");
   assert.equal(result.retryAfterS, 2);
   assert.equal(readEnvelope({ ok: true, data: { balance: 5 } }).data.balance, 5);
+});
+
+function launchShopItems() {
+  return LAUNCH_MANIFEST.assets.map((asset) =>
+    itemView({
+      id: asset.id,
+      name: asset.id,
+      slot: asset.slot,
+      asset_id: asset.id,
+    })
+  );
+}
+
+test("itemThumbPath resolves a visible thumb for every launch-003 slot", () => {
+  const items = launchShopItems();
+  const slots = new Set(items.map((item) => item.slot));
+  assert.deepEqual(
+    Array.from(slots).sort(),
+    SLOT_ORDER.slice().sort(),
+    "manifest covers every shop slot"
+  );
+
+  const seen = new Set();
+  for (const item of items) {
+    const thumbPath = itemThumbPath(item, LAUNCH_MANIFEST);
+    const shortName = item.assetId.slice(item.assetId.lastIndexOf(".") + 1);
+    assert.equal(
+      thumbPath,
+      SHOP_THUMB_DIR + "/" + shortName + "_thumb.png",
+      "unexpected thumb path for " + item.id
+    );
+    assert.ok(!seen.has(thumbPath), "duplicate thumb path " + thumbPath);
+    seen.add(thumbPath);
+
+    const url = itemThumbUrl("https://cdn.example/assets", item, LAUNCH_MANIFEST);
+    assert.equal(url, "https://cdn.example/assets/" + thumbPath);
+    assert.match(url, /\/px3\/thumbs\/[a-z0-9_]+_thumb\.png$/);
+  }
+});
+
+test("itemThumbPath falls back to the id convention when the manifest is absent", () => {
+  const future = itemView({
+    id: "hat.future_item",
+    name: "Future",
+    slot: "head",
+    asset_id: "hat.future_item",
+  });
+  assert.equal(itemThumbPath(future, null), "px3/thumbs/future_item_thumb.png");
+  assert.equal(
+    itemThumbUrl("", future, null),
+    "px3/thumbs/future_item_thumb.png"
+  );
+  assert.equal(itemThumbPath({}, null), "");
+  assert.equal(itemThumbUrl("https://cdn.example/assets", {}, null), "");
+});
+
+test("ShopTab uses the shared thumb helper and a labelled image fallback", () => {
+  assert.ok(SHOP_TAB_SOURCE.includes("itemThumbUrl"), "ShopTab must use itemThumbUrl");
+  assert.ok(!/function\s+itemThumbPath/.test(SHOP_TAB_SOURCE), "ShopTab must not duplicate thumb logic");
+  assert.ok(SHOP_TAB_SOURCE.includes("onError"), "image errors must be handled");
+  assert.ok(
+    SHOP_TAB_SOURCE.includes("hg-shop-card__thumb-fallback"),
+    "missing labelled fallback"
+  );
+  assert.ok(SHOP_TAB_SOURCE.includes('"data-blank"'), "thumb needs data-blank state");
 });
