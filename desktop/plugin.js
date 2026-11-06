@@ -4,8 +4,8 @@
 import { jsx as __ext0 } from "react/jsx-runtime";
 import { jsxs as __ext1 } from "react/jsx-runtime";
 import { useEffect as __ext2 } from "react";
-import { useState as __ext3 } from "react";
-import { useRef as __ext4 } from "react";
+import { useRef as __ext3 } from "react";
+import { useState as __ext4 } from "react";
 import { useCallback as __ext5 } from "react";
 
 // desktop/src/ui/npcLines.js
@@ -153,6 +153,13 @@ const CHAT_DM_TARGET_MAX_CHARS = 64;
 const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
 const LOBBY_RAIL_BREAKPOINT = 840;
 const LOBBY_RAIL_COLLAPSED_KEY = "hermagotchi.lobbyRail.collapsed";
+const LOBBY_RAIL_WIDTH_KEY = "hermagotchi.lobbyRail.width";
+const LOBBY_RAIL_HOST_DISMISSED_KEY = "hermagotchi.lobbyRail.hostDismissed";
+const LOBBY_RAIL_WIDTH_MIN = 260;
+const LOBBY_RAIL_WIDTH_MAX = 480;
+const LOBBY_RAIL_WIDTH_DEFAULT = 320;
+const LOBBY_RAIL_WIDTH_WIDE = 380;
+
 
 
 const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
@@ -567,6 +574,78 @@ function lobbyRailAutoCollapsed(width) {
   return value < LOBBY_RAIL_BREAKPOINT;
 }
 
+/** Wider default rail on large panes; clamp to min/max. */
+function defaultLobbyRailWidth(viewportWidth) {
+  const value = Number(viewportWidth);
+  if (Number.isFinite(value) && value >= 1280) return LOBBY_RAIL_WIDTH_WIDE;
+  return LOBBY_RAIL_WIDTH_DEFAULT;
+}
+
+function clampLobbyRailWidth(width, viewportWidth) {
+  const value = Number(width);
+  if (!Number.isFinite(value)) return defaultLobbyRailWidth(viewportWidth);
+  const max =
+    Number.isFinite(Number(viewportWidth)) && Number(viewportWidth) > 0
+      ? Math.min(LOBBY_RAIL_WIDTH_MAX, Math.floor(Number(viewportWidth) * 0.45))
+      : LOBBY_RAIL_WIDTH_MAX;
+  return Math.max(LOBBY_RAIL_WIDTH_MIN, Math.min(max, Math.round(value)));
+}
+
+function lobbyAuthorKey(message) {
+  if (!message || typeof message !== "object") return "";
+  if (message.account_id) return "id:" + String(message.account_id);
+  const name =
+    message.author_name ||
+    message.author_handle ||
+    message.peer_name ||
+    "";
+  return name ? "name:" + String(name) : "anon";
+}
+
+/** Mark consecutive same-author rows so the UI can skip repeated headers. */
+function groupLobbyMessages(messages) {
+  const rows = Array.isArray(messages) ? messages : [];
+  return rows.map(function (message, index) {
+    const prev = index > 0 ? rows[index - 1] : null;
+    const same =
+      prev &&
+      lobbyAuthorKey(prev) === lobbyAuthorKey(message) &&
+      lobbyAuthorKey(message) !== "" &&
+      lobbyAuthorKey(message) !== "anon";
+    return {
+      message,
+      showHeader: !same,
+      grouped: Boolean(same),
+    };
+  });
+}
+
+/** True when the message list is stuck near the bottom (auto-scroll allowed). */
+function shouldStickLobbyScroll(element, thresholdPx = 48) {
+  if (!element || typeof element.scrollHeight !== "number") return true;
+  const remaining =
+    element.scrollHeight - element.scrollTop - element.clientHeight;
+  return remaining <= thresholdPx;
+}
+
+/** Simple stable hue for an author label (IRC-style name colors). */
+function lobbyAuthorHue(key) {
+  const text = String(key || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return hash % 360;
+}
+
+function isUpsetMessage(message) {
+  if (!message || typeof message !== "object") return false;
+  if (message.kind === "upset" || message.kind === "callout") return true;
+  const context = message.match_context;
+  if (context && typeof context === "object" && context.upset) return true;
+  return false;
+}
+
 /** Unread count for the collapsed lobby rail badge. */
 function lobbyUnreadCount(inbox) {
   return normalizeInbox(inbox).unreadCount;
@@ -835,7 +914,7 @@ function chatHost() {
   return npcHostLine("chat");
 }
 
-  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "LOBBY_RAIL_COLLAPSED_KEY": LOBBY_RAIL_COLLAPSED_KEY, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "formatPlayerLabel": formatPlayerLabel, "displayActorLabel": displayActorLabel, "formatRelativeTime": formatRelativeTime, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
+  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "LOBBY_RAIL_COLLAPSED_KEY": LOBBY_RAIL_COLLAPSED_KEY, "LOBBY_RAIL_WIDTH_KEY": LOBBY_RAIL_WIDTH_KEY, "LOBBY_RAIL_HOST_DISMISSED_KEY": LOBBY_RAIL_HOST_DISMISSED_KEY, "LOBBY_RAIL_WIDTH_MIN": LOBBY_RAIL_WIDTH_MIN, "LOBBY_RAIL_WIDTH_MAX": LOBBY_RAIL_WIDTH_MAX, "LOBBY_RAIL_WIDTH_DEFAULT": LOBBY_RAIL_WIDTH_DEFAULT, "LOBBY_RAIL_WIDTH_WIDE": LOBBY_RAIL_WIDTH_WIDE, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "formatPlayerLabel": formatPlayerLabel, "displayActorLabel": displayActorLabel, "formatRelativeTime": formatRelativeTime, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "defaultLobbyRailWidth": defaultLobbyRailWidth, "clampLobbyRailWidth": clampLobbyRailWidth, "groupLobbyMessages": groupLobbyMessages, "shouldStickLobbyScroll": shouldStickLobbyScroll, "lobbyAuthorHue": lobbyAuthorHue, "isUpsetMessage": isUpsetMessage, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
 })();
 
 // desktop/src/ui/logic/assets.js
@@ -1071,7 +1150,8 @@ function NpcHostBanner(props = {}) {
 // desktop/src/ui/components/LobbyRail.js
 const __m5 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useRef = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const npcHostLine = __m0["npcHostLine"];
@@ -1084,11 +1164,17 @@ const __m5 = (function () {
   const CHAT_MESSAGE_MAX_CHARS = __m2["CHAT_MESSAGE_MAX_CHARS"];
   const CHAT_REPORT_PATH = __m2["CHAT_REPORT_PATH"];
   const CHAT_REPORT_REASON = __m2["CHAT_REPORT_REASON"];
+  const LOBBY_RAIL_HOST_DISMISSED_KEY = __m2["LOBBY_RAIL_HOST_DISMISSED_KEY"];
   const chatActionNotice = __m2["chatActionNotice"];
   const chatMessagePayload = __m2["chatMessagePayload"];
   const chatModerationHost = __m2["chatModerationHost"];
   const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
+  const displayActorLabel = __m2["displayActorLabel"];
+  const formatRelativeTime = __m2["formatRelativeTime"];
+  const groupLobbyMessages = __m2["groupLobbyMessages"];
   const isTauntMessage = __m2["isTauntMessage"];
+  const isUpsetMessage = __m2["isUpsetMessage"];
+  const lobbyAuthorHue = __m2["lobbyAuthorHue"];
   const lobbyUnreadCount = __m2["lobbyUnreadCount"];
   const lobbyUnreadLabel = __m2["lobbyUnreadLabel"];
   const mergeMessages = __m2["mergeMessages"];
@@ -1096,11 +1182,10 @@ const __m5 = (function () {
   const normalizeInbox = __m2["normalizeInbox"];
   const normalizeMessages = __m2["normalizeMessages"];
   const shouldShowChatStub = __m2["shouldShowChatStub"];
+  const shouldStickLobbyScroll = __m2["shouldStickLobbyScroll"];
   const tauntSummary = __m2["tauntSummary"];
   const validateChatDraft = __m2["validateChatDraft"];
   const validateDmTarget = __m2["validateDmTarget"];
-  const displayActorLabel = __m2["displayActorLabel"];
-  const formatRelativeTime = __m2["formatRelativeTime"];
   const NpcHostBanner = __m4["NpcHostBanner"];
 
 function emptyInbox() {
@@ -1111,109 +1196,181 @@ function actorLabel(message) {
   return displayActorLabel(message);
 }
 
+function authorKey(message) {
+  if (message && message.account_id) return String(message.account_id);
+  return actorLabel(message);
+}
+
 function TimeLabel(props) {
   const iso = props.iso || "";
   const relative = formatRelativeTime(iso);
   return jsx("time", {
-    className: "hg-muted hg-time",
+    className: "hg-lobby-rail__time hg-muted",
     dateTime: iso || undefined,
     title: iso || undefined,
-    children: relative || iso || "Unknown time",
+    children: relative || iso || "",
   });
 }
 
-function LobbyActions(props) {
+function MessageMenu(props) {
   const message = props.message;
+  const open = props.open === true;
   return jsxs("div", {
-    className: "hg-actions hg-actions--tight",
+    className: "hg-lobby-rail__menu",
     children: [
       jsx("button", {
         type: "button",
-        className: "hg-btn",
+        className: "hg-lobby-rail__menu-toggle",
+        "aria-haspopup": "menu",
+        "aria-expanded": open ? "true" : "false",
+        "aria-label": "Message actions",
+        title: "Message actions",
+        "data-lobby-menu-toggle": message.id,
         disabled: props.busy,
-        onClick: function () {
-          props.onReport(message);
+        onClick: function (event) {
+          event.stopPropagation();
+          props.onToggle(message.id);
         },
-        children: "Report",
+        children: "⋯",
       }),
-      jsx("button", {
-        type: "button",
-        className: "hg-btn",
-        disabled: props.busy || !message.account_id,
-        onClick: function () {
-          props.onBlock(message);
-        },
-        children: "Block",
-      }),
+      open
+        ? jsxs("div", {
+            className: "hg-lobby-rail__menu-panel",
+            role: "menu",
+            children: [
+              jsx("button", {
+                type: "button",
+                role: "menuitem",
+                className: "hg-lobby-rail__menu-item",
+                disabled: props.busy,
+                onClick: function () {
+                  props.onReport(message);
+                  props.onClose();
+                },
+                children: "Report",
+              }),
+              jsx("button", {
+                type: "button",
+                role: "menuitem",
+                className: "hg-lobby-rail__menu-item",
+                disabled: props.busy || !message.account_id,
+                onClick: function () {
+                  props.onBlock(message);
+                  props.onClose();
+                },
+                children: "Block",
+              }),
+            ],
+          })
+        : null,
     ],
   });
 }
 
 function LobbyMessageRow(props) {
   const message = props.message;
-
-  if (isTauntMessage(message)) {
-    const summary = tauntSummary(message.match_context);
-    return jsxs("li", {
-      className: "hg-lobby-rail__message hg-lobby-rail__taunt",
-      "data-message-id": message.id,
-      "data-actor-mode": message.actor_mode,
-      "data-message-kind": "taunt",
-      children: [
-        jsxs("div", {
-          className: "hg-lobby-rail__bubble",
-          children: [
-            jsxs("div", {
-              className: "hg-row hg-row--between",
-              children: [
-                jsx("strong", { children: actorLabel(message) + " taunt" }),
-                jsx(TimeLabel, { iso: message.created_at }),
-              ],
-            }),
-            jsx("p", {
-              className: "hg-lobby-rail__text",
-              children: message.body,
-            }),
-            summary
-              ? jsx("p", {
-                  className: "hg-lobby-rail__match",
-                  "data-taunt-match": "true",
-                  children: summary,
-                })
-              : null,
-            jsx(LobbyActions, {
-              message,
-              busy: props.busy,
-              onReport: props.onReport,
-              onBlock: props.onBlock,
-            }),
-          ],
-        }),
-      ],
-    });
-  }
+  const showHeader = props.showHeader !== false;
+  const grouped = props.grouped === true;
+  const taunt = isTauntMessage(message);
+  const upset = isUpsetMessage(message);
+  const summary = taunt || upset ? tauntSummary(message.match_context) : "";
+  const label = actorLabel(message);
+  const hue = lobbyAuthorHue(authorKey(message));
+  const kind = taunt ? "taunt" : upset ? "upset" : "chat";
+  const className =
+    "hg-lobby-rail__message" +
+    (grouped ? " hg-lobby-rail__message--grouped" : "") +
+    (taunt ? " hg-lobby-rail__taunt" : "") +
+    (upset ? " hg-lobby-rail__upset" : "");
 
   return jsxs("li", {
-    className: "hg-lobby-rail__message",
+    className: className,
     "data-message-id": message.id,
     "data-actor-mode": message.actor_mode,
+    "data-message-kind": kind,
+    "data-grouped": grouped ? "true" : "false",
     children: [
-      jsxs("div", {
-        className: "hg-row hg-row--between",
-        children: [
-          jsx("strong", { children: actorLabel(message) }),
-          jsx(TimeLabel, { iso: message.created_at }),
-        ],
-      }),
+      showHeader
+        ? jsxs("div", {
+            className: "hg-lobby-rail__meta",
+            children: [
+              jsx("strong", {
+                className: "hg-lobby-rail__author",
+                style: { color: "hsl(" + hue + " 70% 68%)" },
+                children: label,
+              }),
+              taunt
+                ? jsx("span", {
+                    className: "hg-lobby-rail__kind",
+                    children: "taunt",
+                  })
+                : null,
+              upset
+                ? jsx("span", {
+                    className: "hg-lobby-rail__kind hg-lobby-rail__kind--upset",
+                    children: "upset",
+                  })
+                : null,
+              summary
+                ? jsx("span", {
+                    className: "hg-lobby-rail__match",
+                    "data-taunt-match": "true",
+                    title: summary,
+                    children: summary,
+                  })
+                : null,
+              jsx(TimeLabel, { iso: message.created_at }),
+              jsx(MessageMenu, {
+                message,
+                busy: props.busy,
+                open: props.menuOpen,
+                onToggle: props.onMenuToggle,
+                onClose: props.onMenuClose,
+                onReport: props.onReport,
+                onBlock: props.onBlock,
+              }),
+            ],
+          })
+        : jsxs("div", {
+            className: "hg-lobby-rail__meta hg-lobby-rail__meta--grouped",
+            children: [
+              jsx(TimeLabel, { iso: message.created_at }),
+              jsx(MessageMenu, {
+                message,
+                busy: props.busy,
+                open: props.menuOpen,
+                onToggle: props.onMenuToggle,
+                onClose: props.onMenuClose,
+                onReport: props.onReport,
+                onBlock: props.onBlock,
+              }),
+            ],
+          }),
       jsx("p", {
         className: "hg-lobby-rail__text",
         children: message.body,
       }),
-      jsx(LobbyActions, {
-        message,
-        busy: props.busy,
-        onReport: props.onReport,
-        onBlock: props.onBlock,
+    ],
+  });
+}
+
+function HostStrip(props) {
+  if (props.dismissed) return null;
+  const host = props.host;
+  if (!host || !host.line) return null;
+  return jsxs("div", {
+    className: "hg-lobby-rail__host",
+    "data-npc-id": host.id,
+    children: [
+      jsx("strong", { className: "hg-lobby-rail__host-name", children: host.name }),
+      jsx("span", { className: "hg-lobby-rail__host-line", children: host.line }),
+      jsx("button", {
+        type: "button",
+        className: "hg-lobby-rail__host-dismiss",
+        "aria-label": "Dismiss host tip",
+        title: "Dismiss",
+        onClick: props.onDismiss,
+        children: "×",
       }),
     ],
   });
@@ -1228,8 +1385,16 @@ function LobbyStub(props) {
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "chat", size: "compact", api: props.api, assetBaseUrl: props.assetBaseUrl }),
-      jsx("p", { className: "hg-lobby-rail__stub-title", children: "Chat is off by default" }),
+      jsx(NpcHostBanner, {
+        surface: "chat",
+        size: "compact",
+        api: props.api,
+        assetBaseUrl: props.assetBaseUrl,
+      }),
+      jsx("p", {
+        className: "hg-lobby-rail__stub-title",
+        children: "Chat is off by default",
+      }),
       jsx("p", {
         className: "hg-muted",
         children:
@@ -1240,7 +1405,7 @@ function LobbyStub(props) {
         children: [
           jsx("span", { children: "Message" }),
           jsx("textarea", {
-            rows: "3",
+            rows: "2",
             disabled: true,
             placeholder: "Chat is disabled in this stub",
           }),
@@ -1256,6 +1421,24 @@ function LobbyStub(props) {
   });
 }
 
+function readHostDismissed() {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    return window.localStorage.getItem(LOBBY_RAIL_HOST_DISMISSED_KEY) === "1";
+  } catch (_err) {
+    return false;
+  }
+}
+
+function persistHostDismissed(value) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(LOBBY_RAIL_HOST_DISMISSED_KEY, value ? "1" : "0");
+  } catch (_err) {
+    /* ignore */
+  }
+}
+
 function LobbyRail(props = {}) {
   const api = props.api;
   const uiState = props.uiState || props.state || UI_STATES.READY;
@@ -1269,11 +1452,18 @@ function LobbyRail(props = {}) {
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState("");
   const [dmTarget, setDmTarget] = useState("");
+  const [dmOpen, setDmOpen] = useState(false);
   const [composerError, setComposerError] = useState("");
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [inbox, setInbox] = useState(emptyInbox);
+  const [menuId, setMenuId] = useState(null);
+  const [hostDismissed, setHostDismissed] = useState(readHostDismissed);
+  const [stickToBottom, setStickToBottom] = useState(true);
+  const [pendingNew, setPendingNew] = useState(false);
+  const listRef = useRef(null);
+  const prevCountRef = useRef(0);
 
   useEffect(
     function loadMessages() {
@@ -1335,6 +1525,42 @@ function LobbyRail(props = {}) {
     [api, enabled]
   );
 
+  useEffect(
+    function autoScroll() {
+      const el = listRef.current;
+      if (!el) return;
+      const grew = messages.length > prevCountRef.current;
+      prevCountRef.current = messages.length;
+      if (!grew) return;
+      if (stickToBottom) {
+        el.scrollTop = el.scrollHeight;
+        setPendingNew(false);
+      } else {
+        setPendingNew(true);
+      }
+    },
+    [messages, stickToBottom]
+  );
+
+  useEffect(
+    function closeMenuOnOutside() {
+      if (!menuId) return undefined;
+      function onKey(event) {
+        if (event.key === "Escape") setMenuId(null);
+      }
+      function onPointer() {
+        setMenuId(null);
+      }
+      window.addEventListener("keydown", onKey);
+      window.addEventListener("pointerdown", onPointer);
+      return function () {
+        window.removeEventListener("keydown", onKey);
+        window.removeEventListener("pointerdown", onPointer);
+      };
+    },
+    [menuId]
+  );
+
   const unread = lobbyUnreadCount(inbox);
 
   function toggle() {
@@ -1353,6 +1579,47 @@ function LobbyRail(props = {}) {
     });
   }
 
+  function onListScroll() {
+    const el = listRef.current;
+    const stuck = shouldStickLobbyScroll(el);
+    setStickToBottom(stuck);
+    if (stuck) setPendingNew(false);
+  }
+
+  function jumpToLatest() {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setStickToBottom(true);
+    setPendingNew(false);
+  }
+
+  function dismissHost() {
+    setHostDismissed(true);
+    persistHostDismissed(true);
+  }
+
+  function startResize(event) {
+    if (typeof props.onWidthChange !== "function") return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth =
+      typeof props.width === "number" ? props.width : LOBBY_DEFAULT_WIDTH();
+    function onMove(moveEvent) {
+      const delta = startX - moveEvent.clientX;
+      props.onWidthChange(startWidth + delta);
+    }
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  function LOBBY_DEFAULT_WIDTH() {
+    return 320;
+  }
+
   async function submitMessage(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -1362,7 +1629,7 @@ function LobbyRail(props = {}) {
       setComposerError(checked.error);
       return;
     }
-    const checkedTarget = validateDmTarget(dmTarget);
+    const checkedTarget = validateDmTarget(dmOpen ? dmTarget : "");
     if (!checkedTarget.ok) {
       setComposerError(checkedTarget.error);
       return;
@@ -1386,6 +1653,7 @@ function LobbyRail(props = {}) {
         }
         setDraft("");
         setNotice(null);
+        setStickToBottom(true);
       } else {
         setNotice(chatNoticeFromEnvelope(envelope));
       }
@@ -1445,24 +1713,37 @@ function LobbyRail(props = {}) {
     ? chatModerationHost(notice) || npcHostLine("chat.moderation")
     : null;
   const unreadLabel = lobbyUnreadLabel(unread);
+  const host = notice ? moderationHost : npcHostLine("chat");
+  const grouped = groupLobbyMessages(messages);
 
-  const rows = messages.map(function (message) {
+  const rows = grouped.map(function (entry) {
     return jsx(
       LobbyMessageRow,
       {
-        message,
+        message: entry.message,
+        showHeader: entry.showHeader,
+        grouped: entry.grouped,
         busy,
+        menuOpen: menuId === entry.message.id,
+        onMenuToggle: function (id) {
+          setMenuId(function (current) {
+            return current === id ? null : id;
+          });
+        },
+        onMenuClose: function () {
+          setMenuId(null);
+        },
         onReport: reportMessage,
         onBlock: blockMessage,
       },
-      message.id
+      entry.message.id
     );
   });
 
   const emptyState =
     enabled && !loading && messages.length === 0
       ? jsx("li", {
-          className: "hg-muted",
+          className: "hg-muted hg-lobby-rail__empty",
           children: "No lobby messages yet. Say hello below.",
         })
       : null;
@@ -1506,6 +1787,18 @@ function LobbyRail(props = {}) {
     ],
   });
 
+  const resizeHandle =
+    collapsed || typeof props.onWidthChange !== "function"
+      ? null
+      : jsx("div", {
+          className: "hg-lobby-rail__resize",
+          role: "separator",
+          "aria-orientation": "vertical",
+          "aria-label": "Resize lobby chat",
+          "data-lobby-resize": "true",
+          onPointerDown: startResize,
+        });
+
   const body = collapsed
     ? null
     : enabled
@@ -1516,15 +1809,11 @@ function LobbyRail(props = {}) {
             uiState && uiState !== UI_STATES.READY
               ? jsx(StateNotice, { state: uiState })
               : null,
-            notice
-              ? jsx(NpcHostBanner, {
-                  surface: "chat.moderation",
-                  host: moderationHost,
-                  size: "compact",
-                  api: props.api,
-                  assetBaseUrl: props.assetBaseUrl,
-                })
-              : jsx(NpcHostBanner, { surface: "chat", size: "compact", api: props.api, assetBaseUrl: props.assetBaseUrl }),
+            jsx(HostStrip, {
+              host,
+              dismissed: hostDismissed && !notice,
+              onDismiss: dismissHost,
+            }),
             notice && (notice.message || notice.hostLine)
               ? jsx("p", {
                   className:
@@ -1536,50 +1825,96 @@ function LobbyRail(props = {}) {
                   children: notice.message || notice.hostLine,
                 })
               : null,
-            jsx("ol", {
-              className: "hg-lobby-rail__messages",
-              "aria-live": "polite",
-              children: [emptyState, ...rows],
+            jsxs("div", {
+              className: "hg-lobby-rail__scroller",
+              children: [
+                jsx("ol", {
+                  className: "hg-lobby-rail__messages",
+                  "aria-live": "polite",
+                  ref: function (node) {
+                    listRef.current = node;
+                  },
+                  onScroll: onListScroll,
+                  children: [emptyState, ...rows],
+                }),
+                pendingNew
+                  ? jsx("button", {
+                      type: "button",
+                      className: "hg-lobby-rail__new",
+                      onClick: jumpToLatest,
+                      children: "New messages ↓",
+                    })
+                  : null,
+              ],
             }),
             jsxs("form", {
               className: "hg-lobby-rail__compose",
               onSubmit: submitMessage,
               children: [
-                jsxs("label", {
-                  className: "hg-field",
+                jsxs("div", {
+                  className: "hg-lobby-rail__compose-row",
                   children: [
-                    jsx("span", { children: "Message" }),
                     jsx("textarea", {
-                      className: "hg-input",
-                      rows: "3",
+                      className: "hg-input hg-lobby-rail__draft",
+                      rows: "1",
                       maxLength: String(CHAT_MESSAGE_MAX_CHARS),
                       value: draft,
                       disabled: busy,
-                      placeholder: "Write a plain-text lobby message",
+                      placeholder: "Message lobby…",
+                      "aria-label": "Lobby message",
                       onChange: function (event) {
                         setDraft(event.target.value);
+                        const el = event.target;
+                        el.style.height = "auto";
+                        const next = Math.min(el.scrollHeight, 66);
+                        el.style.height = next + "px";
                       },
+                      onKeyDown: function (event) {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          submitMessage(event);
+                        }
+                      },
+                    }),
+                    jsx("button", {
+                      type: "button",
+                      className: dmOpen
+                        ? "hg-btn hg-lobby-rail__dm-toggle hg-lobby-rail__dm-toggle--on"
+                        : "hg-btn hg-lobby-rail__dm-toggle",
+                      "aria-pressed": dmOpen ? "true" : "false",
+                      "aria-label": "Toggle direct message target",
+                      title: "Direct message",
+                      disabled: busy,
+                      onClick: function () {
+                        setDmOpen(function (open) {
+                          return !open;
+                        });
+                      },
+                      children: "@",
+                    }),
+                    jsx("button", {
+                      type: "submit",
+                      className: "hg-btn hg-btn--primary",
+                      disabled: busy,
+                      children: busy ? "…" : "Send",
                     }),
                   ],
                 }),
-                jsxs("label", {
-                  className: "hg-field hg-chat__dm-target",
-                  children: [
-                    jsx("span", { children: "Direct message to (optional)" }),
-                    jsx("input", {
-                      className: "hg-input",
+                dmOpen
+                  ? jsx("input", {
+                      className: "hg-input hg-lobby-rail__dm-input",
                       type: "text",
                       maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
                       value: dmTarget,
                       disabled: busy,
-                      placeholder: "Player or pet name — blank keeps the lobby",
+                      placeholder: "DM to player or pet",
                       "data-chat-dm-target": "true",
+                      "aria-label": "Direct message target",
                       onChange: function (event) {
                         setDmTarget(event.target.value);
                       },
-                    }),
-                  ],
-                }),
+                    })
+                  : null,
                 composerError
                   ? jsx("p", {
                       className: "hg-error",
@@ -1587,29 +1922,15 @@ function LobbyRail(props = {}) {
                       children: composerError,
                     })
                   : null,
-                jsxs("div", {
-                  className: "hg-actions",
-                  children: [
-                    jsx("button", {
-                      type: "submit",
-                      className: "hg-btn hg-btn--primary",
-                      disabled: busy,
-                      children: busy ? "Working..." : "Send",
-                    }),
-                    jsx("button", {
-                      type: "button",
-                      className: "hg-btn",
-                      disabled: busy,
-                      onClick: refresh,
-                      children: "Refresh",
-                    }),
-                  ],
-                }),
               ],
             }),
           ],
         })
-      : jsx(LobbyStub, { uiState });
+      : jsx(LobbyStub, {
+          uiState,
+          api: props.api,
+          assetBaseUrl: props.assetBaseUrl,
+        });
 
   return jsxs("aside", {
     className: collapsed
@@ -1618,7 +1939,7 @@ function LobbyRail(props = {}) {
     "data-rail": "lobby",
     "data-collapsed": collapsed ? "true" : "false",
     "aria-label": "Lobby",
-    children: [header, body],
+    children: [resizeHandle, header, body],
   });
 }
 
@@ -2621,8 +2942,8 @@ function createPlayer(clip) {
 // desktop/src/ui/components/PetPreview.js
 const __m11 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext4;
-  const useState = __ext3;
+  const useRef = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const buildPreviewLayers = __m8["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
@@ -3517,7 +3838,7 @@ function TurnLog(props = {}) {
 // desktop/src/ui/tabs/BattleTab.js
 const __m14 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
@@ -4695,7 +5016,7 @@ function replayPath(matchId) {
 // desktop/src/ui/tabs/ChatTab.js
 const __m17 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const NpcHostBanner = __m4["NpcHostBanner"];
@@ -6351,8 +6672,8 @@ function petFromCareResponse(data, previous) {
 // desktop/src/ui/tabs/HabitatTab.js
 const __m20 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext4;
-  const useState = __ext3;
+  const useRef = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const CareMeter = __m18["CareMeter"];
@@ -7048,7 +7369,7 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 // desktop/src/ui/tabs/LeaderboardTab.js
 const __m22 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
@@ -7781,7 +8102,7 @@ const createPairingViewModel = buildPairingViewModel;
 const __m24 = (function () {
   const useCallback = __ext5;
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
@@ -8508,7 +8829,7 @@ function SettingsTab(props = {}) {
 // desktop/src/ui/tabs/ShopTab.js
 const __m25 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
@@ -9205,13 +9526,16 @@ const WORDMARK_SRC_2X = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZ4AAABCC
 // desktop/src/ui/pane.js
 const __m27 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const LobbyRail = __m5["LobbyRail"];
   const deriveConnectionStatus = __m6["deriveConnectionStatus"];
   const resolveConnectionUiState = __m6["resolveConnectionUiState"];
   const LOBBY_RAIL_COLLAPSED_KEY = __m2["LOBBY_RAIL_COLLAPSED_KEY"];
+  const LOBBY_RAIL_WIDTH_KEY = __m2["LOBBY_RAIL_WIDTH_KEY"];
+  const clampLobbyRailWidth = __m2["clampLobbyRailWidth"];
+  const defaultLobbyRailWidth = __m2["defaultLobbyRailWidth"];
   const lobbyRailAutoCollapsed = __m2["lobbyRailAutoCollapsed"];
   const BattleTab = __m14["BattleTab"];
   const ChatTab = __m17["ChatTab"];
@@ -9324,6 +9648,41 @@ function persistRailCollapsed(collapsed) {
   }
 }
 
+function readStoredRailWidth() {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(LOBBY_RAIL_WIDTH_KEY);
+    if (raw == null || raw === "") return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function persistRailWidth(width) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(LOBBY_RAIL_WIDTH_KEY, String(width));
+  } catch (_err) {
+    /* ignore */
+  }
+}
+
+function initialRailWidth() {
+  const viewport =
+    typeof window !== "undefined" && typeof window.innerWidth === "number"
+      ? window.innerWidth
+      : 1280;
+  const stored = readStoredRailWidth();
+  if (stored != null) return clampLobbyRailWidth(stored, viewport);
+  return defaultLobbyRailWidth(viewport);
+}
+
 function initialRailCollapsed() {
   const stored = readStoredRailCollapsed();
   if (stored !== null) return stored;
@@ -9348,6 +9707,19 @@ function HermagotchiPane(props = {}) {
   const railState = useState(initialRailCollapsed);
   const railCollapsed = railState[0];
   const setRailCollapsed = railState[1];
+  const widthState = useState(initialRailWidth);
+  const railWidth = widthState[0];
+  const setRailWidth = widthState[1];
+
+  function changeRailWidth(next) {
+    const viewport =
+      typeof window !== "undefined" && typeof window.innerWidth === "number"
+        ? window.innerWidth
+        : 1280;
+    const clamped = clampLobbyRailWidth(next, viewport);
+    setRailWidth(clamped);
+    persistRailWidth(clamped);
+  }
 
   useEffect(
     function pollConnection() {
@@ -9484,6 +9856,9 @@ function HermagotchiPane(props = {}) {
         className: railCollapsed
           ? "hg-pane__layout hg-pane__layout--rail-collapsed"
           : "hg-pane__layout",
+        style: railCollapsed
+          ? undefined
+          : { ["--hg-lobby-rail-width"]: railWidth + "px" },
         children: [
           jsx("main", {
             className: "hg-pane__body hg-pane__main",
@@ -9497,6 +9872,8 @@ function HermagotchiPane(props = {}) {
             state: effectiveState,
             collapsed: railCollapsed,
             onToggle: toggleLobbyRail,
+            width: railWidth,
+            onWidthChange: changeRailWidth,
             initialTab: undefined,
             onTabChange: undefined,
           })),
@@ -9946,7 +10323,7 @@ const __m30 = (function () {
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 240px;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) 320px;\n  gap: 12px;\n  align-items: start;\n  padding-top: 12px;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 56px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: stretch;\n  gap: 12px;\n  border: 2px solid #3a2f5f;\n  background:\n    linear-gradient(135deg, rgba(102, 242, 177, 0.06), transparent 42%),\n    #17132a;\n  padding: 10px 12px;\n  margin-bottom: 12px;\n  min-width: 0;\n}\n\n.hg-npc-host__speech {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 6px;\n  min-width: 0;\n  flex: 1 1 auto;\n  position: relative;\n  padding: 10px 12px 10px 14px;\n  border: 2px solid #4a3a78;\n  background: #100e1c;\n}\n\n.hg-npc-host__speech::before {\n  content: \"\";\n  position: absolute;\n  left: -10px;\n  top: 28px;\n  width: 0;\n  height: 0;\n  border-top: 8px solid transparent;\n  border-bottom: 8px solid transparent;\n  border-right: 10px solid #4a3a78;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  font-size: 0.9375rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-text);\n  font-size: 0.9375rem;\n  line-height: 1.35;\n  overflow-wrap: anywhere;\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 180px;\n  height: 180px;\n  flex: 0 0 180px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 2px solid #4a3a78;\n  background: #08060f;\n}\n\n.hg-npc-host__portrait--empty {\n  display: block;\n  background:\n    repeating-linear-gradient(\n      135deg,\n      #1a1530 0,\n      #1a1530 6px,\n      #100e1c 6px,\n      #100e1c 12px\n    );\n}\n\n.hg-npc-host--compact {\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__portrait {\n  width: 64px;\n  height: 64px;\n  flex: 0 0 64px;\n  border-width: 1px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech {\n  padding: 4px 8px 4px 10px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech::before {\n  top: 14px;\n  left: -8px;\n  border-top-width: 6px;\n  border-bottom-width: 6px;\n  border-right-width: 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__name {\n  font-size: 0.75rem;\n}\n\n.hg-npc-host--compact .hg-npc-host__line {\n  font-size: 0.75rem;\n  color: var(--hg-muted);\n}\n\n@media (max-width: 959px) {\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 140px;\n    height: 140px;\n    flex-basis: 140px;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-npc-host--featured {\n    flex-wrap: wrap;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 112px;\n    height: 112px;\n    flex-basis: 112px;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__speech::before {\n    display: none;\n  }\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  max-height: calc(100vh - 180px);\n  overflow: hidden;\n  position: sticky;\n  top: 12px;\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n  border-left-width: 3px;\n  border-left-color: var(--hg-accent);\n  min-height: 8rem;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: inline-block;\n  writing-mode: vertical-rl;\n  transform: rotate(180deg);\n  letter-spacing: 0.18em;\n  font-weight: 700;\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__toggle--collapsed {\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-start;\n  width: 100%;\n  min-height: 7.5rem;\n  padding: 8px 4px;\n  gap: 8px;\n  border-radius: 0;\n  border-left-width: 0;\n  background: var(--hg-bg-raised);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__badge {\n  align-self: center;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  min-height: 0;\n  padding: 8px;\n  overflow-y: auto;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 8px 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-lobby-rail__message {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-lobby-rail__taunt {\n  border-color: var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-lobby-rail__bubble {\n  display: block;\n}\n\n.hg-lobby-rail__text,\n.hg-lobby-rail__match {\n  margin: 4px 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-lobby-rail__match {\n  color: var(--hg-muted);\n  font-size: 0.6875rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 8px;\n  margin-top: auto;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    max-height: none;\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 240px;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) var(--hg-lobby-rail-width, 320px);\n  gap: 12px;\n  align-items: start;\n  padding-top: 12px;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 56px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: stretch;\n  gap: 12px;\n  border: 2px solid #3a2f5f;\n  background:\n    linear-gradient(135deg, rgba(102, 242, 177, 0.06), transparent 42%),\n    #17132a;\n  padding: 10px 12px;\n  margin-bottom: 12px;\n  min-width: 0;\n}\n\n.hg-npc-host__speech {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 6px;\n  min-width: 0;\n  flex: 1 1 auto;\n  position: relative;\n  padding: 10px 12px 10px 14px;\n  border: 2px solid #4a3a78;\n  background: #100e1c;\n}\n\n.hg-npc-host__speech::before {\n  content: \"\";\n  position: absolute;\n  left: -10px;\n  top: 28px;\n  width: 0;\n  height: 0;\n  border-top: 8px solid transparent;\n  border-bottom: 8px solid transparent;\n  border-right: 10px solid #4a3a78;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  font-size: 0.9375rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-text);\n  font-size: 0.9375rem;\n  line-height: 1.35;\n  overflow-wrap: anywhere;\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 180px;\n  height: 180px;\n  flex: 0 0 180px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 2px solid #4a3a78;\n  background: #08060f;\n}\n\n.hg-npc-host__portrait--empty {\n  display: block;\n  background:\n    repeating-linear-gradient(\n      135deg,\n      #1a1530 0,\n      #1a1530 6px,\n      #100e1c 6px,\n      #100e1c 12px\n    );\n}\n\n.hg-npc-host--compact {\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__portrait {\n  width: 64px;\n  height: 64px;\n  flex: 0 0 64px;\n  border-width: 1px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech {\n  padding: 4px 8px 4px 10px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech::before {\n  top: 14px;\n  left: -8px;\n  border-top-width: 6px;\n  border-bottom-width: 6px;\n  border-right-width: 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__name {\n  font-size: 0.75rem;\n}\n\n.hg-npc-host--compact .hg-npc-host__line {\n  font-size: 0.75rem;\n  color: var(--hg-muted);\n}\n\n@media (max-width: 959px) {\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 140px;\n    height: 140px;\n    flex-basis: 140px;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-npc-host--featured {\n    flex-wrap: wrap;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 112px;\n    height: 112px;\n    flex-basis: 112px;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__speech::before {\n    display: none;\n  }\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  height: calc(100vh - 112px);\n  max-height: calc(100vh - 112px);\n  overflow: hidden;\n  position: sticky;\n  top: 12px;\n  align-self: start;\n}\n\n.hg-lobby-rail__resize {\n  position: absolute;\n  left: -3px;\n  top: 0;\n  bottom: 0;\n  width: 6px;\n  cursor: col-resize;\n  z-index: 2;\n}\n\n.hg-lobby-rail__resize:hover,\n.hg-lobby-rail__resize:focus-visible {\n  background: rgba(102, 242, 177, 0.35);\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n  border-left-width: 3px;\n  border-left-color: var(--hg-accent);\n  min-height: 8rem;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: inline-block;\n  writing-mode: vertical-rl;\n  transform: rotate(180deg);\n  letter-spacing: 0.18em;\n  font-weight: 700;\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__toggle--collapsed {\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-start;\n  width: 100%;\n  min-height: 7.5rem;\n  padding: 8px 4px;\n  gap: 8px;\n  border-radius: 0;\n  border-left-width: 0;\n  background: var(--hg-bg-raised);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__badge {\n  align-self: center;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n  min-height: 0;\n  padding: 4px 6px 6px;\n  overflow: hidden;\n}\n\n.hg-lobby-rail__host {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-width: 0;\n  padding: 2px 4px;\n  margin-bottom: 4px;\n  border: 1px solid #3a2f5f;\n  background: #141025;\n  font-size: 0.6875rem;\n  line-height: 1.3;\n}\n\n.hg-lobby-rail__host-name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__host-line {\n  color: var(--hg-muted);\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  flex: 1 1 auto;\n}\n\n.hg-lobby-rail__host-dismiss {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-muted);\n  cursor: pointer;\n  padding: 0 4px;\n  font: inherit;\n  line-height: 1;\n}\n\n.hg-lobby-rail__host-dismiss:hover,\n.hg-lobby-rail__host-dismiss:focus-visible {\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__scroller {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n  min-height: 0;\n}\n\n.hg-lobby-rail__new {\n  appearance: none;\n  position: absolute;\n  left: 50%;\n  bottom: 8px;\n  transform: translateX(-50%);\n  z-index: 2;\n  border: 1px solid var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n  padding: 2px 10px;\n  font: inherit;\n  font-size: 0.6875rem;\n  cursor: pointer;\n  letter-spacing: 0.04em;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 0;\n  flex: 1 1 auto;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n}\n\n.hg-lobby-rail__empty {\n  padding: 8px 4px;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__message {\n  position: relative;\n  border: 0;\n  background: transparent;\n  padding: 1px 4px 1px 6px;\n  font-size: 0.75rem;\n  line-height: 1.35;\n}\n\n.hg-lobby-rail__message:hover,\n.hg-lobby-rail__message:focus-within {\n  background: rgba(102, 242, 177, 0.06);\n}\n\n.hg-lobby-rail__message--grouped {\n  padding-top: 0;\n  padding-bottom: 0;\n}\n\n.hg-lobby-rail__meta {\n  display: flex;\n  align-items: baseline;\n  gap: 6px;\n  min-width: 0;\n}\n\n.hg-lobby-rail__meta--grouped {\n  position: absolute;\n  right: 2px;\n  top: 1px;\n  opacity: 0;\n}\n\n.hg-lobby-rail__message:hover .hg-lobby-rail__meta--grouped,\n.hg-lobby-rail__message:focus-within .hg-lobby-rail__meta--grouped {\n  opacity: 1;\n}\n\n.hg-lobby-rail__author {\n  font-weight: 700;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  max-width: 55%;\n}\n\n.hg-lobby-rail__kind {\n  flex: 0 0 auto;\n  border: 1px solid var(--hg-warn);\n  color: var(--hg-warn);\n  padding: 0 4px;\n  font-size: 0.625rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__kind--upset {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__match {\n  flex: 1 1 auto;\n  min-width: 0;\n  color: var(--hg-muted);\n  font-size: 0.625rem;\n  letter-spacing: 0.03em;\n  text-transform: uppercase;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.hg-lobby-rail__time {\n  margin-left: auto;\n  flex: 0 0 auto;\n  font-size: 0.625rem;\n  opacity: 0.75;\n}\n\n.hg-lobby-rail__text {\n  margin: 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-lobby-rail__message--grouped .hg-lobby-rail__text {\n  padding-right: 2.5rem;\n}\n\n.hg-lobby-rail__taunt {\n  border-left: 2px solid var(--hg-warn);\n  background: rgba(255, 204, 102, 0.06);\n}\n\n.hg-lobby-rail__upset {\n  border-left: 2px solid var(--hg-accent);\n  background: rgba(102, 242, 177, 0.06);\n}\n\n.hg-lobby-rail__menu {\n  position: relative;\n  flex: 0 0 auto;\n  margin-left: 2px;\n}\n\n.hg-lobby-rail__menu-toggle {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-muted);\n  cursor: pointer;\n  padding: 0 3px;\n  font: inherit;\n  line-height: 1;\n  opacity: 0;\n}\n\n.hg-lobby-rail__message:hover .hg-lobby-rail__menu-toggle,\n.hg-lobby-rail__message:focus-within .hg-lobby-rail__menu-toggle,\n.hg-lobby-rail__menu-toggle:focus-visible,\n.hg-lobby-rail__menu [aria-expanded=\"true\"] {\n  opacity: 1;\n}\n\n.hg-lobby-rail__menu-panel {\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 5;\n  display: flex;\n  flex-direction: column;\n  min-width: 7rem;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-raised);\n  padding: 2px;\n}\n\n.hg-lobby-rail__menu-item {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-text);\n  text-align: left;\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__menu-item:hover,\n.hg-lobby-rail__menu-item:focus-visible {\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 6px;\n  margin-top: 4px;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__compose-row {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto auto;\n  gap: 4px;\n  align-items: end;\n}\n\n.hg-lobby-rail__draft {\n  min-height: 1.8rem;\n  max-height: 66px;\n  resize: none;\n  padding: 4px 6px;\n  font-size: 0.75rem;\n  line-height: 1.3;\n}\n\n.hg-lobby-rail__dm-toggle {\n  padding: 4px 8px;\n  min-width: 2rem;\n}\n\n.hg-lobby-rail__dm-toggle--on {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__dm-input {\n  margin-top: 4px;\n  padding: 4px 6px;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__compose .hg-btn {\n  padding: 4px 8px;\n  font-size: 0.75rem;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    max-height: none;\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;

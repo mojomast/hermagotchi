@@ -4,6 +4,9 @@ import { LobbyRail } from "./components/LobbyRail.js";
 import { deriveConnectionStatus, resolveConnectionUiState } from "./logic/connection.js";
 import {
   LOBBY_RAIL_COLLAPSED_KEY,
+  LOBBY_RAIL_WIDTH_KEY,
+  clampLobbyRailWidth,
+  defaultLobbyRailWidth,
   lobbyRailAutoCollapsed,
 } from "./logic/chat.js";
 import { BattleTab } from "./tabs/BattleTab.js";
@@ -113,6 +116,41 @@ function persistRailCollapsed(collapsed) {
   }
 }
 
+function readStoredRailWidth() {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(LOBBY_RAIL_WIDTH_KEY);
+    if (raw == null || raw === "") return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function persistRailWidth(width) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(LOBBY_RAIL_WIDTH_KEY, String(width));
+  } catch (_err) {
+    /* ignore */
+  }
+}
+
+function initialRailWidth() {
+  const viewport =
+    typeof window !== "undefined" && typeof window.innerWidth === "number"
+      ? window.innerWidth
+      : 1280;
+  const stored = readStoredRailWidth();
+  if (stored != null) return clampLobbyRailWidth(stored, viewport);
+  return defaultLobbyRailWidth(viewport);
+}
+
 function initialRailCollapsed() {
   const stored = readStoredRailCollapsed();
   if (stored !== null) return stored;
@@ -137,6 +175,19 @@ export function HermagotchiPane(props = {}) {
   const railState = useState(initialRailCollapsed);
   const railCollapsed = railState[0];
   const setRailCollapsed = railState[1];
+  const widthState = useState(initialRailWidth);
+  const railWidth = widthState[0];
+  const setRailWidth = widthState[1];
+
+  function changeRailWidth(next) {
+    const viewport =
+      typeof window !== "undefined" && typeof window.innerWidth === "number"
+        ? window.innerWidth
+        : 1280;
+    const clamped = clampLobbyRailWidth(next, viewport);
+    setRailWidth(clamped);
+    persistRailWidth(clamped);
+  }
 
   useEffect(
     function pollConnection() {
@@ -273,6 +324,9 @@ export function HermagotchiPane(props = {}) {
         className: railCollapsed
           ? "hg-pane__layout hg-pane__layout--rail-collapsed"
           : "hg-pane__layout",
+        style: railCollapsed
+          ? undefined
+          : { ["--hg-lobby-rail-width"]: railWidth + "px" },
         children: [
           jsx("main", {
             className: "hg-pane__body hg-pane__main",
@@ -286,6 +340,8 @@ export function HermagotchiPane(props = {}) {
             state: effectiveState,
             collapsed: railCollapsed,
             onToggle: toggleLobbyRail,
+            width: railWidth,
+            onWidthChange: changeRailWidth,
             initialTab: undefined,
             onTabChange: undefined,
           })),

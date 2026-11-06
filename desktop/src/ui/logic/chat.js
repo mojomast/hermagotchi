@@ -17,6 +17,13 @@ export const CHAT_DM_TARGET_MAX_CHARS = 64;
 export const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
 export const LOBBY_RAIL_BREAKPOINT = 840;
 export const LOBBY_RAIL_COLLAPSED_KEY = "hermagotchi.lobbyRail.collapsed";
+export const LOBBY_RAIL_WIDTH_KEY = "hermagotchi.lobbyRail.width";
+export const LOBBY_RAIL_HOST_DISMISSED_KEY = "hermagotchi.lobbyRail.hostDismissed";
+export const LOBBY_RAIL_WIDTH_MIN = 260;
+export const LOBBY_RAIL_WIDTH_MAX = 480;
+export const LOBBY_RAIL_WIDTH_DEFAULT = 320;
+export const LOBBY_RAIL_WIDTH_WIDE = 380;
+
 
 
 const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
@@ -429,6 +436,78 @@ export function lobbyRailAutoCollapsed(width) {
   const value = Number(width);
   if (!Number.isFinite(value)) return false;
   return value < LOBBY_RAIL_BREAKPOINT;
+}
+
+/** Wider default rail on large panes; clamp to min/max. */
+export function defaultLobbyRailWidth(viewportWidth) {
+  const value = Number(viewportWidth);
+  if (Number.isFinite(value) && value >= 1280) return LOBBY_RAIL_WIDTH_WIDE;
+  return LOBBY_RAIL_WIDTH_DEFAULT;
+}
+
+export function clampLobbyRailWidth(width, viewportWidth) {
+  const value = Number(width);
+  if (!Number.isFinite(value)) return defaultLobbyRailWidth(viewportWidth);
+  const max =
+    Number.isFinite(Number(viewportWidth)) && Number(viewportWidth) > 0
+      ? Math.min(LOBBY_RAIL_WIDTH_MAX, Math.floor(Number(viewportWidth) * 0.45))
+      : LOBBY_RAIL_WIDTH_MAX;
+  return Math.max(LOBBY_RAIL_WIDTH_MIN, Math.min(max, Math.round(value)));
+}
+
+function lobbyAuthorKey(message) {
+  if (!message || typeof message !== "object") return "";
+  if (message.account_id) return "id:" + String(message.account_id);
+  const name =
+    message.author_name ||
+    message.author_handle ||
+    message.peer_name ||
+    "";
+  return name ? "name:" + String(name) : "anon";
+}
+
+/** Mark consecutive same-author rows so the UI can skip repeated headers. */
+export function groupLobbyMessages(messages) {
+  const rows = Array.isArray(messages) ? messages : [];
+  return rows.map(function (message, index) {
+    const prev = index > 0 ? rows[index - 1] : null;
+    const same =
+      prev &&
+      lobbyAuthorKey(prev) === lobbyAuthorKey(message) &&
+      lobbyAuthorKey(message) !== "" &&
+      lobbyAuthorKey(message) !== "anon";
+    return {
+      message,
+      showHeader: !same,
+      grouped: Boolean(same),
+    };
+  });
+}
+
+/** True when the message list is stuck near the bottom (auto-scroll allowed). */
+export function shouldStickLobbyScroll(element, thresholdPx = 48) {
+  if (!element || typeof element.scrollHeight !== "number") return true;
+  const remaining =
+    element.scrollHeight - element.scrollTop - element.clientHeight;
+  return remaining <= thresholdPx;
+}
+
+/** Simple stable hue for an author label (IRC-style name colors). */
+export function lobbyAuthorHue(key) {
+  const text = String(key || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return hash % 360;
+}
+
+export function isUpsetMessage(message) {
+  if (!message || typeof message !== "object") return false;
+  if (message.kind === "upset" || message.kind === "callout") return true;
+  const context = message.match_context;
+  if (context && typeof context === "object" && context.upset) return true;
+  return false;
 }
 
 /** Unread count for the collapsed lobby rail badge. */

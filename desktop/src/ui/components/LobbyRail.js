@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { npcHostLine } from "../npcLines.js";
 import { StateNotice, UI_STATES } from "../states.js";
@@ -10,11 +10,17 @@ import {
   CHAT_MESSAGE_MAX_CHARS,
   CHAT_REPORT_PATH,
   CHAT_REPORT_REASON,
+  LOBBY_RAIL_HOST_DISMISSED_KEY,
   chatActionNotice,
   chatMessagePayload,
   chatModerationHost,
   chatNoticeFromEnvelope,
+  displayActorLabel,
+  formatRelativeTime,
+  groupLobbyMessages,
   isTauntMessage,
+  isUpsetMessage,
+  lobbyAuthorHue,
   lobbyUnreadCount,
   lobbyUnreadLabel,
   mergeMessages,
@@ -22,11 +28,10 @@ import {
   normalizeInbox,
   normalizeMessages,
   shouldShowChatStub,
+  shouldStickLobbyScroll,
   tauntSummary,
   validateChatDraft,
   validateDmTarget,
-  displayActorLabel,
-  formatRelativeTime,
 } from "../logic/chat.js";
 import { NpcHostBanner } from "./NpcHostBanner.js";
 
@@ -38,109 +43,181 @@ function actorLabel(message) {
   return displayActorLabel(message);
 }
 
+function authorKey(message) {
+  if (message && message.account_id) return String(message.account_id);
+  return actorLabel(message);
+}
+
 function TimeLabel(props) {
   const iso = props.iso || "";
   const relative = formatRelativeTime(iso);
   return jsx("time", {
-    className: "hg-muted hg-time",
+    className: "hg-lobby-rail__time hg-muted",
     dateTime: iso || undefined,
     title: iso || undefined,
-    children: relative || iso || "Unknown time",
+    children: relative || iso || "",
   });
 }
 
-function LobbyActions(props) {
+function MessageMenu(props) {
   const message = props.message;
+  const open = props.open === true;
   return jsxs("div", {
-    className: "hg-actions hg-actions--tight",
+    className: "hg-lobby-rail__menu",
     children: [
       jsx("button", {
         type: "button",
-        className: "hg-btn",
+        className: "hg-lobby-rail__menu-toggle",
+        "aria-haspopup": "menu",
+        "aria-expanded": open ? "true" : "false",
+        "aria-label": "Message actions",
+        title: "Message actions",
+        "data-lobby-menu-toggle": message.id,
         disabled: props.busy,
-        onClick: function () {
-          props.onReport(message);
+        onClick: function (event) {
+          event.stopPropagation();
+          props.onToggle(message.id);
         },
-        children: "Report",
+        children: "⋯",
       }),
-      jsx("button", {
-        type: "button",
-        className: "hg-btn",
-        disabled: props.busy || !message.account_id,
-        onClick: function () {
-          props.onBlock(message);
-        },
-        children: "Block",
-      }),
+      open
+        ? jsxs("div", {
+            className: "hg-lobby-rail__menu-panel",
+            role: "menu",
+            children: [
+              jsx("button", {
+                type: "button",
+                role: "menuitem",
+                className: "hg-lobby-rail__menu-item",
+                disabled: props.busy,
+                onClick: function () {
+                  props.onReport(message);
+                  props.onClose();
+                },
+                children: "Report",
+              }),
+              jsx("button", {
+                type: "button",
+                role: "menuitem",
+                className: "hg-lobby-rail__menu-item",
+                disabled: props.busy || !message.account_id,
+                onClick: function () {
+                  props.onBlock(message);
+                  props.onClose();
+                },
+                children: "Block",
+              }),
+            ],
+          })
+        : null,
     ],
   });
 }
 
 function LobbyMessageRow(props) {
   const message = props.message;
-
-  if (isTauntMessage(message)) {
-    const summary = tauntSummary(message.match_context);
-    return jsxs("li", {
-      className: "hg-lobby-rail__message hg-lobby-rail__taunt",
-      "data-message-id": message.id,
-      "data-actor-mode": message.actor_mode,
-      "data-message-kind": "taunt",
-      children: [
-        jsxs("div", {
-          className: "hg-lobby-rail__bubble",
-          children: [
-            jsxs("div", {
-              className: "hg-row hg-row--between",
-              children: [
-                jsx("strong", { children: actorLabel(message) + " taunt" }),
-                jsx(TimeLabel, { iso: message.created_at }),
-              ],
-            }),
-            jsx("p", {
-              className: "hg-lobby-rail__text",
-              children: message.body,
-            }),
-            summary
-              ? jsx("p", {
-                  className: "hg-lobby-rail__match",
-                  "data-taunt-match": "true",
-                  children: summary,
-                })
-              : null,
-            jsx(LobbyActions, {
-              message,
-              busy: props.busy,
-              onReport: props.onReport,
-              onBlock: props.onBlock,
-            }),
-          ],
-        }),
-      ],
-    });
-  }
+  const showHeader = props.showHeader !== false;
+  const grouped = props.grouped === true;
+  const taunt = isTauntMessage(message);
+  const upset = isUpsetMessage(message);
+  const summary = taunt || upset ? tauntSummary(message.match_context) : "";
+  const label = actorLabel(message);
+  const hue = lobbyAuthorHue(authorKey(message));
+  const kind = taunt ? "taunt" : upset ? "upset" : "chat";
+  const className =
+    "hg-lobby-rail__message" +
+    (grouped ? " hg-lobby-rail__message--grouped" : "") +
+    (taunt ? " hg-lobby-rail__taunt" : "") +
+    (upset ? " hg-lobby-rail__upset" : "");
 
   return jsxs("li", {
-    className: "hg-lobby-rail__message",
+    className: className,
     "data-message-id": message.id,
     "data-actor-mode": message.actor_mode,
+    "data-message-kind": kind,
+    "data-grouped": grouped ? "true" : "false",
     children: [
-      jsxs("div", {
-        className: "hg-row hg-row--between",
-        children: [
-          jsx("strong", { children: actorLabel(message) }),
-          jsx(TimeLabel, { iso: message.created_at }),
-        ],
-      }),
+      showHeader
+        ? jsxs("div", {
+            className: "hg-lobby-rail__meta",
+            children: [
+              jsx("strong", {
+                className: "hg-lobby-rail__author",
+                style: { color: "hsl(" + hue + " 70% 68%)" },
+                children: label,
+              }),
+              taunt
+                ? jsx("span", {
+                    className: "hg-lobby-rail__kind",
+                    children: "taunt",
+                  })
+                : null,
+              upset
+                ? jsx("span", {
+                    className: "hg-lobby-rail__kind hg-lobby-rail__kind--upset",
+                    children: "upset",
+                  })
+                : null,
+              summary
+                ? jsx("span", {
+                    className: "hg-lobby-rail__match",
+                    "data-taunt-match": "true",
+                    title: summary,
+                    children: summary,
+                  })
+                : null,
+              jsx(TimeLabel, { iso: message.created_at }),
+              jsx(MessageMenu, {
+                message,
+                busy: props.busy,
+                open: props.menuOpen,
+                onToggle: props.onMenuToggle,
+                onClose: props.onMenuClose,
+                onReport: props.onReport,
+                onBlock: props.onBlock,
+              }),
+            ],
+          })
+        : jsxs("div", {
+            className: "hg-lobby-rail__meta hg-lobby-rail__meta--grouped",
+            children: [
+              jsx(TimeLabel, { iso: message.created_at }),
+              jsx(MessageMenu, {
+                message,
+                busy: props.busy,
+                open: props.menuOpen,
+                onToggle: props.onMenuToggle,
+                onClose: props.onMenuClose,
+                onReport: props.onReport,
+                onBlock: props.onBlock,
+              }),
+            ],
+          }),
       jsx("p", {
         className: "hg-lobby-rail__text",
         children: message.body,
       }),
-      jsx(LobbyActions, {
-        message,
-        busy: props.busy,
-        onReport: props.onReport,
-        onBlock: props.onBlock,
+    ],
+  });
+}
+
+function HostStrip(props) {
+  if (props.dismissed) return null;
+  const host = props.host;
+  if (!host || !host.line) return null;
+  return jsxs("div", {
+    className: "hg-lobby-rail__host",
+    "data-npc-id": host.id,
+    children: [
+      jsx("strong", { className: "hg-lobby-rail__host-name", children: host.name }),
+      jsx("span", { className: "hg-lobby-rail__host-line", children: host.line }),
+      jsx("button", {
+        type: "button",
+        className: "hg-lobby-rail__host-dismiss",
+        "aria-label": "Dismiss host tip",
+        title: "Dismiss",
+        onClick: props.onDismiss,
+        children: "×",
       }),
     ],
   });
@@ -155,8 +232,16 @@ function LobbyStub(props) {
       uiState && uiState !== UI_STATES.READY
         ? jsx(StateNotice, { state: uiState })
         : null,
-      jsx(NpcHostBanner, { surface: "chat", size: "compact", api: props.api, assetBaseUrl: props.assetBaseUrl }),
-      jsx("p", { className: "hg-lobby-rail__stub-title", children: "Chat is off by default" }),
+      jsx(NpcHostBanner, {
+        surface: "chat",
+        size: "compact",
+        api: props.api,
+        assetBaseUrl: props.assetBaseUrl,
+      }),
+      jsx("p", {
+        className: "hg-lobby-rail__stub-title",
+        children: "Chat is off by default",
+      }),
       jsx("p", {
         className: "hg-muted",
         children:
@@ -167,7 +252,7 @@ function LobbyStub(props) {
         children: [
           jsx("span", { children: "Message" }),
           jsx("textarea", {
-            rows: "3",
+            rows: "2",
             disabled: true,
             placeholder: "Chat is disabled in this stub",
           }),
@@ -183,6 +268,24 @@ function LobbyStub(props) {
   });
 }
 
+function readHostDismissed() {
+  if (typeof window === "undefined" || !window.localStorage) return false;
+  try {
+    return window.localStorage.getItem(LOBBY_RAIL_HOST_DISMISSED_KEY) === "1";
+  } catch (_err) {
+    return false;
+  }
+}
+
+function persistHostDismissed(value) {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(LOBBY_RAIL_HOST_DISMISSED_KEY, value ? "1" : "0");
+  } catch (_err) {
+    /* ignore */
+  }
+}
+
 export function LobbyRail(props = {}) {
   const api = props.api;
   const uiState = props.uiState || props.state || UI_STATES.READY;
@@ -196,11 +299,18 @@ export function LobbyRail(props = {}) {
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState("");
   const [dmTarget, setDmTarget] = useState("");
+  const [dmOpen, setDmOpen] = useState(false);
   const [composerError, setComposerError] = useState("");
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [inbox, setInbox] = useState(emptyInbox);
+  const [menuId, setMenuId] = useState(null);
+  const [hostDismissed, setHostDismissed] = useState(readHostDismissed);
+  const [stickToBottom, setStickToBottom] = useState(true);
+  const [pendingNew, setPendingNew] = useState(false);
+  const listRef = useRef(null);
+  const prevCountRef = useRef(0);
 
   useEffect(
     function loadMessages() {
@@ -262,6 +372,42 @@ export function LobbyRail(props = {}) {
     [api, enabled]
   );
 
+  useEffect(
+    function autoScroll() {
+      const el = listRef.current;
+      if (!el) return;
+      const grew = messages.length > prevCountRef.current;
+      prevCountRef.current = messages.length;
+      if (!grew) return;
+      if (stickToBottom) {
+        el.scrollTop = el.scrollHeight;
+        setPendingNew(false);
+      } else {
+        setPendingNew(true);
+      }
+    },
+    [messages, stickToBottom]
+  );
+
+  useEffect(
+    function closeMenuOnOutside() {
+      if (!menuId) return undefined;
+      function onKey(event) {
+        if (event.key === "Escape") setMenuId(null);
+      }
+      function onPointer() {
+        setMenuId(null);
+      }
+      window.addEventListener("keydown", onKey);
+      window.addEventListener("pointerdown", onPointer);
+      return function () {
+        window.removeEventListener("keydown", onKey);
+        window.removeEventListener("pointerdown", onPointer);
+      };
+    },
+    [menuId]
+  );
+
   const unread = lobbyUnreadCount(inbox);
 
   function toggle() {
@@ -280,6 +426,47 @@ export function LobbyRail(props = {}) {
     });
   }
 
+  function onListScroll() {
+    const el = listRef.current;
+    const stuck = shouldStickLobbyScroll(el);
+    setStickToBottom(stuck);
+    if (stuck) setPendingNew(false);
+  }
+
+  function jumpToLatest() {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setStickToBottom(true);
+    setPendingNew(false);
+  }
+
+  function dismissHost() {
+    setHostDismissed(true);
+    persistHostDismissed(true);
+  }
+
+  function startResize(event) {
+    if (typeof props.onWidthChange !== "function") return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth =
+      typeof props.width === "number" ? props.width : LOBBY_DEFAULT_WIDTH();
+    function onMove(moveEvent) {
+      const delta = startX - moveEvent.clientX;
+      props.onWidthChange(startWidth + delta);
+    }
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  function LOBBY_DEFAULT_WIDTH() {
+    return 320;
+  }
+
   async function submitMessage(event) {
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -289,7 +476,7 @@ export function LobbyRail(props = {}) {
       setComposerError(checked.error);
       return;
     }
-    const checkedTarget = validateDmTarget(dmTarget);
+    const checkedTarget = validateDmTarget(dmOpen ? dmTarget : "");
     if (!checkedTarget.ok) {
       setComposerError(checkedTarget.error);
       return;
@@ -313,6 +500,7 @@ export function LobbyRail(props = {}) {
         }
         setDraft("");
         setNotice(null);
+        setStickToBottom(true);
       } else {
         setNotice(chatNoticeFromEnvelope(envelope));
       }
@@ -372,24 +560,37 @@ export function LobbyRail(props = {}) {
     ? chatModerationHost(notice) || npcHostLine("chat.moderation")
     : null;
   const unreadLabel = lobbyUnreadLabel(unread);
+  const host = notice ? moderationHost : npcHostLine("chat");
+  const grouped = groupLobbyMessages(messages);
 
-  const rows = messages.map(function (message) {
+  const rows = grouped.map(function (entry) {
     return jsx(
       LobbyMessageRow,
       {
-        message,
+        message: entry.message,
+        showHeader: entry.showHeader,
+        grouped: entry.grouped,
         busy,
+        menuOpen: menuId === entry.message.id,
+        onMenuToggle: function (id) {
+          setMenuId(function (current) {
+            return current === id ? null : id;
+          });
+        },
+        onMenuClose: function () {
+          setMenuId(null);
+        },
         onReport: reportMessage,
         onBlock: blockMessage,
       },
-      message.id
+      entry.message.id
     );
   });
 
   const emptyState =
     enabled && !loading && messages.length === 0
       ? jsx("li", {
-          className: "hg-muted",
+          className: "hg-muted hg-lobby-rail__empty",
           children: "No lobby messages yet. Say hello below.",
         })
       : null;
@@ -433,6 +634,18 @@ export function LobbyRail(props = {}) {
     ],
   });
 
+  const resizeHandle =
+    collapsed || typeof props.onWidthChange !== "function"
+      ? null
+      : jsx("div", {
+          className: "hg-lobby-rail__resize",
+          role: "separator",
+          "aria-orientation": "vertical",
+          "aria-label": "Resize lobby chat",
+          "data-lobby-resize": "true",
+          onPointerDown: startResize,
+        });
+
   const body = collapsed
     ? null
     : enabled
@@ -443,15 +656,11 @@ export function LobbyRail(props = {}) {
             uiState && uiState !== UI_STATES.READY
               ? jsx(StateNotice, { state: uiState })
               : null,
-            notice
-              ? jsx(NpcHostBanner, {
-                  surface: "chat.moderation",
-                  host: moderationHost,
-                  size: "compact",
-                  api: props.api,
-                  assetBaseUrl: props.assetBaseUrl,
-                })
-              : jsx(NpcHostBanner, { surface: "chat", size: "compact", api: props.api, assetBaseUrl: props.assetBaseUrl }),
+            jsx(HostStrip, {
+              host,
+              dismissed: hostDismissed && !notice,
+              onDismiss: dismissHost,
+            }),
             notice && (notice.message || notice.hostLine)
               ? jsx("p", {
                   className:
@@ -463,50 +672,96 @@ export function LobbyRail(props = {}) {
                   children: notice.message || notice.hostLine,
                 })
               : null,
-            jsx("ol", {
-              className: "hg-lobby-rail__messages",
-              "aria-live": "polite",
-              children: [emptyState, ...rows],
+            jsxs("div", {
+              className: "hg-lobby-rail__scroller",
+              children: [
+                jsx("ol", {
+                  className: "hg-lobby-rail__messages",
+                  "aria-live": "polite",
+                  ref: function (node) {
+                    listRef.current = node;
+                  },
+                  onScroll: onListScroll,
+                  children: [emptyState, ...rows],
+                }),
+                pendingNew
+                  ? jsx("button", {
+                      type: "button",
+                      className: "hg-lobby-rail__new",
+                      onClick: jumpToLatest,
+                      children: "New messages ↓",
+                    })
+                  : null,
+              ],
             }),
             jsxs("form", {
               className: "hg-lobby-rail__compose",
               onSubmit: submitMessage,
               children: [
-                jsxs("label", {
-                  className: "hg-field",
+                jsxs("div", {
+                  className: "hg-lobby-rail__compose-row",
                   children: [
-                    jsx("span", { children: "Message" }),
                     jsx("textarea", {
-                      className: "hg-input",
-                      rows: "3",
+                      className: "hg-input hg-lobby-rail__draft",
+                      rows: "1",
                       maxLength: String(CHAT_MESSAGE_MAX_CHARS),
                       value: draft,
                       disabled: busy,
-                      placeholder: "Write a plain-text lobby message",
+                      placeholder: "Message lobby…",
+                      "aria-label": "Lobby message",
                       onChange: function (event) {
                         setDraft(event.target.value);
+                        const el = event.target;
+                        el.style.height = "auto";
+                        const next = Math.min(el.scrollHeight, 66);
+                        el.style.height = next + "px";
                       },
+                      onKeyDown: function (event) {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          submitMessage(event);
+                        }
+                      },
+                    }),
+                    jsx("button", {
+                      type: "button",
+                      className: dmOpen
+                        ? "hg-btn hg-lobby-rail__dm-toggle hg-lobby-rail__dm-toggle--on"
+                        : "hg-btn hg-lobby-rail__dm-toggle",
+                      "aria-pressed": dmOpen ? "true" : "false",
+                      "aria-label": "Toggle direct message target",
+                      title: "Direct message",
+                      disabled: busy,
+                      onClick: function () {
+                        setDmOpen(function (open) {
+                          return !open;
+                        });
+                      },
+                      children: "@",
+                    }),
+                    jsx("button", {
+                      type: "submit",
+                      className: "hg-btn hg-btn--primary",
+                      disabled: busy,
+                      children: busy ? "…" : "Send",
                     }),
                   ],
                 }),
-                jsxs("label", {
-                  className: "hg-field hg-chat__dm-target",
-                  children: [
-                    jsx("span", { children: "Direct message to (optional)" }),
-                    jsx("input", {
-                      className: "hg-input",
+                dmOpen
+                  ? jsx("input", {
+                      className: "hg-input hg-lobby-rail__dm-input",
                       type: "text",
                       maxLength: String(CHAT_DM_TARGET_MAX_CHARS),
                       value: dmTarget,
                       disabled: busy,
-                      placeholder: "Player or pet name — blank keeps the lobby",
+                      placeholder: "DM to player or pet",
                       "data-chat-dm-target": "true",
+                      "aria-label": "Direct message target",
                       onChange: function (event) {
                         setDmTarget(event.target.value);
                       },
-                    }),
-                  ],
-                }),
+                    })
+                  : null,
                 composerError
                   ? jsx("p", {
                       className: "hg-error",
@@ -514,29 +769,15 @@ export function LobbyRail(props = {}) {
                       children: composerError,
                     })
                   : null,
-                jsxs("div", {
-                  className: "hg-actions",
-                  children: [
-                    jsx("button", {
-                      type: "submit",
-                      className: "hg-btn hg-btn--primary",
-                      disabled: busy,
-                      children: busy ? "Working..." : "Send",
-                    }),
-                    jsx("button", {
-                      type: "button",
-                      className: "hg-btn",
-                      disabled: busy,
-                      onClick: refresh,
-                      children: "Refresh",
-                    }),
-                  ],
-                }),
               ],
             }),
           ],
         })
-      : jsx(LobbyStub, { uiState });
+      : jsx(LobbyStub, {
+          uiState,
+          api: props.api,
+          assetBaseUrl: props.assetBaseUrl,
+        });
 
   return jsxs("aside", {
     className: collapsed
@@ -545,6 +786,6 @@ export function LobbyRail(props = {}) {
     "data-rail": "lobby",
     "data-collapsed": collapsed ? "true" : "false",
     "aria-label": "Lobby",
-    children: [header, body],
+    children: [resizeHandle, header, body],
   });
 }
