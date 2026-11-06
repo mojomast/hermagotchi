@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
 import { NpcHostBanner } from "../components/NpcHostBanner.js";
+import { useAuthedAssetUrl } from "../components/AuthedImg.js";
 import { PetPreview } from "../components/PetPreview.js";
 import { extractPetId } from "../logic/habitat.js";
 import {
@@ -153,14 +154,56 @@ function ShopCard(props) {
   const thumb = props.thumb;
   const equipped = availability.equipped;
   const selected = Boolean(props.selected);
-  const [thumbState, setThumbState] = useState(thumb ? "loading" : "empty");
+  const authed = useAuthedAssetUrl(thumb || "");
+  const [thumbState, setThumbState] = useState(
+    thumb ? "loading" : "empty"
+  );
 
   useEffect(() => {
-    setThumbState(thumb ? "loading" : "empty");
-  }, [thumb]);
+    if (!thumb) {
+      setThumbState("empty");
+      return;
+    }
+    if (authed.status === "loading") {
+      setThumbState("loading");
+      return;
+    }
+    if (authed.status === "error" || !authed.url) {
+      setThumbState("error");
+      return;
+    }
+    // Keep "loading" until the img element fires onLoad so data-blank stays true
+    // until pixels are actually painted.
+    setThumbState(function (prev) {
+      return prev === "loaded" ? "loaded" : "loading";
+    });
+  }, [thumb, authed.status, authed.url]);
 
-  const showImage = Boolean(thumb) && thumbState !== "error";
+  const showImage = Boolean(authed.url) && thumbState !== "error";
   const blank = thumbState === "loaded" ? "false" : "true";
+
+  const fallback = jsxs("span", {
+    className: "hg-shop-card__thumb-fallback",
+    "data-slot": item.slot,
+    role: "img",
+    "aria-label": item.name + " (" + item.slotLabel + ") preview",
+    children: [
+      jsx("span", {
+        className: "hg-shop-card__thumb-icon",
+        "aria-hidden": "true",
+        children: SLOT_MARKS[item.slot] || "ITEM",
+      }),
+      jsx("span", {
+        className: "hg-shop-card__thumb-initial",
+        "aria-hidden": "true",
+        children: itemInitial(item.name),
+      }),
+      jsx("span", {
+        className: "hg-shop-card__thumb-label",
+        children: item.slotLabel,
+      }),
+    ],
+  });
 
   return jsxs("article", {
     className:
@@ -184,7 +227,7 @@ function ShopCard(props) {
         children: showImage
           ? jsx("img", {
               className: "hg-shop-card__image",
-              src: thumb,
+              src: authed.url,
               alt: item.name,
               "data-blank": blank,
               loading: "lazy",
@@ -197,28 +240,7 @@ function ShopCard(props) {
                 setThumbState("error");
               },
             })
-          : jsxs("span", {
-              className: "hg-shop-card__thumb-fallback",
-              "data-slot": item.slot,
-              role: "img",
-              "aria-label": item.name + " (" + item.slotLabel + ") preview",
-              children: [
-                jsx("span", {
-                  className: "hg-shop-card__thumb-icon",
-                  "aria-hidden": "true",
-                  children: SLOT_MARKS[item.slot] || "ITEM",
-                }),
-                jsx("span", {
-                  className: "hg-shop-card__thumb-initial",
-                  "aria-hidden": "true",
-                  children: itemInitial(item.name),
-                }),
-                jsx("span", {
-                  className: "hg-shop-card__thumb-label",
-                  children: item.slotLabel,
-                }),
-              ],
-            }),
+          : fallback,
       }),
       jsx("h4", { className: "hg-shop-card__name", children: item.name }),
       jsxs("div", {

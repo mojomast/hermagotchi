@@ -4,8 +4,8 @@
 import { jsx as __ext0 } from "react/jsx-runtime";
 import { jsxs as __ext1 } from "react/jsx-runtime";
 import { useEffect as __ext2 } from "react";
-import { useRef as __ext3 } from "react";
-import { useState as __ext4 } from "react";
+import { useState as __ext3 } from "react";
+import { useRef as __ext4 } from "react";
 import { useCallback as __ext5 } from "react";
 
 // desktop/src/ui/npcLines.js
@@ -144,7 +144,7 @@ const CHAT_BLOCKS_PATH = "/blocks";
 const CHAT_REPORT_PATH = "/moderation/report";
 const CHAT_INBOX_PATH = "/chat/inbox";
 const CHAT_INBOX_READ_PATH = "/chat/inbox/read";
-const CHAT_TAUNTS_PATH = "/chat/taunts";
+const CHAT_TAUNTS_PATH = "/chat/taunt";
 const CHAT_SETTINGS_PATH = "/me/chat-settings";
 const CHAT_POLICY_PATH = "/me/policy";
 const CHAT_MESSAGE_MAX_CHARS = 400;
@@ -1117,13 +1117,262 @@ function animStripPath(species, palette, state) {
   return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
 })();
 
-// desktop/src/ui/components/NpcHostBanner.js
+// desktop/src/ui/logic/hermesHostAuth.js
 const __m4 = (function () {
+/**
+ * Hermes host (gateway) credentials for same-origin bridge calls.
+ *
+ * The Hermagotchi bridge itself adds the game Bearer server-side; the pane
+ * never sees that. But the Hermes webapp gates `/api/plugins/...` behind a
+ * host session: the SPA stores a launch-link grant in sessionStorage and
+ * sends it as `X-Hermes-Session-Token`. Bare fetch / img tags omit that
+ * header and 401. Electron injects the same header at the network layer, so
+ * this helper is a no-op there when sessionStorage has no webapp grant.
+ */
+
+const HERMES_SESSION_HEADER = "X-Hermes-Session-Token";
+const WEBAPP_SESSION_KEY_PREFIX = "hermes.webapp.session.v1:";
+
+/**
+ * @param {object=} options
+ * @returns {string}
+ */
+function readHermesWebappSessionToken(options = {}) {
+  const store =
+    options.sessionStorage !== undefined
+      ? options.sessionStorage
+      : typeof globalThis.sessionStorage !== "undefined"
+        ? globalThis.sessionStorage
+        : null;
+  if (!store || typeof store.length !== "number") return "";
+  try {
+    for (let i = 0; i < store.length; i += 1) {
+      const key = store.key(i);
+      if (typeof key === "string" && key.startsWith(WEBAPP_SESSION_KEY_PREFIX)) {
+        const value = store.getItem(key);
+        if (typeof value === "string" && value.trim()) return value.trim();
+      }
+    }
+  } catch (_err) {
+    return "";
+  }
+  return "";
+}
+
+/**
+ * @param {object=} options
+ * @returns {Record of string to string}
+ */
+function hermesHostAuthHeaders(options = {}) {
+  const token = readHermesWebappSessionToken(options);
+  if (!token) return {};
+  return { [HERMES_SESSION_HEADER]: token };
+}
+
+  return { "HERMES_SESSION_HEADER": HERMES_SESSION_HEADER, "WEBAPP_SESSION_KEY_PREFIX": WEBAPP_SESSION_KEY_PREFIX, "readHermesWebappSessionToken": readHermesWebappSessionToken, "hermesHostAuthHeaders": hermesHostAuthHeaders };
+})();
+
+// desktop/src/ui/logic/authedAssets.js
+const __m5 = (function () {
+  const hermesHostAuthHeaders = __m4["hermesHostAuthHeaders"];
+/**
+ * Resolve plugin asset URLs through authenticated fetch into blob:/data: URLs.
+ *
+ * Hermes dashboard/webapp auth puts the session on fetch headers (or cookies),
+ * but bare img tags / CSS background-image requests omit those headers and
+ * 401. Fetching via the same window.fetch the pane already uses, attaching
+ * the Hermes webapp host session header when present, then swapping in an
+ * object URL, keeps non-secret art loading without weakening the host auth
+ * gate.
+ */
+
+
+const cache = new Map();
+
+function isInlineUrl(value) {
+  return typeof value === "string" && /^(?:data:|blob:)/i.test(value);
+}
+
+function fetchImpl() {
+  if (typeof globalThis.fetch === "function") return globalThis.fetch.bind(globalThis);
+  return null;
+}
+
+/**
+ * @param {string} url
+ * @param {object=} options
+ * @returns {Promise of string}
+ */
+function resolveAuthedAssetUrl(url, options = {}) {
+  if (typeof url !== "string") return Promise.resolve("");
+  const trimmed = url.trim();
+  if (!trimmed) return Promise.resolve("");
+  if (isInlineUrl(trimmed)) return Promise.resolve(trimmed);
+
+  const existing = cache.get(trimmed);
+  if (existing) return existing.promise;
+
+  const fetchFn = options.fetchImpl || fetchImpl();
+  if (!fetchFn) {
+    // No fetch available (SSR / node without polyfill): keep the raw URL.
+    return Promise.resolve(trimmed);
+  }
+
+  const entry = { objectUrl: null, promise: null };
+  entry.promise = Promise.resolve()
+    .then(() =>
+      fetchFn(trimmed, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "force-cache",
+        headers: hermesHostAuthHeaders({
+          sessionStorage: options.sessionStorage,
+        }),
+      })
+    )
+    .then((response) => {
+      if (!response || !response.ok) {
+        const status = response && response.status;
+        throw new Error("asset_fetch_failed:" + String(status || "network"));
+      }
+      return response.blob();
+    })
+    .then((blob) => {
+      if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+        entry.objectUrl = URL.createObjectURL(blob);
+        return entry.objectUrl;
+      }
+      // Extremely constrained hosts: fall back to the original URL.
+      return trimmed;
+    })
+    .catch(() => {
+      // Drop the failed cache entry so a later retry can try again.
+      if (cache.get(trimmed) === entry) cache.delete(trimmed);
+      return "";
+    });
+
+  cache.set(trimmed, entry);
+  return entry.promise;
+}
+
+/** Test helper: clear the in-memory blob cache (revokes object URLs). */
+function clearAuthedAssetCache() {
+  for (const entry of cache.values()) {
+    if (entry.objectUrl && typeof URL !== "undefined" && URL.revokeObjectURL) {
+      try {
+        URL.revokeObjectURL(entry.objectUrl);
+      } catch (_err) {
+        /* ignore */
+      }
+    }
+  }
+  cache.clear();
+}
+
+function authedAssetCacheSize() {
+  return cache.size;
+}
+
+  return { "resolveAuthedAssetUrl": resolveAuthedAssetUrl, "clearAuthedAssetCache": clearAuthedAssetCache, "authedAssetCacheSize": authedAssetCacheSize };
+})();
+
+// desktop/src/ui/components/AuthedImg.js
+const __m6 = (function () {
+  const useEffect = __ext2;
+  const useState = __ext3;
+  const jsx = __ext0;
+  const resolveAuthedAssetUrl = __m5["resolveAuthedAssetUrl"];
+
+/**
+ * Hook: resolve a plugin asset URL through authenticated fetch → blob/data URL.
+ * Returns { url, status } where status is idle | loading | ready | error.
+ */
+function useAuthedAssetUrl(src) {
+  const inline =
+    typeof src === "string" && /^(?:data:|blob:)/i.test(src) ? src : "";
+  const [state, setState] = useState(function () {
+    if (!src || typeof src !== "string" || !src.trim()) {
+      return { url: "", status: "idle" };
+    }
+    if (inline) return { url: inline, status: "ready" };
+    return { url: "", status: "loading" };
+  });
+
+  useEffect(
+    function () {
+      let cancelled = false;
+      if (typeof src !== "string" || !src.trim()) {
+        setState({ url: "", status: "idle" });
+        return undefined;
+      }
+      if (/^(?:data:|blob:)/i.test(src)) {
+        setState({ url: src, status: "ready" });
+        return undefined;
+      }
+      setState({ url: "", status: "loading" });
+      resolveAuthedAssetUrl(src).then(function (url) {
+        if (cancelled) return;
+        if (!url) {
+          setState({ url: "", status: "error" });
+          return;
+        }
+        setState({ url: url, status: "ready" });
+      });
+      return function () {
+        cancelled = true;
+      };
+    },
+    [src]
+  );
+  return state;
+}
+
+/**
+ * img element that loads plugin assets through authenticated fetch → blob URL.
+ * Pass-through for data:/blob: sources. While pending (or on failure) renders
+ * `placeholder` (default null).
+ */
+function AuthedImg(props = {}) {
+  const src = typeof props.src === "string" ? props.src : "";
+  const placeholder = Object.prototype.hasOwnProperty.call(props, "placeholder")
+    ? props.placeholder
+    : null;
+  const { url, status } = useAuthedAssetUrl(src);
+
+  useEffect(
+    function () {
+      if (status !== "error") return;
+      if (typeof props.onResolveError === "function") {
+        try {
+          props.onResolveError();
+        } catch (_err) {
+          /* ignore */
+        }
+      }
+    },
+    [status, props.onResolveError]
+  );
+
+  if (status !== "ready" || !url) return placeholder;
+
+  const imgProps = Object.assign({}, props);
+  delete imgProps.placeholder;
+  delete imgProps.onResolveError;
+  imgProps.src = url;
+  return jsx("img", imgProps);
+}
+
+  return { "useAuthedAssetUrl": useAuthedAssetUrl, "AuthedImg": AuthedImg };
+})();
+
+// desktop/src/ui/components/NpcHostBanner.js
+const __m7 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
   const npcHostLine = __m0["npcHostLine"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const npcPortraitPath = __m3["npcPortraitPath"];
+  const AuthedImg = __m6["AuthedImg"];
 
 const PORTRAIT_PX = Object.freeze({
   featured: 180,
@@ -1155,6 +1404,10 @@ function NpcHostBanner(props = {}) {
   const portrait = npcPortraitPath(host.id);
   const portraitUrl =
     portrait && assetBaseUrl ? joinAssetUrl(assetBaseUrl, portrait) : "";
+  const emptyPortrait = jsx("span", {
+    className: "hg-npc-host__portrait hg-npc-host__portrait--empty",
+    "aria-hidden": "true",
+  });
   return jsxs("aside", {
     className:
       size === "compact"
@@ -1166,7 +1419,7 @@ function NpcHostBanner(props = {}) {
     "data-display-only": "true",
     children: [
       portraitUrl
-        ? jsx("img", {
+        ? jsx(AuthedImg, {
             className: "hg-npc-host__portrait",
             src: portraitUrl,
             alt: "",
@@ -1176,11 +1429,9 @@ function NpcHostBanner(props = {}) {
             draggable: "false",
             width: px,
             height: px,
+            placeholder: emptyPortrait,
           })
-        : jsx("span", {
-            className: "hg-npc-host__portrait hg-npc-host__portrait--empty",
-            "aria-hidden": "true",
-          }),
+        : emptyPortrait,
       jsxs("div", {
         className: "hg-npc-host__speech",
         children: [
@@ -1199,10 +1450,10 @@ function NpcHostBanner(props = {}) {
 })();
 
 // desktop/src/ui/components/LobbyRail.js
-const __m5 = (function () {
+const __m8 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const npcHostLine = __m0["npcHostLine"];
@@ -1237,7 +1488,7 @@ const __m5 = (function () {
   const tauntSummary = __m2["tauntSummary"];
   const validateChatDraft = __m2["validateChatDraft"];
   const validateDmTarget = __m2["validateDmTarget"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
 
 function emptyInbox() {
   return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
@@ -2003,7 +2254,7 @@ function LobbyRail(props = {}) {
 })();
 
 // desktop/src/ui/logic/connection.js
-const __m6 = (function () {
+const __m9 = (function () {
 /**
  * Pure connection/pairing status helpers.
  *
@@ -2166,6 +2417,13 @@ function deriveConnectionStatus(options = {}) {
   const serviceReachable = backendEnabled;
 
   const policy = policyFrom(status, health);
+  // Prefer account chat_settings / me.policy when the bridge policy is still default-off.
+  const mePolicy =
+    status && status.body && status.body.me && status.body.me.policy
+      ? status.body.me.policy
+      : status && status.me && status.me.policy
+        ? status.me.policy
+        : null;
   const policyNetwork = booleanPolicy(policy, ["network_enabled", "networkEnabled"]);
   const networkEnabled =
     policyNetwork === null
@@ -2180,7 +2438,11 @@ function deriveConnectionStatus(options = {}) {
     authenticated: authenticatedFrom(pair, status),
     serviceReachable: serviceReachable,
     serviceConfigured: serviceConfigured(policy, statusOk, healthOk),
-    chatEnabled: booleanPolicy(policy, ["chat_enabled", "chatEnabled"]),
+    chatEnabled: (function () {
+      const fromMe = booleanPolicy(mePolicy, ["chat_enabled", "chatEnabled"]);
+      if (fromMe !== null) return fromMe;
+      return booleanPolicy(policy, ["chat_enabled", "chatEnabled"]);
+    })(),
     autonomyEnabled: booleanPolicy(policy, [
       "autonomy_enabled",
       "autonomyEnabled",
@@ -2259,7 +2521,7 @@ function resolveConnectionUiState(connection = {}) {
 })();
 
 // desktop/src/ui/logic/compose.js
-const __m7 = (function () {
+const __m10 = (function () {
 /**
  * Pure cosmetic composition math for the Hermagotchi desktop preview.
  *
@@ -2458,11 +2720,11 @@ const composeLayer = composeItem;
 })();
 
 // desktop/src/ui/logic/shop.js
-const __m8 = (function () {
+const __m11 = (function () {
   const joinAssetUrl = __m3["joinAssetUrl"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const composeItem = __m7["composeItem"];
-  const DEFAULT_NATIVE_SIZE = __m7["DEFAULT_NATIVE_SIZE"];
+  const composeItem = __m10["composeItem"];
+  const DEFAULT_NATIVE_SIZE = __m10["DEFAULT_NATIVE_SIZE"];
 /**
  * Pure Shop helpers. Catalog data always comes from the server response; item
  * ids are never hardcoded here so new cosmetics show up automatically.
@@ -2865,7 +3127,7 @@ function itemAvailability(options = {}) {
 })();
 
 // desktop/src/anim/petAnimContract.json
-const __m9 = (function () {
+const __m12 = (function () {
 const __json = {
   "schema": "hermagotchi-pet-anim-contract-v1",
   "native_size": 32,
@@ -2909,8 +3171,8 @@ const __json = {
 })();
 
 // desktop/src/anim/petAnimPlayer.js
-const __m10 = (function () {
-  const contract = __m9["default"];
+const __m13 = (function () {
+  const contract = __m12["default"];
 /**
  * Standalone pet animation helper for Hermagotchi desktop.
  * Pane UI imports this; do not put React/UI here.
@@ -2996,19 +3258,21 @@ function createPlayer(clip) {
 })();
 
 // desktop/src/ui/components/PetPreview.js
-const __m11 = (function () {
+const __m14 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
-  const buildPreviewLayers = __m8["buildPreviewLayers"];
+  const buildPreviewLayers = __m11["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const resolveAnimPalette = __m3["resolveAnimPalette"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const contract = __m10["contract"];
-  const createPlayer = __m10["createPlayer"];
-  const findClip = __m10["findClip"];
-  const resolveAnimState = __m10["resolveAnimState"];
+  const AuthedImg = __m6["AuthedImg"];
+  const useAuthedAssetUrl = __m6["useAuthedAssetUrl"];
+  const contract = __m13["contract"];
+  const createPlayer = __m13["createPlayer"];
+  const findClip = __m13["findClip"];
+  const resolveAnimState = __m13["resolveAnimState"];
 
 function layerStyle(layer) {
   const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
@@ -3182,6 +3446,12 @@ function PetPreview(props = {}) {
   const [auraFrame, setAuraFrame] = useState(0);
   const playerRef = useRef(null);
   const clipId = clip ? String(clip.id || clip.path || "") : "";
+  const rawStripUrl =
+    animated && clip
+      ? joinAssetUrl(assetBaseUrl, clip.path || "") || (baseLayer && baseLayer.url) || ""
+      : "";
+  const authedStrip = useAuthedAssetUrl(rawStripUrl);
+
 
   useEffect(
     function () {
@@ -3250,28 +3520,30 @@ function PetPreview(props = {}) {
 
   const children = [];
   if (animated) {
-    const stripUrl = joinAssetUrl(assetBaseUrl, clip.path || "") || baseLayer.url;
-    children.push(
-      jsx(
-        "div",
-        {
-          className: "hg-sprite__base hg-sprite__base--anim",
-          "data-layer-kind": "base",
-          "data-layer-id": baseLayer.id,
-          "data-layer-slot": "body",
-          "data-anim-state": requestedState,
-          "data-frame-index": String(frameIndex),
-          "data-strip-path": clip.path || "",
-          "aria-hidden": "true",
-          style: stripStyle(stripUrl, clip, frameIndex),
-        },
-        "anim:" + baseLayer.id
-      )
-    );
+    const stripUrl = authedStrip.url || "";
+    if (stripUrl) {
+      children.push(
+        jsx(
+          "div",
+          {
+            className: "hg-sprite__base hg-sprite__base--anim",
+            "data-layer-kind": "base",
+            "data-layer-id": baseLayer.id,
+            "data-layer-slot": "body",
+            "data-anim-state": requestedState,
+            "data-frame-index": String(frameIndex),
+            "data-strip-path": clip.path || "",
+            "aria-hidden": "true",
+            style: stripStyle(stripUrl, clip, frameIndex),
+          },
+          "anim:" + baseLayer.id
+        )
+      );
+    }
   } else if (baseLayer) {
     children.push(
       jsx(
-        "img",
+        AuthedImg,
         {
           className: "hg-sprite__layer hg-sprite__base",
           src: baseLayer.url,
@@ -3283,6 +3555,7 @@ function PetPreview(props = {}) {
           decoding: "async",
           draggable: "false",
           style: layerStyle(baseLayer),
+          placeholder: null,
         },
         "base:" + baseLayer.id
       )
@@ -3295,7 +3568,7 @@ function PetPreview(props = {}) {
       : layer;
     children.push(
       jsx(
-        "img",
+        AuthedImg,
         {
           className: "hg-sprite__layer",
           src: layer.url,
@@ -3310,6 +3583,7 @@ function PetPreview(props = {}) {
           decoding: "async",
           draggable: "false",
           style: layerStyle(adjusted),
+          placeholder: null,
         },
         layer.kind + ":" + layer.id
       )
@@ -3337,7 +3611,7 @@ function PetPreview(props = {}) {
 })();
 
 // desktop/src/ui/logic/battle.js
-const __m12 = (function () {
+const __m15 = (function () {
 /**
  * Pure battle presentation helpers for the Desktop Battle tab.
  *
@@ -3781,10 +4055,10 @@ function battleTauntContext(match = {}, summary = {}) {
 })();
 
 // desktop/src/ui/components/TurnLog.js
-const __m13 = (function () {
+const __m16 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const formatTurnLog = __m12["formatTurnLog"];
+  const formatTurnLog = __m15["formatTurnLog"];
 
 function TypeChip(props) {
   const type = props.type;
@@ -3892,22 +4166,22 @@ function TurnLog(props = {}) {
 })();
 
 // desktop/src/ui/tabs/BattleTab.js
-const __m14 = (function () {
+const __m17 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m11["PetPreview"];
-  const TurnLog = __m13["TurnLog"];
-  const battleParticipantsFromMatch = __m12["battleParticipantsFromMatch"];
-  const battleSummary = __m12["battleSummary"];
-  const battleTauntContext = __m12["battleTauntContext"];
-  const battleTaunts = __m12["battleTaunts"];
-  const rewardCapNotice = __m12["rewardCapNotice"];
-  const rewardCapReason = __m12["rewardCapReason"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const PetPreview = __m14["PetPreview"];
+  const TurnLog = __m16["TurnLog"];
+  const battleParticipantsFromMatch = __m15["battleParticipantsFromMatch"];
+  const battleSummary = __m15["battleSummary"];
+  const battleTauntContext = __m15["battleTauntContext"];
+  const battleTaunts = __m15["battleTaunts"];
+  const rewardCapNotice = __m15["rewardCapNotice"];
+  const rewardCapReason = __m15["rewardCapReason"];
   const CHAT_TAUNT_MAX_CHARS = __m2["CHAT_TAUNT_MAX_CHARS"];
   const CHAT_TAUNTS_PATH = __m2["CHAT_TAUNTS_PATH"];
   const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
@@ -4526,7 +4800,7 @@ function BattleTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/friends.js
-const __m15 = (function () {
+const __m18 = (function () {
 /** Pure friend roster and request helpers for the Desktop social hub. */
 
 const FRIENDS_PATH = "/friends";
@@ -4738,7 +5012,7 @@ function friendRemovePath(friendId) {
 })();
 
 // desktop/src/ui/logic/social_hub.js
-const __m16 = (function () {
+const __m19 = (function () {
   const normalizeInbox = __m2["normalizeInbox"];
   const tauntSummary = __m2["tauntSummary"];
 /** Pure social-hub helpers shared by the Desktop Chat tab and its tests. */
@@ -5070,12 +5344,12 @@ function replayPath(matchId) {
 })();
 
 // desktop/src/ui/tabs/ChatTab.js
-const __m17 = (function () {
+const __m20 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const NpcHostBanner = __m4["NpcHostBanner"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
   const npcHostLine = __m0["npcHostLine"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
@@ -5103,29 +5377,30 @@ const __m17 = (function () {
   const validateDmTarget = __m2["validateDmTarget"];
   const displayActorLabel = __m2["displayActorLabel"];
   const formatRelativeTime = __m2["formatRelativeTime"];
-  const FRIEND_REQUESTS_PATH = __m15["FRIEND_REQUESTS_PATH"];
-  const filterFriends = __m15["filterFriends"];
-  const friendPresenceCounts = __m15["friendPresenceCounts"];
-  const friendRemovePath = __m15["friendRemovePath"];
-  const friendRequestPayload = __m15["friendRequestPayload"];
-  const friendRequestRespondPath = __m15["friendRequestRespondPath"];
-  const friendRequestResponsePayload = __m15["friendRequestResponsePayload"];
-  const normalizeFriends = __m15["normalizeFriends"];
-  const validateFriendTarget = __m15["validateFriendTarget"];
-  const CHALLENGES_PATH = __m16["CHALLENGES_PATH"];
-  const CHALLENGE_INBOX_PATH = __m16["CHALLENGE_INBOX_PATH"];
-  const SOCIAL_HUB_SECTIONS = __m16["SOCIAL_HUB_SECTIONS"];
-  const challengeCreatePayload = __m16["challengeCreatePayload"];
-  const challengeRespondPath = __m16["challengeRespondPath"];
-  const challengeResponsePayload = __m16["challengeResponsePayload"];
-  const filterHistory = __m16["filterHistory"];
-  const historyFilterCounts = __m16["historyFilterCounts"];
-  const normalizeChallengeInbox = __m16["normalizeChallengeInbox"];
-  const normalizeHistory = __m16["normalizeHistory"];
-  const normalizeThreads = __m16["normalizeThreads"];
-  const replayHref = __m16["replayHref"];
-  const socialHubHost = __m16["socialHubHost"];
-  const threadMessagePath = __m16["threadMessagePath"];
+  const FRIENDS_PATH = __m18["FRIENDS_PATH"];
+  const FRIEND_REQUESTS_PATH = __m18["FRIEND_REQUESTS_PATH"];
+  const filterFriends = __m18["filterFriends"];
+  const friendPresenceCounts = __m18["friendPresenceCounts"];
+  const friendRemovePath = __m18["friendRemovePath"];
+  const friendRequestPayload = __m18["friendRequestPayload"];
+  const friendRequestRespondPath = __m18["friendRequestRespondPath"];
+  const friendRequestResponsePayload = __m18["friendRequestResponsePayload"];
+  const normalizeFriends = __m18["normalizeFriends"];
+  const validateFriendTarget = __m18["validateFriendTarget"];
+  const CHALLENGES_PATH = __m19["CHALLENGES_PATH"];
+  const CHALLENGE_INBOX_PATH = __m19["CHALLENGE_INBOX_PATH"];
+  const SOCIAL_HUB_SECTIONS = __m19["SOCIAL_HUB_SECTIONS"];
+  const challengeCreatePayload = __m19["challengeCreatePayload"];
+  const challengeRespondPath = __m19["challengeRespondPath"];
+  const challengeResponsePayload = __m19["challengeResponsePayload"];
+  const filterHistory = __m19["filterHistory"];
+  const historyFilterCounts = __m19["historyFilterCounts"];
+  const normalizeChallengeInbox = __m19["normalizeChallengeInbox"];
+  const normalizeHistory = __m19["normalizeHistory"];
+  const normalizeThreads = __m19["normalizeThreads"];
+  const replayHref = __m19["replayHref"];
+  const socialHubHost = __m19["socialHubHost"];
+  const threadMessagePath = __m19["threadMessagePath"];
 
 const HISTORY_FILTERS = Object.freeze([
   Object.freeze({ id: "all", label: "All" }),
@@ -6263,7 +6538,7 @@ function ChatLive(props) {
     setBusy(true);
     try {
       const envelope = await api.post(
-        FRIEND_REQUESTS_PATH,
+        FRIENDS_PATH,
         friendRequestPayload(checked.value)
       );
       if (envelope && envelope.ok === true) {
@@ -6487,7 +6762,7 @@ function ChatTab(props = {}) {
 })();
 
 // desktop/src/ui/components/CareMeter.js
-const __m18 = (function () {
+const __m21 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -6530,7 +6805,7 @@ function CareMeter(props = {}) {
 })();
 
 // desktop/src/ui/logic/habitat.js
-const __m19 = (function () {
+const __m22 = (function () {
 /**
  * Pure Habitat helpers. No React, network or DOM access so the same rules can
  * be exercised directly with `node --test`.
@@ -6726,30 +7001,31 @@ function petFromCareResponse(data, previous) {
 })();
 
 // desktop/src/ui/tabs/HabitatTab.js
-const __m20 = (function () {
+const __m23 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const CareMeter = __m18["CareMeter"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m11["PetPreview"];
+  const CareMeter = __m21["CareMeter"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const AuthedImg = __m6["AuthedImg"];
+  const PetPreview = __m14["PetPreview"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CARE_ACTIONS = __m19["CARE_ACTIONS"];
-  const CARE_LABELS = __m19["CARE_LABELS"];
-  const MODES = __m19["MODES"];
-  const MODE_LABELS = __m19["MODE_LABELS"];
-  const SPECIES = __m19["SPECIES"];
-  const SPECIES_LABELS = __m19["SPECIES_LABELS"];
-  const buildAdoptRequest = __m19["buildAdoptRequest"];
-  const careMeters = __m19["careMeters"];
-  const extractPetId = __m19["extractPetId"];
-  const habitatView = __m19["habitatView"];
-  const petFromCareResponse = __m19["petFromCareResponse"];
-  const readEnvelope = __m19["readEnvelope"];
+  const CARE_ACTIONS = __m22["CARE_ACTIONS"];
+  const CARE_LABELS = __m22["CARE_LABELS"];
+  const MODES = __m22["MODES"];
+  const MODE_LABELS = __m22["MODE_LABELS"];
+  const SPECIES = __m22["SPECIES"];
+  const SPECIES_LABELS = __m22["SPECIES_LABELS"];
+  const buildAdoptRequest = __m22["buildAdoptRequest"];
+  const careMeters = __m22["careMeters"];
+  const extractPetId = __m22["extractPetId"];
+  const habitatView = __m22["habitatView"];
+  const petFromCareResponse = __m22["petFromCareResponse"];
+  const readEnvelope = __m22["readEnvelope"];
 
 const HABITAT_PLACEHOLDER = Object.freeze({
   name: "Not named yet",
@@ -7175,7 +7451,7 @@ function HabitatTab(props = {}) {
                     }
                   ),
                   speciesThumbUrl
-                    ? jsx("img", {
+                    ? jsx(AuthedImg, {
                         className: "hg-adopt-species__thumb",
                         src: speciesThumbUrl,
                         alt: (SPECIES_LABELS[species] || species) + " body",
@@ -7184,6 +7460,7 @@ function HabitatTab(props = {}) {
                         loading: "lazy",
                         decoding: "async",
                         draggable: "false",
+                        placeholder: null,
                       })
                     : null,
                 ],
@@ -7284,7 +7561,7 @@ function HabitatTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/leaderboard.js
-const __m21 = (function () {
+const __m24 = (function () {
 /**
  * Pure ranking and bounty presentation helpers for the Desktop Leaderboard tab.
  * No React, no network.
@@ -7423,18 +7700,18 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 })();
 
 // desktop/src/ui/tabs/LeaderboardTab.js
-const __m22 = (function () {
+const __m25 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const bountyRows = __m21["bountyRows"];
-  const leaderboardRows = __m21["leaderboardRows"];
-  const mergeBountyClaim = __m21["mergeBountyClaim"];
-  const normalizeLeaderboard = __m21["normalizeLeaderboard"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const bountyRows = __m24["bountyRows"];
+  const leaderboardRows = __m24["leaderboardRows"];
+  const mergeBountyClaim = __m24["mergeBountyClaim"];
+  const normalizeLeaderboard = __m24["normalizeLeaderboard"];
 
 function envelopeMessage(envelope) {
   if (!envelope) return "The bridge did not return a response.";
@@ -7764,7 +8041,7 @@ function LeaderboardTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/session.js
-const __m23 = (function () {
+const __m26 = (function () {
 /**
  * Pure pairing/session view-model helpers.
  *
@@ -8155,29 +8432,29 @@ const createPairingViewModel = buildPairingViewModel;
 })();
 
 // desktop/src/ui/tabs/SettingsTab.js
-const __m24 = (function () {
+const __m27 = (function () {
   const useCallback = __ext5;
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const connectionRows = __m6["connectionRows"];
-  const deriveConnectionStatus = __m6["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const connectionRows = __m9["connectionRows"];
+  const deriveConnectionStatus = __m9["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m9["resolveConnectionUiState"];
   const CHAT_SETTINGS_PATH = __m2["CHAT_SETTINGS_PATH"];
   const chatEnabledFromEnvelope = __m2["chatEnabledFromEnvelope"];
   const updateChatSetting = __m2["updateChatSetting"];
-  const PAIRING_STATES = __m23["PAIRING_STATES"];
-  const SIGNUP_ERROR_MESSAGES = __m23["SIGNUP_ERROR_MESSAGES"];
-  const deviceRowsFromEnvelope = __m23["deviceRowsFromEnvelope"];
-  const emptyPairingState = __m23["emptyPairingState"];
-  const formatCountdown = __m23["formatCountdown"];
-  const pairingStateFromPoll = __m23["pairingStateFromPoll"];
-  const pairingStateFromStart = __m23["pairingStateFromStart"];
-  const secondsRemaining = __m23["secondsRemaining"];
+  const PAIRING_STATES = __m26["PAIRING_STATES"];
+  const SIGNUP_ERROR_MESSAGES = __m26["SIGNUP_ERROR_MESSAGES"];
+  const deviceRowsFromEnvelope = __m26["deviceRowsFromEnvelope"];
+  const emptyPairingState = __m26["emptyPairingState"];
+  const formatCountdown = __m26["formatCountdown"];
+  const pairingStateFromPoll = __m26["pairingStateFromPoll"];
+  const pairingStateFromStart = __m26["pairingStateFromStart"];
+  const secondsRemaining = __m26["secondsRemaining"];
 
 const SETTINGS_PLACEHOLDER = Object.freeze([
   { key: "backend", label: "Python backend", value: "Disabled" },
@@ -8883,24 +9160,25 @@ function SettingsTab(props = {}) {
 })();
 
 // desktop/src/ui/tabs/ShopTab.js
-const __m25 = (function () {
+const __m28 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m11["PetPreview"];
-  const extractPetId = __m19["extractPetId"];
-  const compareItemsByPrice = __m8["compareItemsByPrice"];
-  const groupCatalogBySlot = __m8["groupCatalogBySlot"];
-  const itemAvailability = __m8["itemAvailability"];
-  const itemThumbUrl = __m8["itemThumbUrl"];
-  const manifestFromCatalog = __m8["manifestFromCatalog"];
-  const normaliseWallet = __m8["normaliseWallet"];
-  const RARITY_LABELS = __m8["RARITY_LABELS"];
-  const readEnvelope = __m8["readEnvelope"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const useAuthedAssetUrl = __m6["useAuthedAssetUrl"];
+  const PetPreview = __m14["PetPreview"];
+  const extractPetId = __m22["extractPetId"];
+  const compareItemsByPrice = __m11["compareItemsByPrice"];
+  const groupCatalogBySlot = __m11["groupCatalogBySlot"];
+  const itemAvailability = __m11["itemAvailability"];
+  const itemThumbUrl = __m11["itemThumbUrl"];
+  const manifestFromCatalog = __m11["manifestFromCatalog"];
+  const normaliseWallet = __m11["normaliseWallet"];
+  const RARITY_LABELS = __m11["RARITY_LABELS"];
+  const readEnvelope = __m11["readEnvelope"];
 
 const SLOT_MARKS = Object.freeze({
   head: "HAT",
@@ -9040,14 +9318,56 @@ function ShopCard(props) {
   const thumb = props.thumb;
   const equipped = availability.equipped;
   const selected = Boolean(props.selected);
-  const [thumbState, setThumbState] = useState(thumb ? "loading" : "empty");
+  const authed = useAuthedAssetUrl(thumb || "");
+  const [thumbState, setThumbState] = useState(
+    thumb ? "loading" : "empty"
+  );
 
   useEffect(() => {
-    setThumbState(thumb ? "loading" : "empty");
-  }, [thumb]);
+    if (!thumb) {
+      setThumbState("empty");
+      return;
+    }
+    if (authed.status === "loading") {
+      setThumbState("loading");
+      return;
+    }
+    if (authed.status === "error" || !authed.url) {
+      setThumbState("error");
+      return;
+    }
+    // Keep "loading" until the img element fires onLoad so data-blank stays true
+    // until pixels are actually painted.
+    setThumbState(function (prev) {
+      return prev === "loaded" ? "loaded" : "loading";
+    });
+  }, [thumb, authed.status, authed.url]);
 
-  const showImage = Boolean(thumb) && thumbState !== "error";
+  const showImage = Boolean(authed.url) && thumbState !== "error";
   const blank = thumbState === "loaded" ? "false" : "true";
+
+  const fallback = jsxs("span", {
+    className: "hg-shop-card__thumb-fallback",
+    "data-slot": item.slot,
+    role: "img",
+    "aria-label": item.name + " (" + item.slotLabel + ") preview",
+    children: [
+      jsx("span", {
+        className: "hg-shop-card__thumb-icon",
+        "aria-hidden": "true",
+        children: SLOT_MARKS[item.slot] || "ITEM",
+      }),
+      jsx("span", {
+        className: "hg-shop-card__thumb-initial",
+        "aria-hidden": "true",
+        children: itemInitial(item.name),
+      }),
+      jsx("span", {
+        className: "hg-shop-card__thumb-label",
+        children: item.slotLabel,
+      }),
+    ],
+  });
 
   return jsxs("article", {
     className:
@@ -9071,7 +9391,7 @@ function ShopCard(props) {
         children: showImage
           ? jsx("img", {
               className: "hg-shop-card__image",
-              src: thumb,
+              src: authed.url,
               alt: item.name,
               "data-blank": blank,
               loading: "lazy",
@@ -9084,28 +9404,7 @@ function ShopCard(props) {
                 setThumbState("error");
               },
             })
-          : jsxs("span", {
-              className: "hg-shop-card__thumb-fallback",
-              "data-slot": item.slot,
-              role: "img",
-              "aria-label": item.name + " (" + item.slotLabel + ") preview",
-              children: [
-                jsx("span", {
-                  className: "hg-shop-card__thumb-icon",
-                  "aria-hidden": "true",
-                  children: SLOT_MARKS[item.slot] || "ITEM",
-                }),
-                jsx("span", {
-                  className: "hg-shop-card__thumb-initial",
-                  "aria-hidden": "true",
-                  children: itemInitial(item.name),
-                }),
-                jsx("span", {
-                  className: "hg-shop-card__thumb-label",
-                  children: item.slotLabel,
-                }),
-              ],
-            }),
+          : fallback,
       }),
       jsx("h4", { className: "hg-shop-card__name", children: item.name }),
       jsxs("div", {
@@ -9569,7 +9868,7 @@ function ShopTab(props = {}) {
 })();
 
 // desktop/src/ui/wordmark.js
-const __m26 = (function () {
+const __m29 = (function () {
 // Generated by scripts/make_wordmark.py — do not edit by hand.
 const WORDMARK_WIDTH = 207;
 const WORDMARK_HEIGHT = 33;
@@ -9580,32 +9879,32 @@ const WORDMARK_SRC_2X = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZ4AAABCC
 })();
 
 // desktop/src/ui/pane.js
-const __m27 = (function () {
+const __m30 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const LobbyRail = __m5["LobbyRail"];
-  const deriveConnectionStatus = __m6["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const LobbyRail = __m8["LobbyRail"];
+  const deriveConnectionStatus = __m9["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m9["resolveConnectionUiState"];
   const LOBBY_RAIL_COLLAPSED_KEY = __m2["LOBBY_RAIL_COLLAPSED_KEY"];
   const LOBBY_RAIL_WIDTH_KEY = __m2["LOBBY_RAIL_WIDTH_KEY"];
   const clampLobbyRailWidth = __m2["clampLobbyRailWidth"];
   const defaultLobbyRailWidth = __m2["defaultLobbyRailWidth"];
   const lobbyRailAutoCollapsed = __m2["lobbyRailAutoCollapsed"];
-  const BattleTab = __m14["BattleTab"];
-  const ChatTab = __m17["ChatTab"];
-  const HabitatTab = __m20["HabitatTab"];
-  const LeaderboardTab = __m22["LeaderboardTab"];
-  const SettingsTab = __m24["SettingsTab"];
-  const ShopTab = __m25["ShopTab"];
+  const BattleTab = __m17["BattleTab"];
+  const ChatTab = __m20["ChatTab"];
+  const HabitatTab = __m23["HabitatTab"];
+  const LeaderboardTab = __m25["LeaderboardTab"];
+  const SettingsTab = __m27["SettingsTab"];
+  const ShopTab = __m28["ShopTab"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const WORDMARK_HEIGHT = __m26["WORDMARK_HEIGHT"];
-  const WORDMARK_SRC = __m26["WORDMARK_SRC"];
-  const WORDMARK_SRC_2X = __m26["WORDMARK_SRC_2X"];
-  const WORDMARK_WIDTH = __m26["WORDMARK_WIDTH"];
+  const WORDMARK_HEIGHT = __m29["WORDMARK_HEIGHT"];
+  const WORDMARK_SRC = __m29["WORDMARK_SRC"];
+  const WORDMARK_SRC_2X = __m29["WORDMARK_SRC_2X"];
+  const WORDMARK_WIDTH = __m29["WORDMARK_WIDTH"];
 
 const TAB_IDS = Object.freeze(["habitat", "battle", "shop", "leaderboard", "chat", "settings"]);
 
@@ -9952,12 +10251,16 @@ function HermagotchiPane(props = {}) {
             className: "hg-pane__body hg-pane__main",
             role: "tabpanel",
             "aria-label": TAB_LABELS[activeTab],
-            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, chatEnabled: props.chatEnabled === true || props.chat_enabled === true || (connection && connection.chatEnabled === true), initialTab: undefined, onTabChange: undefined })),
           }),
           jsx(LobbyRail, Object.assign({}, props, {
             api: api,
             uiState: effectiveState,
             state: effectiveState,
+            chatEnabled:
+              props.chatEnabled === true ||
+              props.chat_enabled === true ||
+              (connection && connection.chatEnabled === true),
             collapsed: railCollapsed,
             onToggle: toggleLobbyRail,
             width: railWidth,
@@ -9975,13 +10278,18 @@ function HermagotchiPane(props = {}) {
 })();
 
 // desktop/src/ui/api.js
-const __m28 = (function () {
+const __m31 = (function () {
+  const hermesHostAuthHeaders = __m4["hermesHostAuthHeaders"];
+
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
- * The browser/Desktop layer never sees a session token. Every call goes to the
- * local Hermes bridge, which adds the Bearer header server-side. All methods
- * resolve to the bridge envelope and never reject.
+ * The browser/Desktop layer never sees the *game* session token. Every call
+ * goes to the local Hermes bridge, which adds the Bearer header server-side.
+ * On the Hermes webapp the host still gates `/api/plugins/...` with
+ * `X-Hermes-Session-Token` (launch-link grant in sessionStorage); we attach
+ * that host header when present. All methods resolve to the bridge envelope
+ * and never reject.
  */
 
 const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
@@ -10145,14 +10453,18 @@ function createApiClient(options) {
     if (typeof fetchImpl !== "function") {
       return offlineEnvelope();
     }
-    const headers = {};
+    const headers = Object.assign({}, hermesHostAuthHeaders());
     if (opts.hasBody) {
       headers["Content-Type"] = "application/json";
     }
     if (opts.idempotencyKey) {
       headers["Idempotency-Key"] = opts.idempotencyKey;
     }
-    const init = { method: method, headers: headers };
+    const init = {
+      method: method,
+      headers: headers,
+      credentials: "same-origin",
+    };
     if (opts.hasBody) {
       init.body = JSON.stringify(
         opts.body === undefined || opts.body === null ? {} : opts.body
@@ -10275,6 +10587,20 @@ function createApiClient(options) {
           opts.idempotencyKey || opts.idempotency_key || randomKey(),
       });
     },
+    put: function put(path, body, putOptions) {
+      const opts = putOptions || {};
+      return request("PUT", proxyUrl(path), {
+        body: body,
+        idempotencyKey: opts.idempotencyKey,
+      });
+    },
+    patch: function patch(path, body, patchOptions) {
+      const opts = patchOptions || {};
+      return request("PATCH", proxyUrl(path), {
+        body: body,
+        idempotencyKey: opts.idempotencyKey,
+      });
+    },
     del: function del(path, deleteOptions) {
       const opts = deleteOptions || {};
       return request("DELETE", proxyUrl(path), {
@@ -10357,10 +10683,10 @@ function uiStateFromEnvelope(envelope) {
 })();
 
 // desktop/src/ui/register.js
-const __m29 = (function () {
+const __m32 = (function () {
   const jsx = __ext0;
-  const HermagotchiPane = __m27["HermagotchiPane"];
-  const createApiClient = __m28["createApiClient"];
+  const HermagotchiPane = __m30["HermagotchiPane"];
+  const createApiClient = __m31["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -10401,17 +10727,17 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m30 = (function () {
+const __m33 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m27["HermagotchiPane"], "TAB_IDS": __m27["TAB_IDS"], "TAB_LABELS": __m27["TAB_LABELS"], "TAB_COMPONENTS": __m27["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m29["PANE_ID"], "PANE_TITLE": __m29["PANE_TITLE"], "createPaneContribution": __m29["createPaneContribution"], "registerHermagotchiPane": __m29["registerHermagotchiPane"], "createDesktopPlugin": __m29["createDesktopPlugin"], "HabitatTab": __m20["HabitatTab"], "HABITAT_PLACEHOLDER": __m20["HABITAT_PLACEHOLDER"], "BattleTab": __m14["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m14["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m25["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m25["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m22["LeaderboardTab"], "ChatTab": __m17["ChatTab"], "SettingsTab": __m24["SettingsTab"], "SETTINGS_PLACEHOLDER": __m24["SETTINGS_PLACEHOLDER"], "CareMeter": __m18["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
+  return { "HermagotchiPane": __m30["HermagotchiPane"], "TAB_IDS": __m30["TAB_IDS"], "TAB_LABELS": __m30["TAB_LABELS"], "TAB_COMPONENTS": __m30["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m32["PANE_ID"], "PANE_TITLE": __m32["PANE_TITLE"], "createPaneContribution": __m32["createPaneContribution"], "registerHermagotchiPane": __m32["registerHermagotchiPane"], "createDesktopPlugin": __m32["createDesktopPlugin"], "HabitatTab": __m23["HabitatTab"], "HABITAT_PLACEHOLDER": __m23["HABITAT_PLACEHOLDER"], "BattleTab": __m17["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m17["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m28["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m28["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m25["LeaderboardTab"], "ChatTab": __m20["ChatTab"], "SettingsTab": __m27["SettingsTab"], "SETTINGS_PLACEHOLDER": __m27["SETTINGS_PLACEHOLDER"], "CareMeter": __m21["CareMeter"], "NpcHostBanner": __m7["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  max-height: 100%;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  flex: 0 0 auto;\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 0;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) var(--hg-lobby-rail-width, 320px);\n  gap: 12px;\n  align-items: stretch;\n  padding-top: 12px;\n  flex: 1 1 auto;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 56px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n  min-height: 0;\n  overflow: auto;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n  flex: 0 0 auto;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: stretch;\n  gap: 12px;\n  border: 2px solid #3a2f5f;\n  background:\n    linear-gradient(135deg, rgba(102, 242, 177, 0.06), transparent 42%),\n    #17132a;\n  padding: 10px 12px;\n  margin-bottom: 12px;\n  min-width: 0;\n}\n\n.hg-npc-host__speech {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 6px;\n  min-width: 0;\n  flex: 1 1 auto;\n  position: relative;\n  padding: 10px 12px 10px 14px;\n  border: 2px solid #4a3a78;\n  background: #100e1c;\n}\n\n.hg-npc-host__speech::before {\n  content: \"\";\n  position: absolute;\n  left: -10px;\n  top: 28px;\n  width: 0;\n  height: 0;\n  border-top: 8px solid transparent;\n  border-bottom: 8px solid transparent;\n  border-right: 10px solid #4a3a78;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  font-size: 0.9375rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-text);\n  font-size: 0.9375rem;\n  line-height: 1.35;\n  overflow-wrap: anywhere;\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 180px;\n  height: 180px;\n  flex: 0 0 180px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 2px solid #4a3a78;\n  background: #08060f;\n}\n\n.hg-npc-host__portrait--empty {\n  display: block;\n  background:\n    repeating-linear-gradient(\n      135deg,\n      #1a1530 0,\n      #1a1530 6px,\n      #100e1c 6px,\n      #100e1c 12px\n    );\n}\n\n.hg-npc-host--compact {\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__portrait {\n  width: 64px;\n  height: 64px;\n  flex: 0 0 64px;\n  border-width: 1px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech {\n  padding: 4px 8px 4px 10px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech::before {\n  top: 14px;\n  left: -8px;\n  border-top-width: 6px;\n  border-bottom-width: 6px;\n  border-right-width: 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__name {\n  font-size: 0.75rem;\n}\n\n.hg-npc-host--compact .hg-npc-host__line {\n  font-size: 0.75rem;\n  color: var(--hg-muted);\n}\n\n@media (max-width: 959px) {\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 140px;\n    height: 140px;\n    flex-basis: 140px;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-npc-host--featured {\n    flex-wrap: wrap;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 112px;\n    height: 112px;\n    flex-basis: 112px;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__speech::before {\n    display: none;\n  }\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  min-height: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  height: var(--hg-lobby-rail-height, 100%);\n  max-height: var(--hg-lobby-rail-height, 100%);\n  overflow: hidden;\n  position: relative;\n  align-self: stretch;\n}\n\n.hg-lobby-rail__resize {\n  position: absolute;\n  left: -3px;\n  top: 0;\n  bottom: 0;\n  width: 6px;\n  cursor: col-resize;\n  z-index: 2;\n}\n\n.hg-lobby-rail__resize:hover,\n.hg-lobby-rail__resize:focus-visible {\n  background: rgba(102, 242, 177, 0.35);\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n  border-left-width: 3px;\n  border-left-color: var(--hg-accent);\n  min-height: 8rem;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: inline-block;\n  writing-mode: vertical-rl;\n  transform: rotate(180deg);\n  letter-spacing: 0.18em;\n  font-weight: 700;\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__toggle--collapsed {\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-start;\n  width: 100%;\n  min-height: 7.5rem;\n  padding: 8px 4px;\n  gap: 8px;\n  border-radius: 0;\n  border-left-width: 0;\n  background: var(--hg-bg-raised);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__badge {\n  align-self: center;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n  min-height: 0;\n  padding: 4px 6px 6px;\n  overflow: hidden;\n}\n\n.hg-lobby-rail__host {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-width: 0;\n  padding: 2px 4px;\n  margin-bottom: 4px;\n  border: 1px solid #3a2f5f;\n  background: #141025;\n  font-size: 0.6875rem;\n  line-height: 1.3;\n}\n\n.hg-lobby-rail__host-name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__host-line {\n  color: var(--hg-muted);\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  flex: 1 1 auto;\n}\n\n.hg-lobby-rail__host-dismiss {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-muted);\n  cursor: pointer;\n  padding: 0 4px;\n  font: inherit;\n  line-height: 1;\n}\n\n.hg-lobby-rail__host-dismiss:hover,\n.hg-lobby-rail__host-dismiss:focus-visible {\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__scroller {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n  min-height: 0;\n  overflow-x: hidden;\n  overflow-y: auto;\n}\n\n/* min-height:100% + margin-top:auto bottom-anchors short chats without\n   the flex-end overflow bug (top messages stay scrollable when long). */\n.hg-lobby-rail__anchor {\n  display: flex;\n  flex-direction: column;\n  min-height: 100%;\n  width: 100%;\n}\n\n.hg-lobby-rail__new {\n  appearance: none;\n  position: absolute;\n  left: 50%;\n  bottom: 8px;\n  transform: translateX(-50%);\n  z-index: 2;\n  border: 1px solid var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n  padding: 2px 10px;\n  font: inherit;\n  font-size: 0.6875rem;\n  cursor: pointer;\n  letter-spacing: 0.04em;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 0;\n  margin-top: auto;\n  padding: 4px 0;\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n  width: 100%;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__empty {\n  padding: 8px 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-lobby-rail__message {\n  position: relative;\n  border: 0;\n  background: transparent;\n  padding: 2px 10px 2px 10px;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n  width: 100%;\n  max-width: none;\n}\n\n.hg-lobby-rail__message:hover,\n.hg-lobby-rail__message:focus-within {\n  background: rgba(102, 242, 177, 0.06);\n}\n\n.hg-lobby-rail__message--grouped {\n  padding-top: 0;\n  padding-bottom: 0;\n}\n\n.hg-lobby-rail__meta {\n  display: flex;\n  align-items: baseline;\n  gap: 6px;\n  min-width: 0;\n}\n\n.hg-lobby-rail__meta--grouped {\n  position: absolute;\n  right: 2px;\n  top: 1px;\n  opacity: 0;\n}\n\n.hg-lobby-rail__message:hover .hg-lobby-rail__meta--grouped,\n.hg-lobby-rail__message:focus-within .hg-lobby-rail__meta--grouped {\n  opacity: 1;\n}\n\n.hg-lobby-rail__author {\n  font-weight: 700;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  max-width: none;\n  flex: 0 1 auto;\n}\n\n.hg-lobby-rail__kind {\n  flex: 0 0 auto;\n  border: 1px solid var(--hg-warn);\n  color: var(--hg-warn);\n  padding: 0 4px;\n  font-size: 0.625rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__kind--upset {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__match {\n  flex: 1 1 auto;\n  min-width: 0;\n  color: var(--hg-muted);\n  font-size: 0.625rem;\n  letter-spacing: 0.03em;\n  text-transform: uppercase;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.hg-lobby-rail__time {\n  margin-left: auto;\n  flex: 0 0 auto;\n  font-size: 0.6875rem;\n  line-height: 1.35;\n  opacity: 0.75;\n}\n\n.hg-lobby-rail__text {\n  margin: 0;\n  width: 100%;\n  max-width: none;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-lobby-rail__message--grouped .hg-lobby-rail__text {\n  padding-right: 2.5rem;\n}\n\n.hg-lobby-rail__taunt {\n  border-left: 2px solid var(--hg-warn);\n  background: rgba(255, 204, 102, 0.06);\n}\n\n.hg-lobby-rail__upset {\n  border-left: 2px solid var(--hg-accent);\n  background: rgba(102, 242, 177, 0.06);\n}\n\n.hg-lobby-rail__menu {\n  position: relative;\n  flex: 0 0 auto;\n  margin-left: 2px;\n}\n\n.hg-lobby-rail__menu-toggle {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-muted);\n  cursor: pointer;\n  padding: 0 3px;\n  font: inherit;\n  line-height: 1;\n  opacity: 0;\n}\n\n.hg-lobby-rail__message:hover .hg-lobby-rail__menu-toggle,\n.hg-lobby-rail__message:focus-within .hg-lobby-rail__menu-toggle,\n.hg-lobby-rail__menu-toggle:focus-visible,\n.hg-lobby-rail__menu [aria-expanded=\"true\"] {\n  opacity: 1;\n}\n\n.hg-lobby-rail__menu-panel {\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 5;\n  display: flex;\n  flex-direction: column;\n  min-width: 7rem;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-raised);\n  padding: 2px;\n}\n\n.hg-lobby-rail__menu-item {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-text);\n  text-align: left;\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__menu-item:hover,\n.hg-lobby-rail__menu-item:focus-visible {\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 6px;\n  margin-top: 0;\n  margin-bottom: 0;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__compose-row {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto auto;\n  gap: 4px;\n  align-items: end;\n}\n\n.hg-lobby-rail__draft {\n  min-height: 1.9rem;\n  max-height: 66px;\n  resize: none;\n  padding: 5px 8px;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n}\n\n.hg-lobby-rail__dm-toggle {\n  padding: 4px 8px;\n  min-width: 2rem;\n}\n\n.hg-lobby-rail__dm-toggle--on {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__dm-input {\n  margin-top: 4px;\n  padding: 4px 6px;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__compose .hg-btn {\n  padding: 4px 8px;\n  font-size: 0.75rem;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    height: auto;\n    max-height: min(70vh, 560px);\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  max-height: 100%;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  flex: 0 0 auto;\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__title {\n  display: flex;\n  align-items: center;\n  flex: 0 0 auto;\n  line-height: 0;\n}\n\n.hg-pane__wordmark {\n  display: block;\n  width: auto;\n  height: 33px;\n  max-width: 100%;\n  image-rendering: pixelated;\n  image-rendering: crisp-edges;\n  user-select: none;\n}\n\n.hg-pane__body {\n  padding-top: 0;\n  min-height: 0;\n}\n\n.hg-pane__layout {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) var(--hg-lobby-rail-width, 320px);\n  gap: 12px;\n  align-items: stretch;\n  padding-top: 12px;\n  flex: 1 1 auto;\n  min-height: 0;\n  overflow: hidden;\n}\n\n.hg-pane__layout--rail-collapsed {\n  grid-template-columns: minmax(0, 1fr) 56px;\n}\n\n.hg-pane__main {\n  min-width: 0;\n  min-height: 0;\n  overflow: auto;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n  flex: 0 0 auto;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: stretch;\n  gap: 12px;\n  border: 2px solid #3a2f5f;\n  background:\n    linear-gradient(135deg, rgba(102, 242, 177, 0.06), transparent 42%),\n    #17132a;\n  padding: 10px 12px;\n  margin-bottom: 12px;\n  min-width: 0;\n}\n\n.hg-npc-host__speech {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 6px;\n  min-width: 0;\n  flex: 1 1 auto;\n  position: relative;\n  padding: 10px 12px 10px 14px;\n  border: 2px solid #4a3a78;\n  background: #100e1c;\n}\n\n.hg-npc-host__speech::before {\n  content: \"\";\n  position: absolute;\n  left: -10px;\n  top: 28px;\n  width: 0;\n  height: 0;\n  border-top: 8px solid transparent;\n  border-bottom: 8px solid transparent;\n  border-right: 10px solid #4a3a78;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  font-size: 0.9375rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-text);\n  font-size: 0.9375rem;\n  line-height: 1.35;\n  overflow-wrap: anywhere;\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  flex: 0 0 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__art .hg-sprite,\n.hg-shop-preview .hg-sprite,\n.hg-battle-preview .hg-sprite {\n  width: 100% !important;\n  height: 100% !important;\n  max-width: 100%;\n  max-height: 100%;\n  box-sizing: border-box;\n}\n\n.hg-shop-preview {\n  width: 192px;\n  height: 192px;\n  margin: 0 auto 12px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-battle-preview {\n  width: 128px;\n  height: 128px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  max-height: 100%;\n  overflow: hidden;\n  position: relative;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 180px;\n  height: 180px;\n  flex: 0 0 180px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 2px solid #4a3a78;\n  background: #08060f;\n}\n\n.hg-npc-host__portrait--empty {\n  display: block;\n  background:\n    repeating-linear-gradient(\n      135deg,\n      #1a1530 0,\n      #1a1530 6px,\n      #100e1c 6px,\n      #100e1c 12px\n    );\n}\n\n.hg-npc-host--compact {\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__portrait {\n  width: 64px;\n  height: 64px;\n  flex: 0 0 64px;\n  border-width: 1px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech {\n  padding: 4px 8px 4px 10px;\n}\n\n.hg-npc-host--compact .hg-npc-host__speech::before {\n  top: 14px;\n  left: -8px;\n  border-top-width: 6px;\n  border-bottom-width: 6px;\n  border-right-width: 8px;\n}\n\n.hg-npc-host--compact .hg-npc-host__name {\n  font-size: 0.75rem;\n}\n\n.hg-npc-host--compact .hg-npc-host__line {\n  font-size: 0.75rem;\n  color: var(--hg-muted);\n}\n\n@media (max-width: 959px) {\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 140px;\n    height: 140px;\n    flex-basis: 140px;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-npc-host--featured {\n    flex-wrap: wrap;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__portrait {\n    width: 112px;\n    height: 112px;\n    flex-basis: 112px;\n  }\n\n  .hg-npc-host--featured .hg-npc-host__speech::before {\n    display: none;\n  }\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--selected {\n  border-color: var(--hg-accent, #5dffb0);\n  box-shadow: 0 0 0 1px var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 2px solid var(--hg-border);\n  /* Light checkerboard keeps sparse and near-dark aura art visible. */\n  background:\n    linear-gradient(45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(-45deg, #d7dded 25%, transparent 25%),\n    linear-gradient(45deg, transparent 75%, #d7dded 75%),\n    linear-gradient(-45deg, transparent 75%, #d7dded 75%);\n  background-color: #f2f5fc;\n  background-size: 12px 12px;\n  background-position: 0 0, 0 6px, 6px -6px, -6px 0;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb[data-blank=\"true\"] {\n  border-style: dashed;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-fallback {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  gap: 2px;\n  width: 100%;\n  height: 100%;\n  padding: 6px;\n  background: rgba(12, 18, 32, 0.82);\n  color: #f2f5fc;\n  text-align: center;\n}\n\n.hg-shop-card__thumb-icon {\n  font-size: 0.6875rem;\n  font-weight: 700;\n  letter-spacing: 0.08em;\n  color: var(--hg-accent, #5dffb0);\n}\n\n.hg-shop-card__thumb-initial {\n  font-size: 1.5rem;\n  font-weight: 700;\n  line-height: 1;\n}\n\n.hg-shop-card__thumb-label {\n  font-size: 0.625rem;\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n  color: #c9d2ea;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-badge--legendary {\n  border-color: #f2b544;\n  color: #ffd479;\n  background: rgba(242, 181, 68, 0.12);\n}\n\n.hg-badge--mythic {\n  border-color: #c77dff;\n  color: #e7c2ff;\n  background: rgba(199, 125, 255, 0.16);\n  text-shadow: 0 0 6px rgba(199, 125, 255, 0.55);\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-chat__dm-target {\n  margin-top: 8px;\n}\n\n.hg-chat__thread {\n  border-left: 3px solid var(--hg-accent-strong);\n  padding-left: 8px;\n}\n\n.hg-inbox__badge {\n  margin-left: 6px;\n  color: var(--hg-muted);\n}\n\n.hg-inbox__badge--unread {\n  color: var(--hg-bg);\n  background: var(--hg-accent);\n  border-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__list,\n.hg-taunt__list {\n  list-style: none;\n  margin: 8px 0 0;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n.hg-inbox__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 6px 8px;\n}\n\n.hg-inbox__item--unread {\n  border-left: 3px solid var(--hg-accent);\n}\n\n.hg-inbox__item--mention {\n  border-left-color: var(--hg-warn);\n}\n\n.hg-inbox__item--dm {\n  border-left-color: var(--hg-accent-strong);\n}\n\n.hg-inbox__preview {\n  margin: 4px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt {\n  border: 1px solid var(--hg-warn);\n  background:\n    repeating-linear-gradient(\n      135deg,\n      rgba(255, 204, 102, 0.05) 0,\n      rgba(255, 204, 102, 0.05) 6px,\n      transparent 6px,\n      transparent 12px\n    ),\n    var(--hg-bg-sunken);\n}\n\n.hg-log__item.hg-taunt {\n  display: block;\n}\n\n.hg-taunt__bubble,\n.hg-taunt--row {\n  padding: 8px 10px;\n}\n\n.hg-taunt__body {\n  margin: 4px 0;\n  color: var(--hg-warn);\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n}\n\n.hg-taunt__match {\n  margin: 0 0 6px;\n  color: var(--hg-muted);\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-taunt__compose {\n  margin-top: 12px;\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-taunt__compose h4 {\n  margin: 0 0 4px;\n  font-size: 0.875rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail {\n  display: flex;\n  flex-direction: column;\n  min-width: 0;\n  min-height: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  height: var(--hg-lobby-rail-height, 100%);\n  max-height: var(--hg-lobby-rail-height, 100%);\n  overflow: hidden;\n  position: relative;\n  align-self: stretch;\n}\n\n.hg-lobby-rail__resize {\n  position: absolute;\n  left: -3px;\n  top: 0;\n  bottom: 0;\n  width: 6px;\n  cursor: col-resize;\n  z-index: 2;\n}\n\n.hg-lobby-rail__resize:hover,\n.hg-lobby-rail__resize:focus-visible {\n  background: rgba(102, 242, 177, 0.35);\n}\n\n.hg-lobby-rail--collapsed {\n  align-items: stretch;\n  max-height: none;\n  border-left-width: 3px;\n  border-left-color: var(--hg-accent);\n  min-height: 8rem;\n}\n\n.hg-lobby-rail__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 6px;\n  padding: 6px;\n  border-bottom: 1px dashed var(--hg-border);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__header {\n  flex-direction: column;\n  border-bottom: 0;\n}\n\n.hg-lobby-rail__toggle {\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__toggle:hover,\n.hg-lobby-rail__toggle:focus-visible {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__icon {\n  color: var(--hg-accent);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__label {\n  display: inline-block;\n  writing-mode: vertical-rl;\n  transform: rotate(180deg);\n  letter-spacing: 0.18em;\n  font-weight: 700;\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__toggle--collapsed {\n  flex-direction: column;\n  align-items: center;\n  justify-content: flex-start;\n  width: 100%;\n  min-height: 7.5rem;\n  padding: 8px 4px;\n  gap: 8px;\n  border-radius: 0;\n  border-left-width: 0;\n  background: var(--hg-bg-raised);\n}\n\n.hg-lobby-rail--collapsed .hg-lobby-rail__badge {\n  align-self: center;\n}\n\n.hg-lobby-rail__badge {\n  align-self: flex-start;\n  min-width: 1.5rem;\n  padding: 1px 5px;\n  border: 1px solid var(--hg-accent-strong);\n  background: var(--hg-accent);\n  color: var(--hg-bg);\n  font-size: 0.6875rem;\n  font-weight: 700;\n  text-align: center;\n}\n\n.hg-lobby-rail__body {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n  min-height: 0;\n  padding: 4px 6px 6px;\n  overflow: hidden;\n}\n\n.hg-lobby-rail__host {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-width: 0;\n  flex: 0 0 auto;\n  position: relative;\n  z-index: 2;\n  padding: 4px 6px;\n  margin: 0 0 6px;\n  border: 1px solid #3a2f5f;\n  background: #141025;\n  font-size: 0.6875rem;\n  line-height: 1.35;\n}\n\n.hg-lobby-rail__host-name {\n  color: #d9b8ff;\n  white-space: nowrap;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__host-line {\n  color: var(--hg-muted);\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  flex: 1 1 auto;\n}\n\n.hg-lobby-rail__host-dismiss {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-muted);\n  cursor: pointer;\n  padding: 0 4px;\n  font: inherit;\n  line-height: 1;\n}\n\n.hg-lobby-rail__host-dismiss:hover,\n.hg-lobby-rail__host-dismiss:focus-visible {\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__scroller {\n  position: relative;\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n  min-height: 0;\n  overflow-x: hidden;\n  overflow-y: auto;\n  scroll-padding-top: 8px;\n  padding-top: 2px;\n}\n\n/* min-height:100% + margin-top:auto bottom-anchors short chats without\n   the flex-end overflow bug (top messages stay scrollable when long). */\n.hg-lobby-rail__anchor {\n  display: flex;\n  flex-direction: column;\n  min-height: 100%;\n  width: 100%;\n}\n\n.hg-lobby-rail__new {\n  appearance: none;\n  position: absolute;\n  left: 50%;\n  bottom: 8px;\n  transform: translateX(-50%);\n  z-index: 2;\n  border: 1px solid var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n  padding: 2px 10px;\n  font: inherit;\n  font-size: 0.6875rem;\n  cursor: pointer;\n  letter-spacing: 0.04em;\n}\n\n.hg-lobby-rail__stub {\n  padding: 8px;\n}\n\n.hg-lobby-rail__stub-title {\n  margin: 8px 0 4px;\n  color: var(--hg-accent-strong);\n  font-weight: 700;\n}\n\n.hg-lobby-rail__notice {\n  margin: 6px 0;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__messages {\n  list-style: none;\n  margin: 0;\n  margin-top: auto;\n  padding: 4px 0;\n  display: flex;\n  flex-direction: column;\n  gap: 1px;\n  width: 100%;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__empty {\n  padding: 8px 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-lobby-rail__message {\n  position: relative;\n  border: 0;\n  background: transparent;\n  padding: 2px 10px 2px 10px;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n  width: 100%;\n  max-width: none;\n}\n\n.hg-lobby-rail__message:hover,\n.hg-lobby-rail__message:focus-within {\n  background: rgba(102, 242, 177, 0.06);\n}\n\n.hg-lobby-rail__message--grouped {\n  padding-top: 0;\n  padding-bottom: 0;\n}\n\n.hg-lobby-rail__meta {\n  display: flex;\n  align-items: baseline;\n  gap: 6px;\n  min-width: 0;\n}\n\n.hg-lobby-rail__meta--grouped {\n  position: absolute;\n  right: 2px;\n  top: 1px;\n  opacity: 0;\n}\n\n.hg-lobby-rail__message:hover .hg-lobby-rail__meta--grouped,\n.hg-lobby-rail__message:focus-within .hg-lobby-rail__meta--grouped {\n  opacity: 1;\n}\n\n.hg-lobby-rail__author {\n  font-weight: 700;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  max-width: none;\n  flex: 0 1 auto;\n}\n\n.hg-lobby-rail__kind {\n  flex: 0 0 auto;\n  border: 1px solid var(--hg-warn);\n  color: var(--hg-warn);\n  padding: 0 4px;\n  font-size: 0.625rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-lobby-rail__kind--upset {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__match {\n  flex: 1 1 auto;\n  min-width: 0;\n  color: var(--hg-muted);\n  font-size: 0.625rem;\n  letter-spacing: 0.03em;\n  text-transform: uppercase;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n.hg-lobby-rail__time {\n  margin-left: auto;\n  flex: 0 0 auto;\n  font-size: 0.6875rem;\n  line-height: 1.35;\n  opacity: 0.75;\n}\n\n.hg-lobby-rail__text {\n  margin: 0;\n  width: 100%;\n  max-width: none;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-lobby-rail__message--grouped .hg-lobby-rail__text {\n  padding-right: 2.5rem;\n}\n\n.hg-lobby-rail__taunt {\n  border-left: 2px solid var(--hg-warn);\n  background: rgba(255, 204, 102, 0.06);\n}\n\n.hg-lobby-rail__upset {\n  border-left: 2px solid var(--hg-accent);\n  background: rgba(102, 242, 177, 0.06);\n}\n\n.hg-lobby-rail__menu {\n  position: relative;\n  flex: 0 0 auto;\n  margin-left: 2px;\n}\n\n.hg-lobby-rail__menu-toggle {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-muted);\n  cursor: pointer;\n  padding: 0 3px;\n  font: inherit;\n  line-height: 1;\n  opacity: 0;\n}\n\n.hg-lobby-rail__message:hover .hg-lobby-rail__menu-toggle,\n.hg-lobby-rail__message:focus-within .hg-lobby-rail__menu-toggle,\n.hg-lobby-rail__menu-toggle:focus-visible,\n.hg-lobby-rail__menu [aria-expanded=\"true\"] {\n  opacity: 1;\n}\n\n.hg-lobby-rail__menu-panel {\n  position: absolute;\n  right: 0;\n  top: 100%;\n  z-index: 5;\n  display: flex;\n  flex-direction: column;\n  min-width: 7rem;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-raised);\n  padding: 2px;\n}\n\n.hg-lobby-rail__menu-item {\n  appearance: none;\n  border: 0;\n  background: transparent;\n  color: var(--hg-text);\n  text-align: left;\n  padding: 4px 8px;\n  font: inherit;\n  font-size: 0.75rem;\n  cursor: pointer;\n}\n\n.hg-lobby-rail__menu-item:hover,\n.hg-lobby-rail__menu-item:focus-visible {\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 6px;\n  margin-top: 0;\n  margin-bottom: 0;\n  flex: 0 0 auto;\n}\n\n.hg-lobby-rail__compose-row {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr) auto auto;\n  gap: 4px;\n  align-items: end;\n}\n\n.hg-lobby-rail__draft {\n  min-height: 1.9rem;\n  max-height: 66px;\n  resize: none;\n  padding: 5px 8px;\n  font-size: 0.8125rem;\n  line-height: 1.35;\n}\n\n.hg-lobby-rail__dm-toggle {\n  padding: 4px 8px;\n  min-width: 2rem;\n}\n\n.hg-lobby-rail__dm-toggle--on {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-lobby-rail__dm-input {\n  margin-top: 4px;\n  padding: 4px 6px;\n  font-size: 0.75rem;\n}\n\n.hg-lobby-rail__compose .hg-btn {\n  padding: 4px 8px;\n  font-size: 0.75rem;\n}\n\n.hg-setting--toggle {\n  align-items: flex-start;\n  flex-wrap: wrap;\n}\n\n.hg-setting__hint {\n  display: block;\n  font-size: 0.75rem;\n  margin-top: 2px;\n}\n\n.hg-toggle {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.hg-toggle__input {\n  width: 18px;\n  height: 18px;\n  accent-color: var(--hg-accent);\n}\n\n.hg-toggle__value {\n  color: var(--hg-accent);\n  text-transform: uppercase;\n  letter-spacing: 0.08em;\n}\n\n.hg-setting__notice {\n  flex-basis: 100%;\n  margin: 4px 0 0;\n  font-size: 0.75rem;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 839px) {\n  .hg-pane__layout,\n  .hg-pane__layout--rail-collapsed {\n    grid-template-columns: minmax(0, 1fr);\n  }\n\n  .hg-lobby-rail {\n    position: static;\n    height: auto;\n    max-height: min(70vh, 560px);\n  }\n\n  .hg-pane__layout--rail-collapsed .hg-lobby-rail {\n    order: -1;\n  }\n\n  .hg-lobby-rail__header,\n  .hg-lobby-rail--collapsed .hg-lobby-rail__header {\n    flex-direction: row;\n  }\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;
@@ -10426,8 +10752,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m30["createDesktopPlugin"];
-const __hgRegisterPane = __m30["registerHermagotchiPane"];
+const __hgCreatePlugin = __m33["createDesktopPlugin"];
+const __hgRegisterPane = __m33["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -10445,34 +10771,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m30["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m30["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m30["CareMeter"];
-export const ChatTab = __m30["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m30["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m30["HabitatTab"];
-export const HermagotchiPane = __m30["HermagotchiPane"];
-export const LeaderboardTab = __m30["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m30["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m30["NPC_NAMES"];
-export const NpcHostBanner = __m30["NpcHostBanner"];
-export const PANE_ID = __m30["PANE_ID"];
-export const PANE_TITLE = __m30["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m30["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m30["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m30["SettingsTab"];
-export const ShopTab = __m30["ShopTab"];
-export const StateNotice = __m30["StateNotice"];
-export const TAB_COMPONENTS = __m30["TAB_COMPONENTS"];
-export const TAB_IDS = __m30["TAB_IDS"];
-export const TAB_LABELS = __m30["TAB_LABELS"];
-export const UI_STATES = __m30["UI_STATES"];
-export const UI_STATE_COPY = __m30["UI_STATE_COPY"];
-export const createDesktopPlugin = __m30["createDesktopPlugin"];
-export const createPaneContribution = __m30["createPaneContribution"];
-export const npcHostLine = __m30["npcHostLine"];
-export const registerHermagotchiPane = __m30["registerHermagotchiPane"];
-export const resolveUiState = __m30["resolveUiState"];
+export const BattleTab = __m33["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m33["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m33["CareMeter"];
+export const ChatTab = __m33["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m33["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m33["HabitatTab"];
+export const HermagotchiPane = __m33["HermagotchiPane"];
+export const LeaderboardTab = __m33["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m33["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m33["NPC_NAMES"];
+export const NpcHostBanner = __m33["NpcHostBanner"];
+export const PANE_ID = __m33["PANE_ID"];
+export const PANE_TITLE = __m33["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m33["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m33["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m33["SettingsTab"];
+export const ShopTab = __m33["ShopTab"];
+export const StateNotice = __m33["StateNotice"];
+export const TAB_COMPONENTS = __m33["TAB_COMPONENTS"];
+export const TAB_IDS = __m33["TAB_IDS"];
+export const TAB_LABELS = __m33["TAB_LABELS"];
+export const UI_STATES = __m33["UI_STATES"];
+export const UI_STATE_COPY = __m33["UI_STATE_COPY"];
+export const createDesktopPlugin = __m33["createDesktopPlugin"];
+export const createPaneContribution = __m33["createPaneContribution"];
+export const npcHostLine = __m33["npcHostLine"];
+export const registerHermagotchiPane = __m33["registerHermagotchiPane"];
+export const resolveUiState = __m33["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;

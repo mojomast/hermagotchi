@@ -1,9 +1,14 @@
+import { hermesHostAuthHeaders } from "./logic/hermesHostAuth.js";
+
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
- * The browser/Desktop layer never sees a session token. Every call goes to the
- * local Hermes bridge, which adds the Bearer header server-side. All methods
- * resolve to the bridge envelope and never reject.
+ * The browser/Desktop layer never sees the *game* session token. Every call
+ * goes to the local Hermes bridge, which adds the Bearer header server-side.
+ * On the Hermes webapp the host still gates `/api/plugins/...` with
+ * `X-Hermes-Session-Token` (launch-link grant in sessionStorage); we attach
+ * that host header when present. All methods resolve to the bridge envelope
+ * and never reject.
  */
 
 export const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
@@ -167,14 +172,18 @@ export function createApiClient(options) {
     if (typeof fetchImpl !== "function") {
       return offlineEnvelope();
     }
-    const headers = {};
+    const headers = Object.assign({}, hermesHostAuthHeaders());
     if (opts.hasBody) {
       headers["Content-Type"] = "application/json";
     }
     if (opts.idempotencyKey) {
       headers["Idempotency-Key"] = opts.idempotencyKey;
     }
-    const init = { method: method, headers: headers };
+    const init = {
+      method: method,
+      headers: headers,
+      credentials: "same-origin",
+    };
     if (opts.hasBody) {
       init.body = JSON.stringify(
         opts.body === undefined || opts.body === null ? {} : opts.body
@@ -295,6 +304,20 @@ export function createApiClient(options) {
         body: body,
         idempotencyKey:
           opts.idempotencyKey || opts.idempotency_key || randomKey(),
+      });
+    },
+    put: function put(path, body, putOptions) {
+      const opts = putOptions || {};
+      return request("PUT", proxyUrl(path), {
+        body: body,
+        idempotencyKey: opts.idempotencyKey,
+      });
+    },
+    patch: function patch(path, body, patchOptions) {
+      const opts = patchOptions || {};
+      return request("PATCH", proxyUrl(path), {
+        body: body,
+        idempotencyKey: opts.idempotencyKey,
       });
     },
     del: function del(path, deleteOptions) {

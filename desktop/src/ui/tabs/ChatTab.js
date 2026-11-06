@@ -29,7 +29,7 @@ import {
   displayActorLabel,
   formatRelativeTime,
 } from "../logic/chat.js";
-import {
+import { FRIENDS_PATH,
   FRIEND_REQUESTS_PATH,
   filterFriends,
   friendPresenceCounts,
@@ -1193,7 +1193,7 @@ function ChatLive(props) {
     setBusy(true);
     try {
       const envelope = await api.post(
-        FRIEND_REQUESTS_PATH,
+        FRIENDS_PATH,
         friendRequestPayload(checked.value)
       );
       if (envelope && envelope.ok === true) {

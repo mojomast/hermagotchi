@@ -363,12 +363,16 @@ export function HermagotchiPane(props = {}) {
             className: "hg-pane__body hg-pane__main",
             role: "tabpanel",
             "aria-label": TAB_LABELS[activeTab],
-            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, initialTab: undefined, onTabChange: undefined })),
+            children: jsx(ActiveTab, Object.assign({}, props, { uiState: effectiveState, state: effectiveState, chatEnabled: props.chatEnabled === true || props.chat_enabled === true || (connection && connection.chatEnabled === true), initialTab: undefined, onTabChange: undefined })),
           }),
           jsx(LobbyRail, Object.assign({}, props, {
             api: api,
             uiState: effectiveState,
             state: effectiveState,
+            chatEnabled:
+              props.chatEnabled === true ||
+              props.chat_enabled === true ||
+              (connection && connection.chatEnabled === true),
             collapsed: railCollapsed,
             onToggle: toggleLobbyRail,
             width: railWidth,
