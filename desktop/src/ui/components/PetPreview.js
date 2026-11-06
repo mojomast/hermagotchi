@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { jsx } from "react/jsx-runtime";
 import { buildPreviewLayers } from "../logic/shop.js";
 import { joinAssetUrl, resolveAnimPalette, speciesBodyPath } from "../logic/assets.js";
+import { AuthedImg, useAuthedAssetUrl } from "./AuthedImg.js";
 import {
   contract,
   createPlayer,
@@ -181,6 +182,12 @@ export function PetPreview(props = {}) {
   const [auraFrame, setAuraFrame] = useState(0);
   const playerRef = useRef(null);
   const clipId = clip ? String(clip.id || clip.path || "") : "";
+  const rawStripUrl =
+    animated && clip
+      ? joinAssetUrl(assetBaseUrl, clip.path || "") || (baseLayer && baseLayer.url) || ""
+      : "";
+  const authedStrip = useAuthedAssetUrl(rawStripUrl);
+
 
   useEffect(
     function () {
@@ -249,28 +256,30 @@ export function PetPreview(props = {}) {
 
   const children = [];
   if (animated) {
-    const stripUrl = joinAssetUrl(assetBaseUrl, clip.path || "") || baseLayer.url;
-    children.push(
-      jsx(
-        "div",
-        {
-          className: "hg-sprite__base hg-sprite__base--anim",
-          "data-layer-kind": "base",
-          "data-layer-id": baseLayer.id,
-          "data-layer-slot": "body",
-          "data-anim-state": requestedState,
-          "data-frame-index": String(frameIndex),
-          "data-strip-path": clip.path || "",
-          "aria-hidden": "true",
-          style: stripStyle(stripUrl, clip, frameIndex),
-        },
-        "anim:" + baseLayer.id
-      )
-    );
+    const stripUrl = authedStrip.url || "";
+    if (stripUrl) {
+      children.push(
+        jsx(
+          "div",
+          {
+            className: "hg-sprite__base hg-sprite__base--anim",
+            "data-layer-kind": "base",
+            "data-layer-id": baseLayer.id,
+            "data-layer-slot": "body",
+            "data-anim-state": requestedState,
+            "data-frame-index": String(frameIndex),
+            "data-strip-path": clip.path || "",
+            "aria-hidden": "true",
+            style: stripStyle(stripUrl, clip, frameIndex),
+          },
+          "anim:" + baseLayer.id
+        )
+      );
+    }
   } else if (baseLayer) {
     children.push(
       jsx(
-        "img",
+        AuthedImg,
         {
           className: "hg-sprite__layer hg-sprite__base",
           src: baseLayer.url,
@@ -282,6 +291,7 @@ export function PetPreview(props = {}) {
           decoding: "async",
           draggable: "false",
           style: layerStyle(baseLayer),
+          placeholder: null,
         },
         "base:" + baseLayer.id
       )
@@ -294,7 +304,7 @@ export function PetPreview(props = {}) {
       : layer;
     children.push(
       jsx(
-        "img",
+        AuthedImg,
         {
           className: "hg-sprite__layer",
           src: layer.url,
@@ -309,6 +319,7 @@ export function PetPreview(props = {}) {
           decoding: "async",
           draggable: "false",
           style: layerStyle(adjusted),
+          placeholder: null,
         },
         layer.kind + ":" + layer.id
       )

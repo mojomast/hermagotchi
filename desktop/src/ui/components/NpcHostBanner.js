@@ -1,6 +1,7 @@
 import { jsx, jsxs } from "react/jsx-runtime";
 import { npcHostLine } from "../npcLines.js";
 import { joinAssetUrl, npcPortraitPath } from "../logic/assets.js";
+import { AuthedImg } from "./AuthedImg.js";
 
 const PORTRAIT_PX = Object.freeze({
   featured: 180,
@@ -32,6 +33,10 @@ export function NpcHostBanner(props = {}) {
   const portrait = npcPortraitPath(host.id);
   const portraitUrl =
     portrait && assetBaseUrl ? joinAssetUrl(assetBaseUrl, portrait) : "";
+  const emptyPortrait = jsx("span", {
+    className: "hg-npc-host__portrait hg-npc-host__portrait--empty",
+    "aria-hidden": "true",
+  });
   return jsxs("aside", {
     className:
       size === "compact"
@@ -43,7 +48,7 @@ export function NpcHostBanner(props = {}) {
     "data-display-only": "true",
     children: [
       portraitUrl
-        ? jsx("img", {
+        ? jsx(AuthedImg, {
             className: "hg-npc-host__portrait",
             src: portraitUrl,
             alt: "",
@@ -53,11 +58,9 @@ export function NpcHostBanner(props = {}) {
             draggable: "false",
             width: px,
             height: px,
+            placeholder: emptyPortrait,
           })
-        : jsx("span", {
-            className: "hg-npc-host__portrait hg-npc-host__portrait--empty",
-            "aria-hidden": "true",
-          }),
+        : emptyPortrait,
       jsxs("div", {
         className: "hg-npc-host__speech",
         children: [

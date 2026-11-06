@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { CareMeter } from "../components/CareMeter.js";
 import { NpcHostBanner } from "../components/NpcHostBanner.js";
+import { AuthedImg } from "../components/AuthedImg.js";
 import { PetPreview } from "../components/PetPreview.js";
 import { joinAssetUrl } from "../logic/assets.js";
 import { StateNotice, UI_STATES } from "../states.js";
@@ -444,7 +445,7 @@ export function HabitatTab(props = {}) {
                     }
                   ),
                   speciesThumbUrl
-                    ? jsx("img", {
+                    ? jsx(AuthedImg, {
                         className: "hg-adopt-species__thumb",
                         src: speciesThumbUrl,
                         alt: (SPECIES_LABELS[species] || species) + " body",
@@ -453,6 +454,7 @@ export function HabitatTab(props = {}) {
                         loading: "lazy",
                         decoding: "async",
                         draggable: "false",
+                        placeholder: null,
                       })
                     : null,
                 ],

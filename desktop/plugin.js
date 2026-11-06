@@ -4,8 +4,8 @@
 import { jsx as __ext0 } from "react/jsx-runtime";
 import { jsxs as __ext1 } from "react/jsx-runtime";
 import { useEffect as __ext2 } from "react";
-import { useRef as __ext3 } from "react";
-import { useState as __ext4 } from "react";
+import { useState as __ext3 } from "react";
+import { useRef as __ext4 } from "react";
 import { useCallback as __ext5 } from "react";
 
 // desktop/src/ui/npcLines.js
@@ -1117,13 +1117,201 @@ function animStripPath(species, palette, state) {
   return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
 })();
 
-// desktop/src/ui/components/NpcHostBanner.js
+// desktop/src/ui/logic/authedAssets.js
 const __m4 = (function () {
+/**
+ * Resolve plugin asset URLs through authenticated fetch into blob:/data: URLs.
+ *
+ * Hermes dashboard/webapp auth puts the session on fetch headers (or cookies),
+ * but bare img tag / CSS background-image requests omit those headers and
+ * 401. Fetching via the same window.fetch the pane already patches, then
+ * swapping in an object URL, keeps non-secret art loading without weakening
+ * the host auth gate.
+ */
+
+const cache = new Map();
+
+function isInlineUrl(value) {
+  return typeof value === "string" && /^(?:data:|blob:)/i.test(value);
+}
+
+function fetchImpl() {
+  if (typeof globalThis.fetch === "function") return globalThis.fetch.bind(globalThis);
+  return null;
+}
+
+/**
+ * @param {string} url
+ * @param {{ fetchImpl?: typeof fetch }=} options
+ * @returns {Promise of string}
+ */
+function resolveAuthedAssetUrl(url, options = {}) {
+  if (typeof url !== "string") return Promise.resolve("");
+  const trimmed = url.trim();
+  if (!trimmed) return Promise.resolve("");
+  if (isInlineUrl(trimmed)) return Promise.resolve(trimmed);
+
+  const existing = cache.get(trimmed);
+  if (existing) return existing.promise;
+
+  const fetchFn = options.fetchImpl || fetchImpl();
+  if (!fetchFn) {
+    // No fetch available (SSR / node without polyfill): keep the raw URL.
+    return Promise.resolve(trimmed);
+  }
+
+  const entry = { objectUrl: null, promise: null };
+  entry.promise = Promise.resolve()
+    .then(() =>
+      fetchFn(trimmed, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "force-cache",
+      })
+    )
+    .then((response) => {
+      if (!response || !response.ok) {
+        const status = response && response.status;
+        throw new Error("asset_fetch_failed:" + String(status || "network"));
+      }
+      return response.blob();
+    })
+    .then((blob) => {
+      if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+        entry.objectUrl = URL.createObjectURL(blob);
+        return entry.objectUrl;
+      }
+      // Extremely constrained hosts: fall back to the original URL.
+      return trimmed;
+    })
+    .catch(() => {
+      // Drop the failed cache entry so a later retry can try again.
+      if (cache.get(trimmed) === entry) cache.delete(trimmed);
+      return "";
+    });
+
+  cache.set(trimmed, entry);
+  return entry.promise;
+}
+
+/** Test helper: clear the in-memory blob cache (revokes object URLs). */
+function clearAuthedAssetCache() {
+  for (const entry of cache.values()) {
+    if (entry.objectUrl && typeof URL !== "undefined" && URL.revokeObjectURL) {
+      try {
+        URL.revokeObjectURL(entry.objectUrl);
+      } catch (_err) {
+        /* ignore */
+      }
+    }
+  }
+  cache.clear();
+}
+
+function authedAssetCacheSize() {
+  return cache.size;
+}
+
+  return { "resolveAuthedAssetUrl": resolveAuthedAssetUrl, "clearAuthedAssetCache": clearAuthedAssetCache, "authedAssetCacheSize": authedAssetCacheSize };
+})();
+
+// desktop/src/ui/components/AuthedImg.js
+const __m5 = (function () {
+  const useEffect = __ext2;
+  const useState = __ext3;
+  const jsx = __ext0;
+  const resolveAuthedAssetUrl = __m4["resolveAuthedAssetUrl"];
+
+/**
+ * Hook: resolve a plugin asset URL through authenticated fetch → blob/data URL.
+ * Returns { url, status } where status is idle | loading | ready | error.
+ */
+function useAuthedAssetUrl(src) {
+  const inline =
+    typeof src === "string" && /^(?:data:|blob:)/i.test(src) ? src : "";
+  const [state, setState] = useState(function () {
+    if (!src || typeof src !== "string" || !src.trim()) {
+      return { url: "", status: "idle" };
+    }
+    if (inline) return { url: inline, status: "ready" };
+    return { url: "", status: "loading" };
+  });
+
+  useEffect(
+    function () {
+      let cancelled = false;
+      if (typeof src !== "string" || !src.trim()) {
+        setState({ url: "", status: "idle" });
+        return undefined;
+      }
+      if (/^(?:data:|blob:)/i.test(src)) {
+        setState({ url: src, status: "ready" });
+        return undefined;
+      }
+      setState({ url: "", status: "loading" });
+      resolveAuthedAssetUrl(src).then(function (url) {
+        if (cancelled) return;
+        if (!url) {
+          setState({ url: "", status: "error" });
+          return;
+        }
+        setState({ url: url, status: "ready" });
+      });
+      return function () {
+        cancelled = true;
+      };
+    },
+    [src]
+  );
+  return state;
+}
+
+/**
+ * img element that loads plugin assets through authenticated fetch → blob URL.
+ * Pass-through for data:/blob: sources. While pending (or on failure) renders
+ * `placeholder` (default null).
+ */
+function AuthedImg(props = {}) {
+  const src = typeof props.src === "string" ? props.src : "";
+  const placeholder = Object.prototype.hasOwnProperty.call(props, "placeholder")
+    ? props.placeholder
+    : null;
+  const { url, status } = useAuthedAssetUrl(src);
+
+  useEffect(
+    function () {
+      if (status !== "error") return;
+      if (typeof props.onResolveError === "function") {
+        try {
+          props.onResolveError();
+        } catch (_err) {
+          /* ignore */
+        }
+      }
+    },
+    [status, props.onResolveError]
+  );
+
+  if (status !== "ready" || !url) return placeholder;
+
+  const imgProps = Object.assign({}, props);
+  delete imgProps.placeholder;
+  delete imgProps.onResolveError;
+  imgProps.src = url;
+  return jsx("img", imgProps);
+}
+
+  return { "useAuthedAssetUrl": useAuthedAssetUrl, "AuthedImg": AuthedImg };
+})();
+
+// desktop/src/ui/components/NpcHostBanner.js
+const __m6 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
   const npcHostLine = __m0["npcHostLine"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const npcPortraitPath = __m3["npcPortraitPath"];
+  const AuthedImg = __m5["AuthedImg"];
 
 const PORTRAIT_PX = Object.freeze({
   featured: 180,
@@ -1155,6 +1343,10 @@ function NpcHostBanner(props = {}) {
   const portrait = npcPortraitPath(host.id);
   const portraitUrl =
     portrait && assetBaseUrl ? joinAssetUrl(assetBaseUrl, portrait) : "";
+  const emptyPortrait = jsx("span", {
+    className: "hg-npc-host__portrait hg-npc-host__portrait--empty",
+    "aria-hidden": "true",
+  });
   return jsxs("aside", {
     className:
       size === "compact"
@@ -1166,7 +1358,7 @@ function NpcHostBanner(props = {}) {
     "data-display-only": "true",
     children: [
       portraitUrl
-        ? jsx("img", {
+        ? jsx(AuthedImg, {
             className: "hg-npc-host__portrait",
             src: portraitUrl,
             alt: "",
@@ -1176,11 +1368,9 @@ function NpcHostBanner(props = {}) {
             draggable: "false",
             width: px,
             height: px,
+            placeholder: emptyPortrait,
           })
-        : jsx("span", {
-            className: "hg-npc-host__portrait hg-npc-host__portrait--empty",
-            "aria-hidden": "true",
-          }),
+        : emptyPortrait,
       jsxs("div", {
         className: "hg-npc-host__speech",
         children: [
@@ -1199,10 +1389,10 @@ function NpcHostBanner(props = {}) {
 })();
 
 // desktop/src/ui/components/LobbyRail.js
-const __m5 = (function () {
+const __m7 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const npcHostLine = __m0["npcHostLine"];
@@ -1237,7 +1427,7 @@ const __m5 = (function () {
   const tauntSummary = __m2["tauntSummary"];
   const validateChatDraft = __m2["validateChatDraft"];
   const validateDmTarget = __m2["validateDmTarget"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
 
 function emptyInbox() {
   return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
@@ -2003,7 +2193,7 @@ function LobbyRail(props = {}) {
 })();
 
 // desktop/src/ui/logic/connection.js
-const __m6 = (function () {
+const __m8 = (function () {
 /**
  * Pure connection/pairing status helpers.
  *
@@ -2270,7 +2460,7 @@ function resolveConnectionUiState(connection = {}) {
 })();
 
 // desktop/src/ui/logic/compose.js
-const __m7 = (function () {
+const __m9 = (function () {
 /**
  * Pure cosmetic composition math for the Hermagotchi desktop preview.
  *
@@ -2469,11 +2659,11 @@ const composeLayer = composeItem;
 })();
 
 // desktop/src/ui/logic/shop.js
-const __m8 = (function () {
+const __m10 = (function () {
   const joinAssetUrl = __m3["joinAssetUrl"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const composeItem = __m7["composeItem"];
-  const DEFAULT_NATIVE_SIZE = __m7["DEFAULT_NATIVE_SIZE"];
+  const composeItem = __m9["composeItem"];
+  const DEFAULT_NATIVE_SIZE = __m9["DEFAULT_NATIVE_SIZE"];
 /**
  * Pure Shop helpers. Catalog data always comes from the server response; item
  * ids are never hardcoded here so new cosmetics show up automatically.
@@ -2876,7 +3066,7 @@ function itemAvailability(options = {}) {
 })();
 
 // desktop/src/anim/petAnimContract.json
-const __m9 = (function () {
+const __m11 = (function () {
 const __json = {
   "schema": "hermagotchi-pet-anim-contract-v1",
   "native_size": 32,
@@ -2920,8 +3110,8 @@ const __json = {
 })();
 
 // desktop/src/anim/petAnimPlayer.js
-const __m10 = (function () {
-  const contract = __m9["default"];
+const __m12 = (function () {
+  const contract = __m11["default"];
 /**
  * Standalone pet animation helper for Hermagotchi desktop.
  * Pane UI imports this; do not put React/UI here.
@@ -3007,19 +3197,21 @@ function createPlayer(clip) {
 })();
 
 // desktop/src/ui/components/PetPreview.js
-const __m11 = (function () {
+const __m13 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
-  const buildPreviewLayers = __m8["buildPreviewLayers"];
+  const buildPreviewLayers = __m10["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const resolveAnimPalette = __m3["resolveAnimPalette"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const contract = __m10["contract"];
-  const createPlayer = __m10["createPlayer"];
-  const findClip = __m10["findClip"];
-  const resolveAnimState = __m10["resolveAnimState"];
+  const AuthedImg = __m5["AuthedImg"];
+  const useAuthedAssetUrl = __m5["useAuthedAssetUrl"];
+  const contract = __m12["contract"];
+  const createPlayer = __m12["createPlayer"];
+  const findClip = __m12["findClip"];
+  const resolveAnimState = __m12["resolveAnimState"];
 
 function layerStyle(layer) {
   const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
@@ -3193,6 +3385,12 @@ function PetPreview(props = {}) {
   const [auraFrame, setAuraFrame] = useState(0);
   const playerRef = useRef(null);
   const clipId = clip ? String(clip.id || clip.path || "") : "";
+  const rawStripUrl =
+    animated && clip
+      ? joinAssetUrl(assetBaseUrl, clip.path || "") || (baseLayer && baseLayer.url) || ""
+      : "";
+  const authedStrip = useAuthedAssetUrl(rawStripUrl);
+
 
   useEffect(
     function () {
@@ -3261,28 +3459,30 @@ function PetPreview(props = {}) {
 
   const children = [];
   if (animated) {
-    const stripUrl = joinAssetUrl(assetBaseUrl, clip.path || "") || baseLayer.url;
-    children.push(
-      jsx(
-        "div",
-        {
-          className: "hg-sprite__base hg-sprite__base--anim",
-          "data-layer-kind": "base",
-          "data-layer-id": baseLayer.id,
-          "data-layer-slot": "body",
-          "data-anim-state": requestedState,
-          "data-frame-index": String(frameIndex),
-          "data-strip-path": clip.path || "",
-          "aria-hidden": "true",
-          style: stripStyle(stripUrl, clip, frameIndex),
-        },
-        "anim:" + baseLayer.id
-      )
-    );
+    const stripUrl = authedStrip.url || "";
+    if (stripUrl) {
+      children.push(
+        jsx(
+          "div",
+          {
+            className: "hg-sprite__base hg-sprite__base--anim",
+            "data-layer-kind": "base",
+            "data-layer-id": baseLayer.id,
+            "data-layer-slot": "body",
+            "data-anim-state": requestedState,
+            "data-frame-index": String(frameIndex),
+            "data-strip-path": clip.path || "",
+            "aria-hidden": "true",
+            style: stripStyle(stripUrl, clip, frameIndex),
+          },
+          "anim:" + baseLayer.id
+        )
+      );
+    }
   } else if (baseLayer) {
     children.push(
       jsx(
-        "img",
+        AuthedImg,
         {
           className: "hg-sprite__layer hg-sprite__base",
           src: baseLayer.url,
@@ -3294,6 +3494,7 @@ function PetPreview(props = {}) {
           decoding: "async",
           draggable: "false",
           style: layerStyle(baseLayer),
+          placeholder: null,
         },
         "base:" + baseLayer.id
       )
@@ -3306,7 +3507,7 @@ function PetPreview(props = {}) {
       : layer;
     children.push(
       jsx(
-        "img",
+        AuthedImg,
         {
           className: "hg-sprite__layer",
           src: layer.url,
@@ -3321,6 +3522,7 @@ function PetPreview(props = {}) {
           decoding: "async",
           draggable: "false",
           style: layerStyle(adjusted),
+          placeholder: null,
         },
         layer.kind + ":" + layer.id
       )
@@ -3348,7 +3550,7 @@ function PetPreview(props = {}) {
 })();
 
 // desktop/src/ui/logic/battle.js
-const __m12 = (function () {
+const __m14 = (function () {
 /**
  * Pure battle presentation helpers for the Desktop Battle tab.
  *
@@ -3792,10 +3994,10 @@ function battleTauntContext(match = {}, summary = {}) {
 })();
 
 // desktop/src/ui/components/TurnLog.js
-const __m13 = (function () {
+const __m15 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const formatTurnLog = __m12["formatTurnLog"];
+  const formatTurnLog = __m14["formatTurnLog"];
 
 function TypeChip(props) {
   const type = props.type;
@@ -3903,22 +4105,22 @@ function TurnLog(props = {}) {
 })();
 
 // desktop/src/ui/tabs/BattleTab.js
-const __m14 = (function () {
+const __m16 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m11["PetPreview"];
-  const TurnLog = __m13["TurnLog"];
-  const battleParticipantsFromMatch = __m12["battleParticipantsFromMatch"];
-  const battleSummary = __m12["battleSummary"];
-  const battleTauntContext = __m12["battleTauntContext"];
-  const battleTaunts = __m12["battleTaunts"];
-  const rewardCapNotice = __m12["rewardCapNotice"];
-  const rewardCapReason = __m12["rewardCapReason"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
+  const PetPreview = __m13["PetPreview"];
+  const TurnLog = __m15["TurnLog"];
+  const battleParticipantsFromMatch = __m14["battleParticipantsFromMatch"];
+  const battleSummary = __m14["battleSummary"];
+  const battleTauntContext = __m14["battleTauntContext"];
+  const battleTaunts = __m14["battleTaunts"];
+  const rewardCapNotice = __m14["rewardCapNotice"];
+  const rewardCapReason = __m14["rewardCapReason"];
   const CHAT_TAUNT_MAX_CHARS = __m2["CHAT_TAUNT_MAX_CHARS"];
   const CHAT_TAUNTS_PATH = __m2["CHAT_TAUNTS_PATH"];
   const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
@@ -4537,7 +4739,7 @@ function BattleTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/friends.js
-const __m15 = (function () {
+const __m17 = (function () {
 /** Pure friend roster and request helpers for the Desktop social hub. */
 
 const FRIENDS_PATH = "/friends";
@@ -4749,7 +4951,7 @@ function friendRemovePath(friendId) {
 })();
 
 // desktop/src/ui/logic/social_hub.js
-const __m16 = (function () {
+const __m18 = (function () {
   const normalizeInbox = __m2["normalizeInbox"];
   const tauntSummary = __m2["tauntSummary"];
 /** Pure social-hub helpers shared by the Desktop Chat tab and its tests. */
@@ -5081,12 +5283,12 @@ function replayPath(matchId) {
 })();
 
 // desktop/src/ui/tabs/ChatTab.js
-const __m17 = (function () {
+const __m19 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const NpcHostBanner = __m4["NpcHostBanner"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
   const npcHostLine = __m0["npcHostLine"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
@@ -5114,30 +5316,30 @@ const __m17 = (function () {
   const validateDmTarget = __m2["validateDmTarget"];
   const displayActorLabel = __m2["displayActorLabel"];
   const formatRelativeTime = __m2["formatRelativeTime"];
-  const FRIENDS_PATH = __m15["FRIENDS_PATH"];
-  const FRIEND_REQUESTS_PATH = __m15["FRIEND_REQUESTS_PATH"];
-  const filterFriends = __m15["filterFriends"];
-  const friendPresenceCounts = __m15["friendPresenceCounts"];
-  const friendRemovePath = __m15["friendRemovePath"];
-  const friendRequestPayload = __m15["friendRequestPayload"];
-  const friendRequestRespondPath = __m15["friendRequestRespondPath"];
-  const friendRequestResponsePayload = __m15["friendRequestResponsePayload"];
-  const normalizeFriends = __m15["normalizeFriends"];
-  const validateFriendTarget = __m15["validateFriendTarget"];
-  const CHALLENGES_PATH = __m16["CHALLENGES_PATH"];
-  const CHALLENGE_INBOX_PATH = __m16["CHALLENGE_INBOX_PATH"];
-  const SOCIAL_HUB_SECTIONS = __m16["SOCIAL_HUB_SECTIONS"];
-  const challengeCreatePayload = __m16["challengeCreatePayload"];
-  const challengeRespondPath = __m16["challengeRespondPath"];
-  const challengeResponsePayload = __m16["challengeResponsePayload"];
-  const filterHistory = __m16["filterHistory"];
-  const historyFilterCounts = __m16["historyFilterCounts"];
-  const normalizeChallengeInbox = __m16["normalizeChallengeInbox"];
-  const normalizeHistory = __m16["normalizeHistory"];
-  const normalizeThreads = __m16["normalizeThreads"];
-  const replayHref = __m16["replayHref"];
-  const socialHubHost = __m16["socialHubHost"];
-  const threadMessagePath = __m16["threadMessagePath"];
+  const FRIENDS_PATH = __m17["FRIENDS_PATH"];
+  const FRIEND_REQUESTS_PATH = __m17["FRIEND_REQUESTS_PATH"];
+  const filterFriends = __m17["filterFriends"];
+  const friendPresenceCounts = __m17["friendPresenceCounts"];
+  const friendRemovePath = __m17["friendRemovePath"];
+  const friendRequestPayload = __m17["friendRequestPayload"];
+  const friendRequestRespondPath = __m17["friendRequestRespondPath"];
+  const friendRequestResponsePayload = __m17["friendRequestResponsePayload"];
+  const normalizeFriends = __m17["normalizeFriends"];
+  const validateFriendTarget = __m17["validateFriendTarget"];
+  const CHALLENGES_PATH = __m18["CHALLENGES_PATH"];
+  const CHALLENGE_INBOX_PATH = __m18["CHALLENGE_INBOX_PATH"];
+  const SOCIAL_HUB_SECTIONS = __m18["SOCIAL_HUB_SECTIONS"];
+  const challengeCreatePayload = __m18["challengeCreatePayload"];
+  const challengeRespondPath = __m18["challengeRespondPath"];
+  const challengeResponsePayload = __m18["challengeResponsePayload"];
+  const filterHistory = __m18["filterHistory"];
+  const historyFilterCounts = __m18["historyFilterCounts"];
+  const normalizeChallengeInbox = __m18["normalizeChallengeInbox"];
+  const normalizeHistory = __m18["normalizeHistory"];
+  const normalizeThreads = __m18["normalizeThreads"];
+  const replayHref = __m18["replayHref"];
+  const socialHubHost = __m18["socialHubHost"];
+  const threadMessagePath = __m18["threadMessagePath"];
 
 const HISTORY_FILTERS = Object.freeze([
   Object.freeze({ id: "all", label: "All" }),
@@ -6499,7 +6701,7 @@ function ChatTab(props = {}) {
 })();
 
 // desktop/src/ui/components/CareMeter.js
-const __m18 = (function () {
+const __m20 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -6542,7 +6744,7 @@ function CareMeter(props = {}) {
 })();
 
 // desktop/src/ui/logic/habitat.js
-const __m19 = (function () {
+const __m21 = (function () {
 /**
  * Pure Habitat helpers. No React, network or DOM access so the same rules can
  * be exercised directly with `node --test`.
@@ -6738,30 +6940,31 @@ function petFromCareResponse(data, previous) {
 })();
 
 // desktop/src/ui/tabs/HabitatTab.js
-const __m20 = (function () {
+const __m22 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const CareMeter = __m18["CareMeter"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m11["PetPreview"];
+  const CareMeter = __m20["CareMeter"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
+  const AuthedImg = __m5["AuthedImg"];
+  const PetPreview = __m13["PetPreview"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CARE_ACTIONS = __m19["CARE_ACTIONS"];
-  const CARE_LABELS = __m19["CARE_LABELS"];
-  const MODES = __m19["MODES"];
-  const MODE_LABELS = __m19["MODE_LABELS"];
-  const SPECIES = __m19["SPECIES"];
-  const SPECIES_LABELS = __m19["SPECIES_LABELS"];
-  const buildAdoptRequest = __m19["buildAdoptRequest"];
-  const careMeters = __m19["careMeters"];
-  const extractPetId = __m19["extractPetId"];
-  const habitatView = __m19["habitatView"];
-  const petFromCareResponse = __m19["petFromCareResponse"];
-  const readEnvelope = __m19["readEnvelope"];
+  const CARE_ACTIONS = __m21["CARE_ACTIONS"];
+  const CARE_LABELS = __m21["CARE_LABELS"];
+  const MODES = __m21["MODES"];
+  const MODE_LABELS = __m21["MODE_LABELS"];
+  const SPECIES = __m21["SPECIES"];
+  const SPECIES_LABELS = __m21["SPECIES_LABELS"];
+  const buildAdoptRequest = __m21["buildAdoptRequest"];
+  const careMeters = __m21["careMeters"];
+  const extractPetId = __m21["extractPetId"];
+  const habitatView = __m21["habitatView"];
+  const petFromCareResponse = __m21["petFromCareResponse"];
+  const readEnvelope = __m21["readEnvelope"];
 
 const HABITAT_PLACEHOLDER = Object.freeze({
   name: "Not named yet",
@@ -7187,7 +7390,7 @@ function HabitatTab(props = {}) {
                     }
                   ),
                   speciesThumbUrl
-                    ? jsx("img", {
+                    ? jsx(AuthedImg, {
                         className: "hg-adopt-species__thumb",
                         src: speciesThumbUrl,
                         alt: (SPECIES_LABELS[species] || species) + " body",
@@ -7196,6 +7399,7 @@ function HabitatTab(props = {}) {
                         loading: "lazy",
                         decoding: "async",
                         draggable: "false",
+                        placeholder: null,
                       })
                     : null,
                 ],
@@ -7296,7 +7500,7 @@ function HabitatTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/leaderboard.js
-const __m21 = (function () {
+const __m23 = (function () {
 /**
  * Pure ranking and bounty presentation helpers for the Desktop Leaderboard tab.
  * No React, no network.
@@ -7435,18 +7639,18 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 })();
 
 // desktop/src/ui/tabs/LeaderboardTab.js
-const __m22 = (function () {
+const __m24 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const bountyRows = __m21["bountyRows"];
-  const leaderboardRows = __m21["leaderboardRows"];
-  const mergeBountyClaim = __m21["mergeBountyClaim"];
-  const normalizeLeaderboard = __m21["normalizeLeaderboard"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
+  const bountyRows = __m23["bountyRows"];
+  const leaderboardRows = __m23["leaderboardRows"];
+  const mergeBountyClaim = __m23["mergeBountyClaim"];
+  const normalizeLeaderboard = __m23["normalizeLeaderboard"];
 
 function envelopeMessage(envelope) {
   if (!envelope) return "The bridge did not return a response.";
@@ -7776,7 +7980,7 @@ function LeaderboardTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/session.js
-const __m23 = (function () {
+const __m25 = (function () {
 /**
  * Pure pairing/session view-model helpers.
  *
@@ -8167,29 +8371,29 @@ const createPairingViewModel = buildPairingViewModel;
 })();
 
 // desktop/src/ui/tabs/SettingsTab.js
-const __m24 = (function () {
+const __m26 = (function () {
   const useCallback = __ext5;
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const connectionRows = __m6["connectionRows"];
-  const deriveConnectionStatus = __m6["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
+  const connectionRows = __m8["connectionRows"];
+  const deriveConnectionStatus = __m8["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m8["resolveConnectionUiState"];
   const CHAT_SETTINGS_PATH = __m2["CHAT_SETTINGS_PATH"];
   const chatEnabledFromEnvelope = __m2["chatEnabledFromEnvelope"];
   const updateChatSetting = __m2["updateChatSetting"];
-  const PAIRING_STATES = __m23["PAIRING_STATES"];
-  const SIGNUP_ERROR_MESSAGES = __m23["SIGNUP_ERROR_MESSAGES"];
-  const deviceRowsFromEnvelope = __m23["deviceRowsFromEnvelope"];
-  const emptyPairingState = __m23["emptyPairingState"];
-  const formatCountdown = __m23["formatCountdown"];
-  const pairingStateFromPoll = __m23["pairingStateFromPoll"];
-  const pairingStateFromStart = __m23["pairingStateFromStart"];
-  const secondsRemaining = __m23["secondsRemaining"];
+  const PAIRING_STATES = __m25["PAIRING_STATES"];
+  const SIGNUP_ERROR_MESSAGES = __m25["SIGNUP_ERROR_MESSAGES"];
+  const deviceRowsFromEnvelope = __m25["deviceRowsFromEnvelope"];
+  const emptyPairingState = __m25["emptyPairingState"];
+  const formatCountdown = __m25["formatCountdown"];
+  const pairingStateFromPoll = __m25["pairingStateFromPoll"];
+  const pairingStateFromStart = __m25["pairingStateFromStart"];
+  const secondsRemaining = __m25["secondsRemaining"];
 
 const SETTINGS_PLACEHOLDER = Object.freeze([
   { key: "backend", label: "Python backend", value: "Disabled" },
@@ -8895,24 +9099,25 @@ function SettingsTab(props = {}) {
 })();
 
 // desktop/src/ui/tabs/ShopTab.js
-const __m25 = (function () {
+const __m27 = (function () {
   const useEffect = __ext2;
-  const useState = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m11["PetPreview"];
-  const extractPetId = __m19["extractPetId"];
-  const compareItemsByPrice = __m8["compareItemsByPrice"];
-  const groupCatalogBySlot = __m8["groupCatalogBySlot"];
-  const itemAvailability = __m8["itemAvailability"];
-  const itemThumbUrl = __m8["itemThumbUrl"];
-  const manifestFromCatalog = __m8["manifestFromCatalog"];
-  const normaliseWallet = __m8["normaliseWallet"];
-  const RARITY_LABELS = __m8["RARITY_LABELS"];
-  const readEnvelope = __m8["readEnvelope"];
+  const NpcHostBanner = __m6["NpcHostBanner"];
+  const useAuthedAssetUrl = __m5["useAuthedAssetUrl"];
+  const PetPreview = __m13["PetPreview"];
+  const extractPetId = __m21["extractPetId"];
+  const compareItemsByPrice = __m10["compareItemsByPrice"];
+  const groupCatalogBySlot = __m10["groupCatalogBySlot"];
+  const itemAvailability = __m10["itemAvailability"];
+  const itemThumbUrl = __m10["itemThumbUrl"];
+  const manifestFromCatalog = __m10["manifestFromCatalog"];
+  const normaliseWallet = __m10["normaliseWallet"];
+  const RARITY_LABELS = __m10["RARITY_LABELS"];
+  const readEnvelope = __m10["readEnvelope"];
 
 const SLOT_MARKS = Object.freeze({
   head: "HAT",
@@ -9052,14 +9257,56 @@ function ShopCard(props) {
   const thumb = props.thumb;
   const equipped = availability.equipped;
   const selected = Boolean(props.selected);
-  const [thumbState, setThumbState] = useState(thumb ? "loading" : "empty");
+  const authed = useAuthedAssetUrl(thumb || "");
+  const [thumbState, setThumbState] = useState(
+    thumb ? "loading" : "empty"
+  );
 
   useEffect(() => {
-    setThumbState(thumb ? "loading" : "empty");
-  }, [thumb]);
+    if (!thumb) {
+      setThumbState("empty");
+      return;
+    }
+    if (authed.status === "loading") {
+      setThumbState("loading");
+      return;
+    }
+    if (authed.status === "error" || !authed.url) {
+      setThumbState("error");
+      return;
+    }
+    // Keep "loading" until the img element fires onLoad so data-blank stays true
+    // until pixels are actually painted.
+    setThumbState(function (prev) {
+      return prev === "loaded" ? "loaded" : "loading";
+    });
+  }, [thumb, authed.status, authed.url]);
 
-  const showImage = Boolean(thumb) && thumbState !== "error";
+  const showImage = Boolean(authed.url) && thumbState !== "error";
   const blank = thumbState === "loaded" ? "false" : "true";
+
+  const fallback = jsxs("span", {
+    className: "hg-shop-card__thumb-fallback",
+    "data-slot": item.slot,
+    role: "img",
+    "aria-label": item.name + " (" + item.slotLabel + ") preview",
+    children: [
+      jsx("span", {
+        className: "hg-shop-card__thumb-icon",
+        "aria-hidden": "true",
+        children: SLOT_MARKS[item.slot] || "ITEM",
+      }),
+      jsx("span", {
+        className: "hg-shop-card__thumb-initial",
+        "aria-hidden": "true",
+        children: itemInitial(item.name),
+      }),
+      jsx("span", {
+        className: "hg-shop-card__thumb-label",
+        children: item.slotLabel,
+      }),
+    ],
+  });
 
   return jsxs("article", {
     className:
@@ -9083,7 +9330,7 @@ function ShopCard(props) {
         children: showImage
           ? jsx("img", {
               className: "hg-shop-card__image",
-              src: thumb,
+              src: authed.url,
               alt: item.name,
               "data-blank": blank,
               loading: "lazy",
@@ -9096,28 +9343,7 @@ function ShopCard(props) {
                 setThumbState("error");
               },
             })
-          : jsxs("span", {
-              className: "hg-shop-card__thumb-fallback",
-              "data-slot": item.slot,
-              role: "img",
-              "aria-label": item.name + " (" + item.slotLabel + ") preview",
-              children: [
-                jsx("span", {
-                  className: "hg-shop-card__thumb-icon",
-                  "aria-hidden": "true",
-                  children: SLOT_MARKS[item.slot] || "ITEM",
-                }),
-                jsx("span", {
-                  className: "hg-shop-card__thumb-initial",
-                  "aria-hidden": "true",
-                  children: itemInitial(item.name),
-                }),
-                jsx("span", {
-                  className: "hg-shop-card__thumb-label",
-                  children: item.slotLabel,
-                }),
-              ],
-            }),
+          : fallback,
       }),
       jsx("h4", { className: "hg-shop-card__name", children: item.name }),
       jsxs("div", {
@@ -9581,7 +9807,7 @@ function ShopTab(props = {}) {
 })();
 
 // desktop/src/ui/wordmark.js
-const __m26 = (function () {
+const __m28 = (function () {
 // Generated by scripts/make_wordmark.py — do not edit by hand.
 const WORDMARK_WIDTH = 207;
 const WORDMARK_HEIGHT = 33;
@@ -9592,32 +9818,32 @@ const WORDMARK_SRC_2X = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZ4AAABCC
 })();
 
 // desktop/src/ui/pane.js
-const __m27 = (function () {
+const __m29 = (function () {
   const useEffect = __ext2;
-  const useRef = __ext3;
-  const useState = __ext4;
+  const useRef = __ext4;
+  const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const LobbyRail = __m5["LobbyRail"];
-  const deriveConnectionStatus = __m6["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m6["resolveConnectionUiState"];
+  const LobbyRail = __m7["LobbyRail"];
+  const deriveConnectionStatus = __m8["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m8["resolveConnectionUiState"];
   const LOBBY_RAIL_COLLAPSED_KEY = __m2["LOBBY_RAIL_COLLAPSED_KEY"];
   const LOBBY_RAIL_WIDTH_KEY = __m2["LOBBY_RAIL_WIDTH_KEY"];
   const clampLobbyRailWidth = __m2["clampLobbyRailWidth"];
   const defaultLobbyRailWidth = __m2["defaultLobbyRailWidth"];
   const lobbyRailAutoCollapsed = __m2["lobbyRailAutoCollapsed"];
-  const BattleTab = __m14["BattleTab"];
-  const ChatTab = __m17["ChatTab"];
-  const HabitatTab = __m20["HabitatTab"];
-  const LeaderboardTab = __m22["LeaderboardTab"];
-  const SettingsTab = __m24["SettingsTab"];
-  const ShopTab = __m25["ShopTab"];
+  const BattleTab = __m16["BattleTab"];
+  const ChatTab = __m19["ChatTab"];
+  const HabitatTab = __m22["HabitatTab"];
+  const LeaderboardTab = __m24["LeaderboardTab"];
+  const SettingsTab = __m26["SettingsTab"];
+  const ShopTab = __m27["ShopTab"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const WORDMARK_HEIGHT = __m26["WORDMARK_HEIGHT"];
-  const WORDMARK_SRC = __m26["WORDMARK_SRC"];
-  const WORDMARK_SRC_2X = __m26["WORDMARK_SRC_2X"];
-  const WORDMARK_WIDTH = __m26["WORDMARK_WIDTH"];
+  const WORDMARK_HEIGHT = __m28["WORDMARK_HEIGHT"];
+  const WORDMARK_SRC = __m28["WORDMARK_SRC"];
+  const WORDMARK_SRC_2X = __m28["WORDMARK_SRC_2X"];
+  const WORDMARK_WIDTH = __m28["WORDMARK_WIDTH"];
 
 const TAB_IDS = Object.freeze(["habitat", "battle", "shop", "leaderboard", "chat", "settings"]);
 
@@ -9991,7 +10217,7 @@ function HermagotchiPane(props = {}) {
 })();
 
 // desktop/src/ui/api.js
-const __m28 = (function () {
+const __m30 = (function () {
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
@@ -10387,10 +10613,10 @@ function uiStateFromEnvelope(envelope) {
 })();
 
 // desktop/src/ui/register.js
-const __m29 = (function () {
+const __m31 = (function () {
   const jsx = __ext0;
-  const HermagotchiPane = __m27["HermagotchiPane"];
-  const createApiClient = __m28["createApiClient"];
+  const HermagotchiPane = __m29["HermagotchiPane"];
+  const createApiClient = __m30["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -10431,13 +10657,13 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m30 = (function () {
+const __m32 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m27["HermagotchiPane"], "TAB_IDS": __m27["TAB_IDS"], "TAB_LABELS": __m27["TAB_LABELS"], "TAB_COMPONENTS": __m27["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m29["PANE_ID"], "PANE_TITLE": __m29["PANE_TITLE"], "createPaneContribution": __m29["createPaneContribution"], "registerHermagotchiPane": __m29["registerHermagotchiPane"], "createDesktopPlugin": __m29["createDesktopPlugin"], "HabitatTab": __m20["HabitatTab"], "HABITAT_PLACEHOLDER": __m20["HABITAT_PLACEHOLDER"], "BattleTab": __m14["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m14["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m25["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m25["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m22["LeaderboardTab"], "ChatTab": __m17["ChatTab"], "SettingsTab": __m24["SettingsTab"], "SETTINGS_PLACEHOLDER": __m24["SETTINGS_PLACEHOLDER"], "CareMeter": __m18["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
+  return { "HermagotchiPane": __m29["HermagotchiPane"], "TAB_IDS": __m29["TAB_IDS"], "TAB_LABELS": __m29["TAB_LABELS"], "TAB_COMPONENTS": __m29["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m31["PANE_ID"], "PANE_TITLE": __m31["PANE_TITLE"], "createPaneContribution": __m31["createPaneContribution"], "registerHermagotchiPane": __m31["registerHermagotchiPane"], "createDesktopPlugin": __m31["createDesktopPlugin"], "HabitatTab": __m22["HabitatTab"], "HABITAT_PLACEHOLDER": __m22["HABITAT_PLACEHOLDER"], "BattleTab": __m16["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m16["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m27["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m27["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m24["LeaderboardTab"], "ChatTab": __m19["ChatTab"], "SettingsTab": __m26["SettingsTab"], "SETTINGS_PLACEHOLDER": __m26["SETTINGS_PLACEHOLDER"], "CareMeter": __m20["CareMeter"], "NpcHostBanner": __m6["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
@@ -10456,8 +10682,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m30["createDesktopPlugin"];
-const __hgRegisterPane = __m30["registerHermagotchiPane"];
+const __hgCreatePlugin = __m32["createDesktopPlugin"];
+const __hgRegisterPane = __m32["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -10475,34 +10701,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m30["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m30["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m30["CareMeter"];
-export const ChatTab = __m30["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m30["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m30["HabitatTab"];
-export const HermagotchiPane = __m30["HermagotchiPane"];
-export const LeaderboardTab = __m30["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m30["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m30["NPC_NAMES"];
-export const NpcHostBanner = __m30["NpcHostBanner"];
-export const PANE_ID = __m30["PANE_ID"];
-export const PANE_TITLE = __m30["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m30["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m30["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m30["SettingsTab"];
-export const ShopTab = __m30["ShopTab"];
-export const StateNotice = __m30["StateNotice"];
-export const TAB_COMPONENTS = __m30["TAB_COMPONENTS"];
-export const TAB_IDS = __m30["TAB_IDS"];
-export const TAB_LABELS = __m30["TAB_LABELS"];
-export const UI_STATES = __m30["UI_STATES"];
-export const UI_STATE_COPY = __m30["UI_STATE_COPY"];
-export const createDesktopPlugin = __m30["createDesktopPlugin"];
-export const createPaneContribution = __m30["createPaneContribution"];
-export const npcHostLine = __m30["npcHostLine"];
-export const registerHermagotchiPane = __m30["registerHermagotchiPane"];
-export const resolveUiState = __m30["resolveUiState"];
+export const BattleTab = __m32["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m32["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m32["CareMeter"];
+export const ChatTab = __m32["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m32["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m32["HabitatTab"];
+export const HermagotchiPane = __m32["HermagotchiPane"];
+export const LeaderboardTab = __m32["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m32["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m32["NPC_NAMES"];
+export const NpcHostBanner = __m32["NpcHostBanner"];
+export const PANE_ID = __m32["PANE_ID"];
+export const PANE_TITLE = __m32["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m32["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m32["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m32["SettingsTab"];
+export const ShopTab = __m32["ShopTab"];
+export const StateNotice = __m32["StateNotice"];
+export const TAB_COMPONENTS = __m32["TAB_COMPONENTS"];
+export const TAB_IDS = __m32["TAB_IDS"];
+export const TAB_LABELS = __m32["TAB_LABELS"];
+export const UI_STATES = __m32["UI_STATES"];
+export const UI_STATE_COPY = __m32["UI_STATE_COPY"];
+export const createDesktopPlugin = __m32["createDesktopPlugin"];
+export const createPaneContribution = __m32["createPaneContribution"];
+export const npcHostLine = __m32["npcHostLine"];
+export const registerHermagotchiPane = __m32["registerHermagotchiPane"];
+export const resolveUiState = __m32["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;

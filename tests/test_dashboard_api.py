@@ -62,7 +62,10 @@ def test_manifest_names_the_plugin_and_api_file():
         (ROOT / "dashboard" / "manifest.json").read_text(encoding="utf-8")
     )
 
-    assert manifest == {"name": "hermagotchi", "api": "plugin_api.py"}
+    assert manifest["name"] == "hermagotchi"
+    assert manifest["api"] == "plugin_api.py"
+    assert manifest["entry"] == "dist/index.js"
+    assert manifest["tab"]["path"] == "/hermagotchi"
 
 
 def test_module_exports_apirouter_with_health_and_status():
