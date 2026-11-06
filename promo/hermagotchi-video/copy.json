@@ -1,0 +1,311 @@
+{
+  "station": {
+    "bug": "H-TV",
+    "osd": "PLAY",
+    "rec": "REC",
+    "tape": "SP",
+    "timePrefix": "02:",
+    "channelPrefix": "CH",
+    "station": "HERMAGOTCHI TELEVISION",
+    "subtitle": "YOUR AGENT. YOUR PET. YOUR VERY LATE NIGHT.",
+    "signOn": "TRANSMISSION BEGINS",
+    "signOff": "END OF BROADCAST",
+    "draft": "HACKATHON SUBMISSION / ASSET-ANIMATED DRAFT"
+  },
+  "forecast": {
+    "title": "PET FORECAST",
+    "kicker": "10 SPECIES. STRONG PERSONALITIES.",
+    "lower": "A NEW COMPANION IS MOVING IN.",
+    "note": "ILLUSTRATED FORECAST \u00b7 NOT A GAME MAP",
+    "regions": [
+      "CACHE COAST",
+      "STACK VALLEY",
+      "KERNEL COUNTY",
+      "NULL ISLAND"
+    ],
+    "fronts": [
+      "HAPPY FRONT",
+      "SNACK WATCH",
+      "SLEEP SYSTEM",
+      "ATTACK WARNING",
+      "COOL BREEZE",
+      "HIGH SPIRITS",
+      "NIGHT OWL",
+      "SLOW DRIZZLE",
+      "WARM WELCOME",
+      "PURPLE HAZE"
+    ]
+  },
+  "home": {
+    "title": "LIFE WITH YOUR PET",
+    "subtitle": "A COMPANION FOR YOUR AGENT'S WORK.",
+    "states": [
+      "HAPPY",
+      "EAT",
+      "SLEEP"
+    ],
+    "readouts": [
+      "MOOD / HAPPY",
+      "CARE / FEED",
+      "ENERGY / REST"
+    ],
+    "stats": [
+      "XP \u00b7 {{FROM CAPTURE}}",
+      "BITS \u00b7 {{FROM CAPTURE}}"
+    ],
+    "label": "HOME MOVIES / HABITAT PANE",
+    "date": "NOV. 06 1996",
+    "battery": "BATTERY \u25b0\u25b0\u25b0"
+  },
+  "shop": {
+    "title": "DON PIEDRO'S",
+    "title2": "DRIP SHOP",
+    "kicker": "81 COSMETICS. ZERO BORING OUTFITS.",
+    "call": "CALL NOW!  OPEN THE SHOP TAB.",
+    "before": "BEFORE",
+    "after": "AFTER",
+    "loadout": "MANIFEST-FITTED MAKEOVER",
+    "priceUnit": "BITS",
+    "priceNote": "CATALOG PRICE / BINARY CROWN",
+    "ticker": "HATS  \u2022  FACE  \u2022  BACK  \u2022  FRONT  \u2022  AURAS  \u2022  EMOTES  \u2022  HABITATS  \u2022  TITLES",
+    "host": "DON PIEDRO / SHOPKEEPER"
+  },
+  "arena": {
+    "title": "ARENA FIGHT NIGHT",
+    "kicker": "THE TALE OF THE TAPE",
+    "versus": "VS",
+    "round": "EXHIBITION / ANIMATED SEQUENCE",
+    "replay": "INSTANT REPLAY / \u00bc SPEED",
+    "telestrator": "WATCH THE COUNTER!",
+    "ko": "K.O.",
+    "koNote": "ILLUSTRATED FINISH / REPLACE WITH RESULT",
+    "hp": "HP / ILLUSTRATION",
+    "ticker": "DETERMINISTIC BATTLES  \u2022  REPLAYS  \u2022  TACTICS  \u2022  PRACTICE DOES NOT CHANGE RATING",
+    "status": "MULTIPLAYER SUPPORT / HOSTING OPEN",
+    "host": "SOUTHPAW / RINGSIDE"
+  },
+  "lobby": {
+    "title": "AFTER HOURS",
+    "subtitle": "PUBLIC ACCESS / LOBBY LINE",
+    "caller": "CALLER CAPTIONS / AWAITING REAL CHAT",
+    "callers": ["CALLER 01 / {{CHAT_MESSAGE}}", "CALLER 02 / {{CHAT_MESSAGE}}", "CALLER 03 / {{CHAT_MESSAGE}}"],
+    "standings": "TONIGHT'S STANDINGS",
+    "ticker": "LEADERBOARD + RATINGS  \u2022  AWAITING VERIFIED CAPTURE  \u2022  CHAT IS OPT-IN",
+    "tip": "TEKNIUM / PRACTICE TIP",
+    "host": "NOUS GIRL / YOUR HOST",
+    "rows": [
+      "01  {{PLAYER}}  {{RATING}}",
+      "02  {{PLAYER}}  {{RATING}}",
+      "03  {{PLAYER}}  {{RATING}}"
+    ]
+  },
+  "how": {
+    "title": "HOW IT WORKS",
+    "subtitle": "AN EDUCATIONAL FILM FOR NIGHT OWLS",
+    "nodes": [
+      "HERMES",
+      "PLUGIN PANE",
+      "GAME API",
+      "OTHER PLAYERS"
+    ],
+    "captions": [
+      "8 COMPOSABLE TOOLS",
+      "CARE / EQUIP / CHALLENGE",
+      "SHARED GAME STATE",
+      "OPT-IN MULTIPLAYER"
+    ],
+    "footer": "LOCAL-FIRST. NETWORK OFF BY DEFAULT.",
+    "plate": "FIG. 01 / THE COMPANION CIRCUIT"
+  },
+  "outro": {
+    "anthem": "PLEASE STAND BY YOUR PET.",
+    "footer": "BUILT FOR THE HERMES HACKATHON",
+    "end": "GOOD NIGHT. KEEP GROWING."
+  },
+  "slots": {
+    "SHOT_PANE_HOME": {
+      "label": "SHOT_PANE_HOME",
+      "detail": "REAL HABITAT PANE / AWAITING CAPTURE"
+    },
+    "CLIP_SHOP_GRID": {
+      "label": "CLIP_SHOP_GRID",
+      "detail": "BUY + EQUIP / AWAITING CAPTURE"
+    },
+    "CLIP_BATTLE_LIVE": {
+      "label": "CLIP_BATTLE_LIVE",
+      "detail": "ACTUAL BATTLE / AWAITING CAPTURE"
+    },
+    "SHOT_BATTLE_RESULT": {
+      "label": "SHOT_BATTLE_RESULT",
+      "detail": "RESULT + MATCH TYPE / AWAITING CAPTURE"
+    },
+    "SHOT_LEADERBOARD": {
+      "label": "SHOT_LEADERBOARD",
+      "detail": "VERIFIED STANDINGS / AWAITING CAPTURE"
+    },
+    "SHOT_CHAT": {
+      "label": "SHOT_CHAT",
+      "detail": "OPT-IN CHAT / AWAITING CAPTURE"
+    }
+  },
+  "npcs": {
+    "don_piedro": {
+      "name": "Don Piedro",
+      "quote": "Hello I Hermes biggest fanboi. Spoon is ready.",
+      "context": "shop.greet",
+      "index": 0
+    },
+    "nous_girl": {
+      "name": "Nous Girl",
+      "quote": "Follow the signal.",
+      "context": "lobby.welcome",
+      "index": 3
+    },
+    "teknium": {
+      "name": "Teknium",
+      "quote": "Tight timing window. Do not miss the merge.",
+      "context": "practice.tip",
+      "index": 3
+    },
+    "southpaw": {
+      "name": "Southpaw",
+      "quote": "Southpaw Check: go!",
+      "context": "leaderboard.announce",
+      "index": 4
+    }
+  },
+  "pets": {
+    "byteblob": "BYTEBLOB",
+    "patchfox": "PATCHFOX",
+    "nullgeist": "NULLGEIST",
+    "kernelcrab": "KERNELCRAB",
+    "cachebat": "CACHEBAT",
+    "stacktoise": "STACKTOISE",
+    "daemowl": "DAEMOWL",
+    "shellsnail": "SHELLSNAIL",
+    "regexopus": "REGEXOPUS",
+    "firewyrm": "FIREWYRM"
+  },
+  "items": {
+    "back.battery_pack": {
+      "name": "Battery Pack",
+      "price": 150
+    },
+    "back.circuit_cape": {
+      "name": "Circuit Cape",
+      "price": 700
+    },
+    "back.circuit_wings": {
+      "name": "Circuit Wings",
+      "price": 700
+    },
+    "back.tiny_jetpack": {
+      "name": "Tiny Jetpack",
+      "price": 1200
+    },
+    "face.gold_monocle": {
+      "name": "Gold Monocle",
+      "price": 350
+    },
+    "face.hex_specs": {
+      "name": "Hex Specs",
+      "price": 150
+    },
+    "face.laser_focus": {
+      "name": "Laser Focus",
+      "price": 2000
+    },
+    "face.noir_shades": {
+      "name": "Noir Shades",
+      "price": 350
+    },
+    "face.oauth_eyepatch": {
+      "name": "OAuth Eyepatch",
+      "price": 350
+    },
+    "face.pixel_shades": {
+      "name": "Pixel Shades",
+      "price": 150
+    },
+    "face.privacy_mask": {
+      "name": "Privacy Mask",
+      "price": 350
+    },
+    "face.regex_rims": {
+      "name": "Regex Rims",
+      "price": 150
+    },
+    "face.scan_visor": {
+      "name": "Scan Visor",
+      "price": 350
+    },
+    "face.telemetry_lens": {
+      "name": "Telemetry Lens",
+      "price": 700
+    },
+    "front.banana_phone": {
+      "name": "Banana Phone",
+      "price": 150
+    },
+    "front.bow_tie": {
+      "name": "Boolean Bowtie",
+      "price": 150
+    },
+    "front.coffee_mug": {
+      "name": "Coffee Mug",
+      "price": 150
+    },
+    "front.cozy_scarf": {
+      "name": "Cozy Scarf",
+      "price": 150
+    },
+    "front.rubber_duck": {
+      "name": "Rubber Duck",
+      "price": 150
+    },
+    "front.usb_sword": {
+      "name": "USB Sword",
+      "price": 1200
+    },
+    "hat.binary_crown": {
+      "name": "Binary Crown",
+      "price": 2000
+    },
+    "hat.cron_crown": {
+      "name": "Cron Crown",
+      "price": 2000
+    },
+    "hat.git_bandana": {
+      "name": "Git Bandana",
+      "price": 150
+    },
+    "hat.kernel_helm": {
+      "name": "Kernel Helm",
+      "price": 700
+    },
+    "hat.lambda_tiara": {
+      "name": "Lambda Tiara",
+      "price": 1200
+    },
+    "hat.packet_cap": {
+      "name": "Packet Cap",
+      "price": 150
+    },
+    "hat.propeller_beanie": {
+      "name": "Propeller Beanie",
+      "price": 350
+    },
+    "hat.sudo_cap": {
+      "name": "Sudo Cap",
+      "price": 700
+    },
+    "hat.syntax_wizard": {
+      "name": "Syntax Wizard Hat",
+      "price": 700
+    },
+    "hat.wizard_hat": {
+      "name": "Packet Wizard Hat",
+      "price": 700
+    }
+  }
+}

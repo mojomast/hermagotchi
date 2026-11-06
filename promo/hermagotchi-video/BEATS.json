@@ -1,0 +1,10 @@
+[
+  {"id":"01-sign-on","channel":"00","start":0,"end":6,"keyframe":4,"cuts":[0,1.8,2.35,3],"pets":[]},
+  {"id":"02-forecast","channel":"03","start":6,"end":18,"keyframe":15,"cuts":[6,7,11,15],"pets":[0,1,2,3,4,5,6,7,8,9]},
+  {"id":"03-home","channel":"05","start":18,"end":30,"keyframe":24,"cuts":[18,22,26],"pets":[0]},
+  {"id":"04-shop","channel":"09","start":30,"end":46,"keyframe":35,"cuts":[30,31,35,38,42],"pets":[0,1,2,3,4,5,6,7,8,9],"npcs":["don_piedro"]},
+  {"id":"05-arena","channel":"12","start":46,"end":64,"keyframe":57,"cuts":[46,50,55,59,61],"pets":[3,9],"npcs":["southpaw"]},
+  {"id":"06-lobby","channel":"21","start":64,"end":76,"keyframe":70,"cuts":[64,67,70,73],"pets":[],"npcs":["nous_girl","teknium"]},
+  {"id":"07-how-it-works","channel":"33","start":76,"end":85,"keyframe":81,"cuts":[76,77,79,81,83],"pets":[0]},
+  {"id":"08-sign-off","channel":"00","start":85,"end":92,"keyframe":88,"cuts":[85,89.5,90.4,91.2,91.8],"pets":[0,1,2,3,4,5,6,7,8,9]}
+]

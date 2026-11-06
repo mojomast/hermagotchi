@@ -1,0 +1,3687 @@
+{
+  "schema_version": 1,
+  "asset_pack_id": "launch-003",
+  "notes": "launch-003: low-res handheld pixel art (native 32x32 grid, x16 nearest upscale, binary alpha, 8-12 colours/species, 3-5/item). Cosmetics pack hand-authored via scripts/draw_cosmetics.py (2026-11-05); see assets/PROVENANCE.md and art_ext.launch-003.json. hand anchor added for held props. Animations: per-palette state strips in px3/anims/ (see animations{}).",
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "baseline_y": 448
+  },
+  "rigs": {
+    "small_front_v1": {
+      "anchors": {
+        "head": [
+          0.5,
+          0.23
+        ],
+        "face": [
+          0.5,
+          0.42
+        ],
+        "back": [
+          0.5,
+          0.47
+        ],
+        "front": [
+          0.5,
+          0.66
+        ],
+        "ground": [
+          0.5,
+          0.88
+        ],
+        "hand": [
+          0.58,
+          0.66
+        ]
+      }
+    }
+  },
+  "species": {
+    "byteblob": {
+      "rig": "small_front_v1",
+      "base": "px3/species/byteblob_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.3438
+        ],
+        "face": [
+          0.5,
+          0.5
+        ],
+        "back": [
+          0.5,
+          0.5312
+        ],
+        "front": [
+          0.5,
+          0.7188
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.5938,
+          0.7188
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "face": [
+          "visor"
+        ],
+        "antenna": [
+          "bent"
+        ]
+      }
+    },
+    "patchfox": {
+      "rig": "small_front_v1",
+      "base": "px3/species/patchfox_body.png",
+      "overrides": {
+        "head": [
+          0.4688,
+          0.3438
+        ],
+        "face": [
+          0.4688,
+          0.4688
+        ],
+        "back": [
+          0.4688,
+          0.625
+        ],
+        "front": [
+          0.4688,
+          0.5625
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.5625,
+          0.5625
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "ear_type": [
+          "giant"
+        ],
+        "tail_type": [
+          "brush"
+        ]
+      }
+    },
+    "nullgeist": {
+      "rig": "small_front_v1",
+      "base": "px3/species/nullgeist_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.2812
+        ],
+        "face": [
+          0.5,
+          0.4062
+        ],
+        "back": [
+          0.5,
+          0.5
+        ],
+        "front": [
+          0.5,
+          0.5938
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.5938,
+          0.5938
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "hood": [
+          "pointed"
+        ],
+        "eye_style": [
+          "mismatched"
+        ]
+      }
+    },
+    "kernelcrab": {
+      "rig": "small_front_v1",
+      "base": "px3/species/kernelcrab_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.4062
+        ],
+        "face": [
+          0.5,
+          0.5312
+        ],
+        "back": [
+          0.5,
+          0.5938
+        ],
+        "front": [
+          0.5,
+          0.6562
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.75,
+          0.5625
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "kernelcrab"
+        ]
+      }
+    },
+    "cachebat": {
+      "rig": "small_front_v1",
+      "base": "px3/species/cachebat_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.375
+        ],
+        "face": [
+          0.5,
+          0.4688
+        ],
+        "back": [
+          0.5,
+          0.5
+        ],
+        "front": [
+          0.5,
+          0.5625
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.6875,
+          0.5312
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "cachebat"
+        ]
+      }
+    },
+    "stacktoise": {
+      "rig": "small_front_v1",
+      "base": "px3/species/stacktoise_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.2188
+        ],
+        "face": [
+          0.5,
+          0.4062
+        ],
+        "back": [
+          0.5,
+          0.5
+        ],
+        "front": [
+          0.5,
+          0.5938
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.5938,
+          0.5938
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "stacktoise"
+        ]
+      }
+    },
+    "daemowl": {
+      "rig": "small_front_v1",
+      "base": "px3/species/daemowl_body.png",
+      "overrides": {
+        "head": [
+          0.4688,
+          0.25
+        ],
+        "face": [
+          0.4688,
+          0.4062
+        ],
+        "back": [
+          0.4688,
+          0.5
+        ],
+        "front": [
+          0.4688,
+          0.5938
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.5625,
+          0.5938
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "daemowl"
+        ]
+      }
+    },
+    "shellsnail": {
+      "rig": "small_front_v1",
+      "base": "px3/species/shellsnail_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.4688
+        ],
+        "face": [
+          0.5,
+          0.5625
+        ],
+        "back": [
+          0.5,
+          0.625
+        ],
+        "front": [
+          0.5,
+          0.6875
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.3125,
+          0.6875
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "shellsnail"
+        ]
+      }
+    },
+    "regexopus": {
+      "rig": "small_front_v1",
+      "base": "px3/species/regexopus_body.png",
+      "overrides": {
+        "head": [
+          0.4688,
+          0.2812
+        ],
+        "face": [
+          0.4688,
+          0.4375
+        ],
+        "back": [
+          0.4688,
+          0.5312
+        ],
+        "front": [
+          0.4688,
+          0.5938
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.5625,
+          0.5938
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "regexopus"
+        ]
+      }
+    },
+    "firewyrm": {
+      "rig": "small_front_v1",
+      "base": "px3/species/firewyrm_body.png",
+      "overrides": {
+        "head": [
+          0.4688,
+          0.2188
+        ],
+        "face": [
+          0.4688,
+          0.4062
+        ],
+        "back": [
+          0.4688,
+          0.5
+        ],
+        "front": [
+          0.4688,
+          0.5938
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ],
+        "hand": [
+          0.625,
+          0.5625
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "silhouette": [
+          "firewyrm"
+        ]
+      }
+    }
+  },
+  "assets": [
+    {
+      "id": "back.battery_pack",
+      "slot": "back",
+      "path": "px3/items/battery_pack.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Battery Pack. Hand-authored 32-grid cosmetic.",
+      "sha256": "33810ca24728f1d07db91a4f44304d6aee8e3e86ecd2358117380cdbb60e5b75"
+    },
+    {
+      "id": "back.circuit_cape",
+      "slot": "back",
+      "path": "px3/items/circuit_cape.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "58ad1990ea8463b96fd85ed79723b53910709d0948ccde2daf4fb1d55f35c617"
+    },
+    {
+      "id": "back.circuit_wings",
+      "slot": "back",
+      "path": "px3/items/circuit_wings.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Blocky cyan robot wings. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "cf99f6554c78e68ba31718924ee67a7b45052b3c317b65dbe358ac337f105e53"
+    },
+    {
+      "id": "back.tiny_jetpack",
+      "slot": "back",
+      "path": "px3/items/tiny_jetpack.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Wide twin-tank jetpack. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "0c93796ba5543dea12b35172fdab8ffdc0bbf6b5e5ad97cf08e2728282c3601c"
+    },
+    {
+      "id": "face.gold_monocle",
+      "slot": "face",
+      "path": "px3/items/gold_monocle.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        48,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Gold monocle on a stalk. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "93f85ab46785c804d231850240aa641a7b3894ac0deedbbd13237ab11ef34b84"
+    },
+    {
+      "id": "face.hex_specs",
+      "slot": "face",
+      "path": "px3/items/hex_specs.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hex Specs. Hand-authored 32-grid cosmetic.",
+      "sha256": "9eceaa84e079f5ce7cd1ba2da5c126dce0577cdd3f0ecd30b0692322dcf2a7de"
+    },
+    {
+      "id": "face.laser_focus",
+      "slot": "face",
+      "path": "px3/items/laser_focus.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Laser Focus. Hand-authored 32-grid cosmetic.",
+      "sha256": "b28218326d74d01019f9a7f2cf294b97a7be041e03d04a4425a5ea138979bc3d"
+    },
+    {
+      "id": "face.noir_shades",
+      "slot": "face",
+      "path": "px3/items/noir_shades.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Noir Shades. Hand-authored 32-grid cosmetic.",
+      "sha256": "598feb621ff4b5db2f84b0a0b127065c5db4252af18a1bd79c90cdd6c1d267fb"
+    },
+    {
+      "id": "face.oauth_eyepatch",
+      "slot": "face",
+      "path": "px3/items/oauth_eyepatch.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "OAuth Eyepatch. Hand-authored 32-grid cosmetic.",
+      "sha256": "9fd2e9d669fd628ad98a82c9b5cbe21519f37571337e05e1fe48b8af9eb79197"
+    },
+    {
+      "id": "face.pixel_shades",
+      "slot": "face",
+      "path": "px3/items/pixel_shades.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Black shades with glints. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "380a3abe640050b0793dff72dc1350e5915a1853caa09e96c43c24f287fd4ed0"
+    },
+    {
+      "id": "face.privacy_mask",
+      "slot": "face",
+      "path": "px3/items/privacy_mask.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Privacy Mask. Hand-authored 32-grid cosmetic.",
+      "sha256": "c81410e6b69fb06ad42d55c3c6967901be1ef14ab6036683ececc91ef2c868a9"
+    },
+    {
+      "id": "face.regex_rims",
+      "slot": "face",
+      "path": "px3/items/regex_rims.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Regex Rims. Hand-authored 32-grid cosmetic.",
+      "sha256": "ef8ac1ffa16d5949360f83d73bb388017f1f7a77518d325de737e0b7d57aff5d"
+    },
+    {
+      "id": "face.scan_visor",
+      "slot": "face",
+      "path": "px3/items/scan_visor.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "c7378be61faf10dbb24c6299a7afacf0c33b91656b7b31df02bbe57deadeb1ec"
+    },
+    {
+      "id": "face.telemetry_lens",
+      "slot": "face",
+      "path": "px3/items/telemetry_lens.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Telemetry Lens. Hand-authored 32-grid cosmetic.",
+      "sha256": "488abf808ae4d2154fd1f839561e14c0bd905134611aa4e9eeddc99202964540"
+    },
+    {
+      "id": "front.banana_phone",
+      "slot": "front",
+      "path": "px3/items/banana_phone.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Banana Phone. Hand-authored 32-grid cosmetic.",
+      "sha256": "6267254e925b43b307dfa5d9a3197436da6f8fca7bb5ad9d07f04e86cf42106d"
+    },
+    {
+      "id": "front.bow_tie",
+      "slot": "front",
+      "path": "px3/items/bow_tie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Boolean Bowtie. Hand-authored 32-grid cosmetic.",
+      "sha256": "bcd6a670eea242777673451879856fc47d594f19ba5d4b17f07d8cd8c4244057"
+    },
+    {
+      "id": "front.coffee_mug",
+      "slot": "front",
+      "path": "px3/items/coffee_mug.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Coffee Mug. Hand-authored 32-grid cosmetic.",
+      "sha256": "6609009615c24a893391a5a59c1a0ad3cd2d16deeefa4d940bc9bf5c90a78a34"
+    },
+    {
+      "id": "front.cozy_scarf",
+      "slot": "front",
+      "path": "px3/items/cozy_scarf.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Red striped scarf. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "f5735888e1b700b36aeb6909ac7818de069f537fd33b09d9a32a95fddfce9f32"
+    },
+    {
+      "id": "front.rubber_duck",
+      "slot": "front",
+      "path": "px3/items/rubber_duck.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Rubber Duck. Hand-authored 32-grid cosmetic.",
+      "sha256": "45a0a26278bda5c0b02506d8e768984f9a029a024cc569098eae20a879b95314"
+    },
+    {
+      "id": "front.usb_sword",
+      "slot": "front",
+      "path": "px3/items/usb_sword.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "USB Sword. Hand-authored 32-grid cosmetic.",
+      "sha256": "e31a15f7511503351c8ff1acd3339f8d98c3f72b7aceed6a9a942b019998d551"
+    },
+    {
+      "id": "hat.binary_crown",
+      "slot": "head",
+      "path": "px3/items/binary_crown.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Chunky gold crown with a red gem. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "05c557a503702c9e3b020a3e23625e13ec47125ba9efda9f7e9b8efc120cf9f1",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.cron_crown",
+      "slot": "head",
+      "path": "px3/items/cron_crown.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Cron Crown. Hand-authored 32-grid cosmetic.",
+      "sha256": "0a1bc7a4a422410fa8496213e67ca5bf270556c375372f0fe32b65b5f150388b",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.git_bandana",
+      "slot": "head",
+      "path": "px3/items/git_bandana.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Git Bandana. Hand-authored 32-grid cosmetic.",
+      "sha256": "5b1392db932af58834e89d92d255d45451f7ccbf908fa8cedf2b8431f8fb18f1",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.kernel_helm",
+      "slot": "head",
+      "path": "px3/items/kernel_helm.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Kernel Helm. Hand-authored 32-grid cosmetic.",
+      "sha256": "124080cd90f66886f29afdf21f479f825e316cd5be18bd29b2bbd0de58b9230a",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.lambda_tiara",
+      "slot": "head",
+      "path": "px3/items/lambda_tiara.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Lambda Tiara. Hand-authored 32-grid cosmetic.",
+      "sha256": "a186471084ddaa825f42dfc2f87bb99b264c9c197188c68ad42de685856eff69",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.packet_cap",
+      "slot": "head",
+      "path": "px3/items/packet_cap.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Packet Cap. Hand-authored 32-grid cosmetic.",
+      "sha256": "85ba3e467b14006c1b672fd1934373ea67e9af41775fa3aadb4e529ce9181ff2",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.propeller_beanie",
+      "slot": "head",
+      "path": "px3/items/propeller_beanie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Red/yellow propeller cap. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "7e297ad722a3b2aef2d1f2f9bbf9fd7aa8d4205d59b4e1bce2796690d17a8e9c",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.sudo_cap",
+      "slot": "head",
+      "path": "px3/items/sudo_cap.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Sudo Cap. Hand-authored 32-grid cosmetic.",
+      "sha256": "5c8dedf0864e8dfcb2cfcc769c12b6a1ea2d13048fef38d034aeae6152426b62",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.syntax_wizard",
+      "slot": "head",
+      "path": "px3/items/syntax_wizard.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Blue wizard hat with star dots. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "b7331b5a510eb6af8331f08775842b201c59e50fbc987240488f833a37582b86",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.wizard_hat",
+      "slot": "head",
+      "path": "px3/items/wizard_hat.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hand-drawn pixel icon for launch catalog completeness (W9 glue).",
+      "sha256": "2c1b3b761edaeafeec60cac16a82d05a939b4fb2510d8e5acd229f3ac13ebeac"
+    }
+  ],
+  "animations": {
+    "version": 1,
+    "native_size": 32,
+    "pixel_factor": 16,
+    "states": [
+      "idle",
+      "happy",
+      "eat",
+      "sleep",
+      "hurt",
+      "attack"
+    ],
+    "clip_meta": {
+      "idle": {
+        "fps": 6,
+        "loop": true,
+        "frame_count": 4
+      },
+      "happy": {
+        "fps": 8,
+        "loop": true,
+        "frame_count": 4
+      },
+      "eat": {
+        "fps": 6,
+        "loop": true,
+        "frame_count": 3
+      },
+      "sleep": {
+        "fps": 3,
+        "loop": true,
+        "frame_count": 3
+      },
+      "hurt": {
+        "fps": 10,
+        "loop": false,
+        "frame_count": 3
+      },
+      "attack": {
+        "fps": 10,
+        "loop": false,
+        "frame_count": 4
+      }
+    },
+    "clips": [
+      {
+        "id": "byteblob.teal.idle",
+        "species": "byteblob",
+        "palette": "teal",
+        "state": "idle",
+        "path": "px3/anims/byteblob_teal_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "1aafabdb2dfa699f9cef62b47b6033bf0e3640f41cad48ac9d3266ead1d78e58",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "byteblob.teal.happy",
+        "species": "byteblob",
+        "palette": "teal",
+        "state": "happy",
+        "path": "px3/anims/byteblob_teal_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "d399cd62a5c36dab44e54ddf1b615b15250029a2bb08262758019d879ce3a7e8",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "byteblob.teal.eat",
+        "species": "byteblob",
+        "palette": "teal",
+        "state": "eat",
+        "path": "px3/anims/byteblob_teal_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "e5ba8a46e9369b994674ddb396fdd35940490e4a9c2c70aeb3fa6df3d1de50a6",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "byteblob.teal.sleep",
+        "species": "byteblob",
+        "palette": "teal",
+        "state": "sleep",
+        "path": "px3/anims/byteblob_teal_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "1959b1b4410fd1f5e297a7ff1b5e5b5d0553b5e20833989bba81e2dd892ba81b",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "byteblob.teal.hurt",
+        "species": "byteblob",
+        "palette": "teal",
+        "state": "hurt",
+        "path": "px3/anims/byteblob_teal_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "c56fb941cbbc3865ac349d30ba82e1e298ed3ad0599c22d8bc9afe88fd6d5602",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "byteblob.teal.attack",
+        "species": "byteblob",
+        "palette": "teal",
+        "state": "attack",
+        "path": "px3/anims/byteblob_teal_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "8c0eb871ccc73b721c139ea091a948a04715f10c7a7dac1975a5c36bc8c25a30",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "patchfox.rust.idle",
+        "species": "patchfox",
+        "palette": "rust",
+        "state": "idle",
+        "path": "px3/anims/patchfox_rust_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "caa41b74f2305415c5deded9636bab8272bb2298da08b89480abbe6de2f42eaa",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "patchfox.rust.happy",
+        "species": "patchfox",
+        "palette": "rust",
+        "state": "happy",
+        "path": "px3/anims/patchfox_rust_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "34f27288e902acca1c825479bb203b4f7d7e6fc192168b1480227167c187fc63",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "patchfox.rust.eat",
+        "species": "patchfox",
+        "palette": "rust",
+        "state": "eat",
+        "path": "px3/anims/patchfox_rust_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "a9850ea6eb665faad9142f6d54309a20c53c3d0516d92018fd9fcce1f68c10c2",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "patchfox.rust.sleep",
+        "species": "patchfox",
+        "palette": "rust",
+        "state": "sleep",
+        "path": "px3/anims/patchfox_rust_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "1f3d6485194d576da4b0a6106ab2ddef081051c88b18851be1fad62a520f06f2",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "patchfox.rust.hurt",
+        "species": "patchfox",
+        "palette": "rust",
+        "state": "hurt",
+        "path": "px3/anims/patchfox_rust_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "38a2caf1c16bf7790a53692fa84bc75c79998108e21cee7b034771a681ba50a7",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "patchfox.rust.attack",
+        "species": "patchfox",
+        "palette": "rust",
+        "state": "attack",
+        "path": "px3/anims/patchfox_rust_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "a40c30aef219de3bc1a053d175ff1dbd0dff27cbbdf2259560c4cfa98f99af03",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "nullgeist.violet.idle",
+        "species": "nullgeist",
+        "palette": "violet",
+        "state": "idle",
+        "path": "px3/anims/nullgeist_violet_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "ca8b5e8822c486461ed53d0d379c927451124dce0d0e152d966faf7f108fc5e1",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "nullgeist.violet.happy",
+        "species": "nullgeist",
+        "palette": "violet",
+        "state": "happy",
+        "path": "px3/anims/nullgeist_violet_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "74f4184b1cb3b6ffd142b1bd5c73e010191848473bf6bb9e429fc06e9d20964b",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "nullgeist.violet.eat",
+        "species": "nullgeist",
+        "palette": "violet",
+        "state": "eat",
+        "path": "px3/anims/nullgeist_violet_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "e50fa6b9e9b915afdb513ed99ea6698585646f98c58bd6b03329d17b9a71db3f",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "nullgeist.violet.sleep",
+        "species": "nullgeist",
+        "palette": "violet",
+        "state": "sleep",
+        "path": "px3/anims/nullgeist_violet_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "c3892cd6748d6caa89a931cd68f4ac99133c415171bd3bea34d1d685a004cc3c",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "nullgeist.violet.hurt",
+        "species": "nullgeist",
+        "palette": "violet",
+        "state": "hurt",
+        "path": "px3/anims/nullgeist_violet_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "9dd6422aa2eec110eac428dbfbe7298679b6cbeb6f86d12981bc507664e87cd6",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "nullgeist.violet.attack",
+        "species": "nullgeist",
+        "palette": "violet",
+        "state": "attack",
+        "path": "px3/anims/nullgeist_violet_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "8926c178e062585ec07729a1f89698dab410352bb0dd370c9ecede97766d26ba",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "kernelcrab.scarlet.idle",
+        "species": "kernelcrab",
+        "palette": "scarlet",
+        "state": "idle",
+        "path": "px3/anims/kernelcrab_scarlet_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "2a5fa84e5defe90c646e0b769f57e8c5e61c0e7dfeadad9b28d77edc6bcd9fdf",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "kernelcrab.scarlet.happy",
+        "species": "kernelcrab",
+        "palette": "scarlet",
+        "state": "happy",
+        "path": "px3/anims/kernelcrab_scarlet_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "4a48e69d7199d55b52a84c0ae1a72714f90f5f5ba4429733158ac8915e246c1b",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "kernelcrab.scarlet.eat",
+        "species": "kernelcrab",
+        "palette": "scarlet",
+        "state": "eat",
+        "path": "px3/anims/kernelcrab_scarlet_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "3501e6176381bdb4931a0aa3a497838a7206944e30898d6757c40ffc83dc47f9",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "kernelcrab.scarlet.sleep",
+        "species": "kernelcrab",
+        "palette": "scarlet",
+        "state": "sleep",
+        "path": "px3/anims/kernelcrab_scarlet_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "5c9cbf52733d2fb49b1abe267b0de9488966e9cb1bd99db913288aa2930b62fb",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "kernelcrab.scarlet.hurt",
+        "species": "kernelcrab",
+        "palette": "scarlet",
+        "state": "hurt",
+        "path": "px3/anims/kernelcrab_scarlet_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "331a4ed50a328d697f1ea86ed49b399a76a9f9823ec64d3f789c258092076b8a",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "kernelcrab.scarlet.attack",
+        "species": "kernelcrab",
+        "palette": "scarlet",
+        "state": "attack",
+        "path": "px3/anims/kernelcrab_scarlet_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "968a16cf5415e437a040e3765049438ab44757d3a4df0c00c41868024faf8bf1",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "cachebat.ice.idle",
+        "species": "cachebat",
+        "palette": "ice",
+        "state": "idle",
+        "path": "px3/anims/cachebat_ice_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "f93ace997e4d4d8a1e9a0c007e3668eb86d0941e16ae8bbb240095095df04c76",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "cachebat.ice.happy",
+        "species": "cachebat",
+        "palette": "ice",
+        "state": "happy",
+        "path": "px3/anims/cachebat_ice_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "87f07568f106f8cef3553afc1505733f8117a8ffc6ff96579dd470ba089f3cea",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "cachebat.ice.eat",
+        "species": "cachebat",
+        "palette": "ice",
+        "state": "eat",
+        "path": "px3/anims/cachebat_ice_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "ba2718f60aae36016b0e3d6a35c7c9e9304a21d0bc0d168f54becd3955b8a69d",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "cachebat.ice.sleep",
+        "species": "cachebat",
+        "palette": "ice",
+        "state": "sleep",
+        "path": "px3/anims/cachebat_ice_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "b7f541f42c6b1f6691ece8a0ca9cf528898f82b6d58121ceb21204c1961795d9",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "cachebat.ice.hurt",
+        "species": "cachebat",
+        "palette": "ice",
+        "state": "hurt",
+        "path": "px3/anims/cachebat_ice_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "adbb8d4a0bf96e174cfbfd375f30068020de8c52c245c43979d976370f77c1d3",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "cachebat.ice.attack",
+        "species": "cachebat",
+        "palette": "ice",
+        "state": "attack",
+        "path": "px3/anims/cachebat_ice_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "0811542b7c12cf2d6eccc0d10489b4ec964375b375d9f3e052f505de0438de3d",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "stacktoise.olive.idle",
+        "species": "stacktoise",
+        "palette": "olive",
+        "state": "idle",
+        "path": "px3/anims/stacktoise_olive_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "01d2c3f78596d66597de34d2eb192f3b1995d498846658c45e040ce8b08d6c4e",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "stacktoise.olive.happy",
+        "species": "stacktoise",
+        "palette": "olive",
+        "state": "happy",
+        "path": "px3/anims/stacktoise_olive_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "1686f864e1fe36a7f73757fea99eab7af9ef5fd0e87a466c10ef135354378e07",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "stacktoise.olive.eat",
+        "species": "stacktoise",
+        "palette": "olive",
+        "state": "eat",
+        "path": "px3/anims/stacktoise_olive_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "8c45baec60dcc629b97d39cb8dccb767f85b4e9976c370095484861e35169630",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "stacktoise.olive.sleep",
+        "species": "stacktoise",
+        "palette": "olive",
+        "state": "sleep",
+        "path": "px3/anims/stacktoise_olive_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "85cb2a71c4a6fe03a8b5b02abfce265536555d502584bf8cf738f8132b8e7931",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "stacktoise.olive.hurt",
+        "species": "stacktoise",
+        "palette": "olive",
+        "state": "hurt",
+        "path": "px3/anims/stacktoise_olive_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "a1d4e4f256553280dd227f984d6dbb93125c92e9679fea3c30c363449f23e948",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "stacktoise.olive.attack",
+        "species": "stacktoise",
+        "palette": "olive",
+        "state": "attack",
+        "path": "px3/anims/stacktoise_olive_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "b0c4324e194b6dd74727e8733447d3e352c7a96ee316cdd6fa56380adbb070f3",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "daemowl.rose.idle",
+        "species": "daemowl",
+        "palette": "rose",
+        "state": "idle",
+        "path": "px3/anims/daemowl_rose_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "9da509f2e0ad5268377674ff177b7184942c2585b469f6f5cd95a9f99d899479",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "daemowl.rose.happy",
+        "species": "daemowl",
+        "palette": "rose",
+        "state": "happy",
+        "path": "px3/anims/daemowl_rose_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "1cb553048c00bcf89eca836e4048bbe669a22e0114f21411502826e097fc6d90",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "daemowl.rose.eat",
+        "species": "daemowl",
+        "palette": "rose",
+        "state": "eat",
+        "path": "px3/anims/daemowl_rose_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "d60c93cf8fb39b47de5311613f5722e1e65ef2e2c1a299b8d2ea30899d9a6c0c",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "daemowl.rose.sleep",
+        "species": "daemowl",
+        "palette": "rose",
+        "state": "sleep",
+        "path": "px3/anims/daemowl_rose_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "1f98129b34536d86c364826f2e1b2486f9e71c88704aaaef4bff51c243bf3115",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "daemowl.rose.hurt",
+        "species": "daemowl",
+        "palette": "rose",
+        "state": "hurt",
+        "path": "px3/anims/daemowl_rose_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "a81e74249ee95989368cf444402ef5f23cb2194446271a792a27e139ae1de006",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "daemowl.rose.attack",
+        "species": "daemowl",
+        "palette": "rose",
+        "state": "attack",
+        "path": "px3/anims/daemowl_rose_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "efa5f69a26121430849fe5f23e5e273a4f4aae2f7253f692cfaf1ea997b86602",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "shellsnail.sky.idle",
+        "species": "shellsnail",
+        "palette": "sky",
+        "state": "idle",
+        "path": "px3/anims/shellsnail_sky_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "834fc7a4a00da923e696f25dd54cb73c88145707f81d48269f17198f7c1d7287",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "shellsnail.sky.happy",
+        "species": "shellsnail",
+        "palette": "sky",
+        "state": "happy",
+        "path": "px3/anims/shellsnail_sky_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "844cea38e4caaa70e7f27b5367569223497d4abb6e8585815dccab34ae11e73e",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "shellsnail.sky.eat",
+        "species": "shellsnail",
+        "palette": "sky",
+        "state": "eat",
+        "path": "px3/anims/shellsnail_sky_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "c518a970198538a93209bb587a74fe952c0b366da69fd862583b51ae5a09fbdb",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "shellsnail.sky.sleep",
+        "species": "shellsnail",
+        "palette": "sky",
+        "state": "sleep",
+        "path": "px3/anims/shellsnail_sky_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "a10dd181735842989aed5d6b0b68415c25188b305a90b694fe00854b329a3b4c",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "shellsnail.sky.hurt",
+        "species": "shellsnail",
+        "palette": "sky",
+        "state": "hurt",
+        "path": "px3/anims/shellsnail_sky_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "61124179676343476a65583a3b4a62e3aebf439eefc5e9b2523c42b9ba69a203",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "shellsnail.sky.attack",
+        "species": "shellsnail",
+        "palette": "sky",
+        "state": "attack",
+        "path": "px3/anims/shellsnail_sky_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "98ed20af3d7b3815deb6b82b4976532d0e0265ee3141ded5fcf2b7687a17de9d",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "regexopus.aqua.idle",
+        "species": "regexopus",
+        "palette": "aqua",
+        "state": "idle",
+        "path": "px3/anims/regexopus_aqua_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "8dff90851bb7be90c6cb3b768a0be76f6c54ffcaeb1be8d6e438e39184ead74c",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "regexopus.aqua.happy",
+        "species": "regexopus",
+        "palette": "aqua",
+        "state": "happy",
+        "path": "px3/anims/regexopus_aqua_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "67d064587ba77d08d616068a2eb94ec0103887e4a6ad37596d32a9c9c8e0467b",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "regexopus.aqua.eat",
+        "species": "regexopus",
+        "palette": "aqua",
+        "state": "eat",
+        "path": "px3/anims/regexopus_aqua_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "2bf45c30b9292c0ced4dd8a3aa0044543299efe6268fcf6bc65b1cf2a38f5bf5",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "regexopus.aqua.sleep",
+        "species": "regexopus",
+        "palette": "aqua",
+        "state": "sleep",
+        "path": "px3/anims/regexopus_aqua_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "7d907dd6d3c7c17eeca5e6ea57a02bf3b35202d367202415b844956c90d4e383",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "regexopus.aqua.hurt",
+        "species": "regexopus",
+        "palette": "aqua",
+        "state": "hurt",
+        "path": "px3/anims/regexopus_aqua_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "e1151e107bf415c67f53bd063ba2415bd76447aa5b8be664f05cbf8571ac9b22",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "regexopus.aqua.attack",
+        "species": "regexopus",
+        "palette": "aqua",
+        "state": "attack",
+        "path": "px3/anims/regexopus_aqua_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "e08118e3aeb46f81da4b166f5ebe16b003ae848a73e68f43240d59aba5bcc059",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "firewyrm.indigo.idle",
+        "species": "firewyrm",
+        "palette": "indigo",
+        "state": "idle",
+        "path": "px3/anims/firewyrm_indigo_idle.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 6,
+        "loop": true,
+        "sha256": "1a3ec67f9cc04ffdbb0c4999bae036b047f00a68c36774f70ec94b9c29b9f457",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "firewyrm.indigo.happy",
+        "species": "firewyrm",
+        "palette": "indigo",
+        "state": "happy",
+        "path": "px3/anims/firewyrm_indigo_happy.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 8,
+        "loop": true,
+        "sha256": "0f9ed77ccbe70024785360a722cfd7cea7e9772972bf2f7878de0f1d577d46af",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              -3
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              -1
+            ],
+            "duration_ms": 125
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 125
+          }
+        ]
+      },
+      {
+        "id": "firewyrm.indigo.eat",
+        "species": "firewyrm",
+        "palette": "indigo",
+        "state": "eat",
+        "path": "px3/anims/firewyrm_indigo_eat.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 6,
+        "loop": true,
+        "sha256": "06ba4695a080d841ef391174fbecbbc52f11c7f81b4bcfa6b9bb2fe55a6b6400",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 166
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 166
+          }
+        ]
+      },
+      {
+        "id": "firewyrm.indigo.sleep",
+        "species": "firewyrm",
+        "palette": "indigo",
+        "state": "sleep",
+        "path": "px3/anims/firewyrm_indigo_sleep.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 3,
+        "loop": true,
+        "sha256": "63ed819f117a031c3cff74a5fe48e71378d3a6aba1674cf46d65ec317f143c19",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              0,
+              2
+            ],
+            "duration_ms": 333
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              1
+            ],
+            "duration_ms": 333
+          }
+        ]
+      },
+      {
+        "id": "firewyrm.indigo.hurt",
+        "species": "firewyrm",
+        "palette": "indigo",
+        "state": "hurt",
+        "path": "px3/anims/firewyrm_indigo_hurt.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 3,
+        "fps": 10,
+        "loop": false,
+        "sha256": "cecc401675168fb217158f4148950bb3ee7907ce262b0a66bc9da41993331a84",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              -1,
+              1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      },
+      {
+        "id": "firewyrm.indigo.attack",
+        "species": "firewyrm",
+        "palette": "indigo",
+        "state": "attack",
+        "path": "px3/anims/firewyrm_indigo_attack.png",
+        "frame_w": 32,
+        "frame_h": 32,
+        "frame_count": 4,
+        "fps": 10,
+        "loop": false,
+        "sha256": "b9639124092c9e3f29a2fd7002ac9a6d8a835152fa4ff1ef47ee29f89e0eabf4",
+        "layout": "horizontal",
+        "frames": [
+          {
+            "i": 0,
+            "anchor_delta": [
+              -1,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 1,
+            "anchor_delta": [
+              3,
+              -1
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 2,
+            "anchor_delta": [
+              2,
+              0
+            ],
+            "duration_ms": 100
+          },
+          {
+            "i": 3,
+            "anchor_delta": [
+              0,
+              0
+            ],
+            "duration_ms": 100
+          }
+        ]
+      }
+    ]
+  }
+}
