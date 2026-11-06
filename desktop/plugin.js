@@ -585,10 +585,211 @@ function NpcHostBanner(props = {}) {
   return { "NpcHostBanner": NpcHostBanner };
 })();
 
-// desktop/src/ui/logic/shop.js
+// desktop/src/ui/logic/compose.js
 const __m5 = (function () {
+/**
+ * Pure cosmetic composition math for the Hermagotchi desktop preview.
+ *
+ * Mirrors scripts/asset_px3_compose.py::_item: an item layer is centred on its
+ * species anchor (head / face / back / front / hand / ground) plus the
+ * manifest offset, per-species transform (dx, dy, scale) and item scale.
+ *
+ * No React and no filesystem access: composeAnchors.json is embedded below so
+ * the browser never has to fetch Python-side art data.
+ */
+
+const DEFAULT_NATIVE_SIZE = 32;
+const DEFAULT_PIXEL_FACTOR = 16;
+
+/** Slim launch-003 snapshot generated from assets/art_ext.launch-003.json. */
+const EMBEDDED_ANCHORS = Object.freeze({"schema":"hermagotchi-compose-anchors-v1","asset_pack_id":"launch-003","pixel_factor":16,"native_size":32,"species":{"byteblob":{"anchors_native":{"head":[16,11],"face":[16,16],"back":[16,17],"front":[16,23],"ground":[16,28],"hand":[19,23]},"item_scale":1.0},"patchfox":{"anchors_native":{"head":[15,11],"face":[15,15],"back":[15,20],"front":[15,18],"ground":[16,28],"hand":[18,18]},"item_scale":1.0},"nullgeist":{"anchors_native":{"head":[16,9],"face":[16,13],"back":[16,16],"front":[16,19],"ground":[16,28],"hand":[19,19]},"item_scale":1.0},"kernelcrab":{"anchors_native":{"head":[16,13],"face":[16,17],"back":[16,19],"front":[16,21],"ground":[16,28],"hand":[24,18]},"item_scale":1.0},"cachebat":{"anchors_native":{"head":[16,12],"face":[16,15],"back":[16,16],"front":[16,18],"ground":[16,28],"hand":[22,17]},"item_scale":1.0},"stacktoise":{"anchors_native":{"head":[16,7],"face":[16,13],"back":[16,16],"front":[16,19],"ground":[16,28],"hand":[19,19]},"item_scale":1.0},"daemowl":{"anchors_native":{"head":[15,8],"face":[15,13],"back":[15,16],"front":[15,19],"ground":[16,28],"hand":[18,19]},"item_scale":1.0},"shellsnail":{"anchors_native":{"head":[10,15],"face":[10,18],"back":[16,20],"front":[16,22],"ground":[16,28],"hand":[10,22]},"item_scale":1.0},"regexopus":{"anchors_native":{"head":[15,9],"face":[15,14],"back":[15,17],"front":[15,19],"ground":[16,28],"hand":[18,19]},"item_scale":1.0},"firewyrm":{"anchors_native":{"head":[15,7],"face":[15,13],"back":[15,16],"front":[15,19],"ground":[16,28],"hand":[20,18]},"item_scale":1.0}},"items":{"aura.data_orbit":{"slot":"aura","z":-30,"anchor":"front","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[0,-8,1.0],"patchfox":[1,-3,1.0],"nullgeist":[0,-4,1.0],"kernelcrab":[0,-6,1.0],"cachebat":[0,-3,1.0],"stacktoise":[0,-4,1.0],"daemowl":[1,-4,1.0],"shellsnail":[0,-7,1.0],"regexopus":[1,-4,1.0],"firewyrm":[1,-4,1.0]}},"aura.ember_halo":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[0,-1,1.0],"patchfox":[1,0,1.0],"nullgeist":[0,2,1.0],"kernelcrab":[0,-2,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,2,1.0],"daemowl":[1,2,1.0],"shellsnail":[6,-3,1.0],"regexopus":[1,1,1.0],"firewyrm":[1,2,1.0]}},"aura.flame_wall":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.ghost_cache":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.heart_beat":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.hex_shield":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.leaf_orbit":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.ping_pulse":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.rainbow_arc":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[0,4,1.0],"patchfox":[1,5,1.0],"nullgeist":[0,7,1.0],"kernelcrab":[0,3,1.0],"cachebat":[0,5,1.0],"stacktoise":[0,7,1.0],"daemowl":[1,7,1.0],"shellsnail":[6,2,1.0],"regexopus":[1,6,1.0],"firewyrm":[1,7,1.0]}},"aura.snow_globe":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.spark_aura":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[-1,0,1.0],"patchfox":[0,1,1.0],"nullgeist":[-1,3,1.0],"kernelcrab":[-1,-1,1.0],"cachebat":[-1,1,1.0],"stacktoise":[-1,3,1.0],"daemowl":[0,3,1.0],"shellsnail":[5,-2,1.0],"regexopus":[0,2,1.0],"firewyrm":[0,3,1.0]}},"aura.spark_trail":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.starfield":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.static_haze":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"aura.virus_scan":{"slot":"aura","z":-30,"anchor":"face","offset_px":[0,0],"scale":1.25,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[0,0,1.0],"nullgeist":[-1,2,1.0],"kernelcrab":[-1,-2,1.0],"cachebat":[-1,0,1.0],"stacktoise":[-1,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[5,-3,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,2,1.0]}},"back.antenna_array":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,3,1.0],"patchfox":[0,3,1.0],"nullgeist":[0,3,1.0],"kernelcrab":[0,3,1.0],"cachebat":[0,3,1.0],"stacktoise":[0,3,1.0],"daemowl":[0,3,1.0],"shellsnail":[0,3,1.0],"regexopus":[0,3,1.0],"firewyrm":[0,3,1.0]}},"back.battery_pack":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-3,1.0],"patchfox":[0,-3,1.0],"nullgeist":[0,-3,1.0],"kernelcrab":[0,-3,1.0],"cachebat":[0,-3,1.0],"stacktoise":[0,-3,1.0],"daemowl":[0,-3,1.0],"shellsnail":[0,-3,1.0],"regexopus":[0,-3,1.0],"firewyrm":[0,-3,1.0]}},"back.caped_crusader":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-4,1.0],"patchfox":[0,-4,1.0],"nullgeist":[-1,-4,1.0],"kernelcrab":[0,-4,1.0],"cachebat":[0,-4,1.0],"stacktoise":[-1,-4,1.0],"daemowl":[0,-4,1.0],"shellsnail":[0,-4,1.0],"regexopus":[0,-4,1.0],"firewyrm":[-1,-4,1.0]}},"back.circuit_cape":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-3,1.0],"patchfox":[0,-3,1.0],"nullgeist":[0,-3,1.0],"kernelcrab":[0,-3,1.0],"cachebat":[0,-3,1.0],"stacktoise":[0,-3,1.0],"daemowl":[0,-3,1.0],"shellsnail":[0,-3,1.0],"regexopus":[0,-3,1.0],"firewyrm":[0,-3,1.0]}},"back.circuit_wings":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"back.docker_whale":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"back.glider_cloak":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-4,1.0],"patchfox":[0,-4,1.0],"nullgeist":[-1,-4,1.0],"kernelcrab":[0,-4,1.0],"cachebat":[0,-4,1.0],"stacktoise":[-1,-4,1.0],"daemowl":[0,-4,1.0],"shellsnail":[0,-4,1.0],"regexopus":[0,-4,1.0],"firewyrm":[-1,-4,1.0]}},"back.payload_pack":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-3,1.0],"patchfox":[0,-3,1.0],"nullgeist":[0,-3,1.0],"kernelcrab":[0,-3,1.0],"cachebat":[0,-3,1.0],"stacktoise":[0,-3,1.0],"daemowl":[0,-3,1.0],"shellsnail":[0,-3,1.0],"regexopus":[0,-3,1.0],"firewyrm":[0,-3,1.0]}},"back.scroll_quiver":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-2,1.0],"patchfox":[0,-2,1.0],"nullgeist":[0,-2,1.0],"kernelcrab":[0,-2,1.0],"cachebat":[0,-2,1.0],"stacktoise":[0,-2,1.0],"daemowl":[0,-2,1.0],"shellsnail":[0,-2,1.0],"regexopus":[0,-2,1.0],"firewyrm":[0,-2,1.0]}},"back.tiny_jetpack":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"back.webhook_wings":{"slot":"back","z":-10,"anchor":"back","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-2,1.0],"patchfox":[0,-2,1.0],"nullgeist":[0,-2,1.0],"kernelcrab":[0,-2,1.0],"cachebat":[0,-2,0.9],"stacktoise":[0,-2,1.0],"daemowl":[0,-2,1.0],"shellsnail":[0,-2,1.0],"regexopus":[0,-2,1.0],"firewyrm":[0,-2,1.0]}},"emote.heart_bubble":{"slot":"emote","z":50,"anchor":"head","offset_px":[128,-48],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"emote.sparkle":{"slot":"emote","z":50,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.bug_eye":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.gold_monocle":{"slot":"face","z":20,"anchor":"face","offset_px":[48,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.happy_path":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.hex_specs":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.laser_focus":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.noir_shades":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.oauth_eyepatch":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.pixel_mustache":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.pixel_shades":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.privacy_mask":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.regex_rims":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.scan_visor":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.stack_trace":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.telemetry_lens":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"face.three_lens":{"slot":"face","z":20,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"front.banana_phone":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"front.bow_tie":{"slot":"front","z":40,"anchor":"front","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-7,1.0],"patchfox":[0,-3,1.0],"nullgeist":[0,-6,1.0],"kernelcrab":[0,-4,1.0],"cachebat":[0,-3,1.0],"stacktoise":[0,-6,1.0],"daemowl":[0,-6,1.0],"shellsnail":[0,-4,1.0],"regexopus":[0,-5,1.0],"firewyrm":[0,-6,1.0]}},"front.bug_net":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,2,1.0],"patchfox":[0,2,1.0],"nullgeist":[0,2,1.0],"kernelcrab":[0,2,1.0],"cachebat":[0,2,1.0],"stacktoise":[0,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,2,1.0],"regexopus":[0,2,1.0],"firewyrm":[0,2,1.0]}},"front.cache_scarf":{"slot":"front","z":40,"anchor":"front","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-11,1.0],"patchfox":[0,-7,1.0],"nullgeist":[0,-10,1.0],"kernelcrab":[0,-8,1.0],"cachebat":[0,-7,1.0],"stacktoise":[0,-10,1.0],"daemowl":[0,-10,1.0],"shellsnail":[0,-8,1.0],"regexopus":[0,-9,1.0],"firewyrm":[0,-10,1.0]}},"front.coffee_mug":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-2,1.0],"patchfox":[0,-2,1.0],"nullgeist":[0,-2,1.0],"kernelcrab":[0,-2,1.0],"cachebat":[0,-2,1.0],"stacktoise":[0,-2,1.0],"daemowl":[0,-2,1.0],"shellsnail":[0,-2,1.0],"regexopus":[0,-2,1.0],"firewyrm":[0,-2,1.0]}},"front.cozy_scarf":{"slot":"front","z":40,"anchor":"front","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-9,1.0],"patchfox":[0,-5,1.0],"nullgeist":[0,-8,1.0],"kernelcrab":[0,-6,1.0],"cachebat":[0,-5,1.0],"stacktoise":[0,-8,1.0],"daemowl":[0,-8,1.0],"shellsnail":[0,-6,1.0],"regexopus":[0,-7,1.0],"firewyrm":[0,-8,1.0]}},"front.flag":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[-2,1,1.0],"patchfox":[-2,1,1.0],"nullgeist":[-2,1,1.0],"kernelcrab":[-2,1,1.0],"cachebat":[-2,1,1.0],"stacktoise":[-2,1,1.0],"daemowl":[-2,1,1.0],"shellsnail":[-2,1,1.0],"regexopus":[-2,1,1.0],"firewyrm":[-2,1,1.0]}},"front.keyboard":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-1,1.0],"patchfox":[0,-1,1.0],"nullgeist":[0,-1,1.0],"kernelcrab":[0,-1,1.0],"cachebat":[0,-1,1.0],"stacktoise":[0,-1,1.0],"daemowl":[0,-1,1.0],"shellsnail":[0,-1,1.0],"regexopus":[0,-1,1.0],"firewyrm":[0,-1,1.0]}},"front.magnifier":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[1,-1,1.0],"patchfox":[1,-1,1.0],"nullgeist":[1,-1,1.0],"kernelcrab":[1,-1,1.0],"cachebat":[1,-1,1.0],"stacktoise":[1,-1,1.0],"daemowl":[1,-1,1.0],"shellsnail":[1,-1,1.0],"regexopus":[1,-1,1.0],"firewyrm":[1,-1,1.0]}},"front.medal_ribbon":{"slot":"front","z":40,"anchor":"front","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-9,1.0],"patchfox":[0,-5,1.0],"nullgeist":[0,-8,1.0],"kernelcrab":[0,-6,1.0],"cachebat":[0,-5,1.0],"stacktoise":[0,-8,1.0],"daemowl":[0,-8,1.0],"shellsnail":[0,-6,1.0],"regexopus":[0,-7,1.0],"firewyrm":[0,-8,1.0]}},"front.pixel_badge":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-2,1.0],"patchfox":[0,-2,1.0],"nullgeist":[0,-2,1.0],"kernelcrab":[0,-2,1.0],"cachebat":[0,-2,1.0],"stacktoise":[0,-2,1.0],"daemowl":[0,-2,1.0],"shellsnail":[0,-2,1.0],"regexopus":[0,-2,1.0],"firewyrm":[0,-2,1.0]}},"front.pixel_blade":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,2,1.0],"patchfox":[0,2,1.0],"nullgeist":[0,2,1.0],"kernelcrab":[0,2,1.0],"cachebat":[0,2,1.0],"stacktoise":[0,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,2,1.0],"regexopus":[0,2,1.0],"firewyrm":[0,2,1.0]}},"front.pointer_wand":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"front.rubber_duck":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[-1,-1,1.0],"patchfox":[-1,-1,1.0],"nullgeist":[-1,-1,1.0],"kernelcrab":[-1,-1,1.0],"cachebat":[-1,-1,1.0],"stacktoise":[-1,-1,1.0],"daemowl":[-1,-1,1.0],"shellsnail":[-1,-1,1.0],"regexopus":[-1,-1,1.0],"firewyrm":[-1,-1,1.0]}},"front.scroll":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"front.silk_tie":{"slot":"front","z":40,"anchor":"front","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-10,1.0],"patchfox":[0,-6,1.0],"nullgeist":[0,-9,1.0],"kernelcrab":[0,-7,1.0],"cachebat":[0,-6,1.0],"stacktoise":[0,-9,1.0],"daemowl":[0,-9,1.0],"shellsnail":[0,-7,1.0],"regexopus":[0,-8,1.0],"firewyrm":[0,-9,1.0]}},"front.toast":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"front.usb_sword":{"slot":"front","z":40,"anchor":"hand","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,2,1.0],"patchfox":[0,2,1.0],"nullgeist":[0,2,1.0],"kernelcrab":[0,2,1.0],"cachebat":[0,2,1.0],"stacktoise":[0,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,2,1.0],"regexopus":[0,2,1.0],"firewyrm":[0,2,1.0]}},"habitat.glow_moss":{"slot":"habitat","z":-20,"anchor":"ground","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"habitat.plush_cushion":{"slot":"habitat","z":-20,"anchor":"ground","offset_px":[0,-16],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"hat.binary_crown":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.bloom_filter":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-2,1.0],"patchfox":[0,-2,1.0],"nullgeist":[0,-2,0.914],"kernelcrab":[0,-2,1.0],"cachebat":[0,-2,1.0],"stacktoise":[0,-1,0.731],"daemowl":[0,-2,0.823],"shellsnail":[0,-2,1.0],"regexopus":[0,-2,0.914],"firewyrm":[0,-1,0.731]}},"hat.clippy_hat":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.cron_crown":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.debug_bowler":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,-2,1.0],"patchfox":[0,-2,1.0],"nullgeist":[0,-2,0.914],"kernelcrab":[0,-2,1.0],"cachebat":[0,-2,1.0],"stacktoise":[0,-1,0.731],"daemowl":[0,-2,0.823],"shellsnail":[0,-2,1.0],"regexopus":[0,-2,0.914],"firewyrm":[0,-1,0.731]}},"hat.git_bandana":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,2,1.0],"patchfox":[0,2,1.0],"nullgeist":[0,2,1.0],"kernelcrab":[0,2,1.0],"cachebat":[0,2,1.0],"stacktoise":[0,2,1.0],"daemowl":[0,2,1.0],"shellsnail":[0,2,1.0],"regexopus":[0,2,1.0],"firewyrm":[0,2,1.0]}},"hat.kernel_helm":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"hat.lambda_tiara":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,4,1.0],"patchfox":[0,4,1.0],"nullgeist":[0,4,1.0],"kernelcrab":[0,4,1.0],"cachebat":[0,4,1.0],"stacktoise":[0,4,1.0],"daemowl":[0,4,1.0],"shellsnail":[0,4,1.0],"regexopus":[0,4,1.0],"firewyrm":[0,4,1.0]}},"hat.nginx_visor":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.packet_cap":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.propeller_beanie":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,0.895],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,0.895]}},"hat.rss_antenna":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,0.838],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,0.67],"daemowl":[0,1,0.754],"shellsnail":[0,1,1.0],"regexopus":[0,1,0.838],"firewyrm":[0,1,0.67]}},"hat.sudo_cap":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.syntax_wizard":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,0.805],"daemowl":[0,0,0.906],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,0.805]}},"hat.topo_beanie":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,1,1.0],"patchfox":[0,1,1.0],"nullgeist":[0,1,1.0],"kernelcrab":[0,1,1.0],"cachebat":[0,1,1.0],"stacktoise":[0,1,1.0],"daemowl":[0,1,1.0],"shellsnail":[0,1,1.0],"regexopus":[0,1,1.0],"firewyrm":[0,1,1.0]}},"hat.wizard_hat":{"slot":"head","z":30,"anchor":"head","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,2,1.0],"patchfox":[0,2,1.0],"nullgeist":[0,2,0.838],"kernelcrab":[0,2,1.0],"cachebat":[0,2,1.0],"stacktoise":[0,2,0.67],"daemowl":[0,2,0.754],"shellsnail":[0,2,1.0],"regexopus":[0,2,0.838],"firewyrm":[0,2,0.67]}},"title.pixel_pilot":{"slot":"title","z":50,"anchor":"face","offset_px":[0,0],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}},"title.royal_ribbon":{"slot":"title","z":50,"anchor":"ground","offset_px":[0,32],"scale":1.0,"per_species":{"byteblob":[0,0,1.0],"patchfox":[0,0,1.0],"nullgeist":[0,0,1.0],"kernelcrab":[0,0,1.0],"cachebat":[0,0,1.0],"stacktoise":[0,0,1.0],"daemowl":[0,0,1.0],"shellsnail":[0,0,1.0],"regexopus":[0,0,1.0],"firewyrm":[0,0,1.0]}}}});
+
+function number(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function resolveSource(source) {
+  if (source && typeof source === "object" && source.species && source.items) {
+    return source;
+  }
+  return EMBEDDED_ANCHORS;
+}
+
+function speciesEntry(source, species) {
+  if (!species || !source || !source.species) return null;
+  return source.species[species] || source.species[String(species)] || null;
+}
+
+function itemEntry(source, itemId) {
+  if (!itemId || !source || !source.items) return null;
+  return source.items[itemId] || source.items[String(itemId)] || null;
+}
+
+function transformArray(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray(raw.transform_native)) return raw.transform_native;
+  return null;
+}
+
+/** Species anchor points on the native 32x32 grid. */
+function anchorsFor(species, source) {
+  const entry = speciesEntry(resolveSource(source), species);
+  return entry && entry.anchors_native ? entry.anchors_native : null;
+}
+
+/** Species-wide cosmetic scale multiplier. */
+function itemScaleFor(species, source) {
+  const entry = speciesEntry(resolveSource(source), species);
+  return entry ? number(entry.item_scale, 1) : 1;
+}
+
+/** [dx, dy, scale] for one item on one species. */
+function transformNativeFor(itemId, species, source) {
+  const entry = itemEntry(resolveSource(source), itemId);
+  if (!entry || !entry.per_species) return [0, 0, 1];
+  const raw = entry.per_species[species] || entry.per_species[String(species)];
+  const transform = transformArray(raw);
+  if (!transform || transform.length < 3) return [0, 0, 1];
+  return [
+    number(transform[0], 0),
+    number(transform[1], 0),
+    number(transform[2], 1),
+  ];
+}
+
+/**
+ * Compose one cosmetic layer.
+ *
+ * @param {object} options
+ * @param {string} options.species
+ * @param {string} [options.itemId]
+ * @param {object} [options.manifestAsset] manifest asset entry (anchor/offset/scale/z)
+ * @param {object} [options.artExt] full art_ext object (optional)
+ * @param {object} [options.anchors] composeAnchors snapshot (optional)
+ * @param {number} [options.nativeSize=32]
+ * @param {number} [options.displaySize=nativeSize]
+ * @returns {object|null}
+ */
+function composeItem(options = {}) {
+  const manifestAsset = options.manifestAsset || options.asset || null;
+  const species = options.species ? String(options.species) : "";
+  const itemId = String(
+    options.itemId || (manifestAsset && (manifestAsset.id || manifestAsset.asset_id)) || ""
+  );
+  if (!species) return null;
+
+  const source = resolveSource(
+    options.artExt || options.anchors || options.composeAnchors
+  );
+  const speciesData = speciesEntry(source, species);
+  if (!speciesData) return null;
+
+  const itemData = itemEntry(source, itemId) || {};
+  const transform = transformNativeFor(itemId, species, source);
+  const nativeSize = Math.max(
+    1,
+    number(options.nativeSize, number(source.native_size, DEFAULT_NATIVE_SIZE))
+  );
+  const displaySize = Math.max(1, number(options.displaySize, nativeSize));
+  const pixelFactor = Math.max(
+    1,
+    number(options.pixelFactor, number(source.pixel_factor, DEFAULT_PIXEL_FACTOR))
+  );
+
+  const anchorName = String(
+    (manifestAsset && manifestAsset.anchor) || itemData.anchor || "front"
+  );
+  const anchorSet = speciesData.anchors_native || {};
+  const anchorNative = anchorSet[anchorName] ||
+    anchorSet.front ||
+    anchorSet.body || [nativeSize / 2, nativeSize / 2];
+
+  const rawOffset =
+    manifestAsset && Array.isArray(manifestAsset.offset_px)
+      ? manifestAsset.offset_px
+      : Array.isArray(itemData.offset_px)
+        ? itemData.offset_px
+        : [0, 0];
+  const explicitOffset =
+    (manifestAsset && manifestAsset.offset_native) || itemData.offset_native;
+  const offsetNative = Array.isArray(explicitOffset)
+    ? [number(explicitOffset[0], 0), number(explicitOffset[1], 0)]
+    : [
+        Math.floor(number(rawOffset[0], 0) / pixelFactor),
+        Math.floor(number(rawOffset[1], 0) / pixelFactor),
+      ];
+
+  const baseScale = number(
+    manifestAsset && manifestAsset.scale != null
+      ? manifestAsset.scale
+      : itemData.scale,
+    1
+  );
+  const itemScale = number(speciesData.item_scale, 1);
+  const transformScale = number(transform[2], 1);
+  const scale = baseScale * itemScale * transformScale;
+  const centerNative = [
+    number(anchorNative[0], nativeSize / 2) + offsetNative[0] + number(transform[0], 0),
+    number(anchorNative[1], nativeSize / 2) + offsetNative[1] + number(transform[1], 0),
+  ];
+  const topLeftNative = [
+    centerNative[0] - (nativeSize * scale) / 2,
+    centerNative[1] - (nativeSize * scale) / 2,
+  ];
+  const fraction = [
+    centerNative[0] / nativeSize - 0.5,
+    centerNative[1] / nativeSize - 0.5,
+  ];
+  const offsetPercent = [fraction[0] * 100, fraction[1] * 100];
+  const offsetPx = [fraction[0] * displaySize, fraction[1] * displaySize];
+  const topLeftPx = [
+    (topLeftNative[0] / nativeSize) * displaySize,
+    (topLeftNative[1] / nativeSize) * displaySize,
+  ];
+  const zValue =
+    manifestAsset && Number.isFinite(Number(manifestAsset.z))
+      ? Number(manifestAsset.z)
+      : Number.isFinite(Number(itemData.z))
+        ? Number(itemData.z)
+        : null;
+
+  return {
+    itemId,
+    species,
+    slot: String((manifestAsset && manifestAsset.slot) || itemData.slot || ""),
+    anchor: anchorName,
+    anchorNative: [number(anchorNative[0], nativeSize / 2), number(anchorNative[1], nativeSize / 2)],
+    transformNative: [transform[0], transform[1], transform[2]],
+    itemScale,
+    baseScale,
+    scale,
+    nativeSize,
+    displaySize,
+    pixelFactor,
+    offsetNative,
+    centerNative,
+    topLeftNative,
+    fraction,
+    offsetPercent,
+    offsetPx,
+    topLeftPx,
+    z: zValue,
+  };
+}
+
+/** Layer-shaped alias used by buildPreviewLayers / PetPreview. */
+const composeLayer = composeItem;
+
+  return { "DEFAULT_NATIVE_SIZE": DEFAULT_NATIVE_SIZE, "DEFAULT_PIXEL_FACTOR": DEFAULT_PIXEL_FACTOR, "EMBEDDED_ANCHORS": EMBEDDED_ANCHORS, "anchorsFor": anchorsFor, "itemScaleFor": itemScaleFor, "transformNativeFor": transformNativeFor, "composeItem": composeItem, "composeLayer": composeLayer };
+})();
+
+// desktop/src/ui/logic/shop.js
+const __m6 = (function () {
   const joinAssetUrl = __m3["joinAssetUrl"];
   const speciesBodyPath = __m3["speciesBodyPath"];
+  const composeItem = __m5["composeItem"];
+  const DEFAULT_NATIVE_SIZE = __m5["DEFAULT_NATIVE_SIZE"];
 /**
  * Pure Shop helpers. Catalog data always comes from the server response; item
  * ids are never hardcoded here so new cosmetics show up automatically.
@@ -773,6 +974,11 @@ function buildPreviewLayers(options = {}) {
   }
   const assetMap = manifestAssetMap(manifest);
   const layers = [];
+  const nativeSize = Math.max(
+    1,
+    number(options.nativeSize, DEFAULT_NATIVE_SIZE)
+  );
+  const displaySize = Math.max(1, number(options.displaySize, nativeSize));
 
   const species = pet && pet.species ? String(pet.species) : "";
   const speciesPath = speciesBodyPath(manifest, pet);
@@ -823,6 +1029,17 @@ function buildPreviewLayers(options = {}) {
       (manifestAsset && manifestAsset.path) ||
       "";
 
+    const composed =
+      species && manifestAsset
+        ? composeItem({
+            species,
+            itemId: manifestAsset.id || assetId || itemId,
+            manifestAsset,
+            nativeSize,
+            displaySize,
+          })
+        : null;
+
     layers.push({
       kind: "item",
       id: itemId,
@@ -833,19 +1050,27 @@ function buildPreviewLayers(options = {}) {
         itemId,
       url: joinAssetUrl(baseUrl, assetUrl),
       z: zFor(slot, manifestAsset),
-      scale: number(
-        valueObject.scale != null
-          ? valueObject.scale
-          : manifestAsset && manifestAsset.scale,
-        1
-      ),
-      offsetPx:
-        valueObject.offset_px ||
-        valueObject.offsetPx ||
-        (manifestAsset && manifestAsset.offset_px) ||
-        [0, 0],
+      scale: composed
+        ? composed.scale
+        : number(
+            valueObject.scale != null
+              ? valueObject.scale
+              : manifestAsset && manifestAsset.scale,
+            1
+          ),
+      offsetPx: composed
+        ? composed.offsetPx
+        : valueObject.offset_px ||
+          valueObject.offsetPx ||
+          (manifestAsset && manifestAsset.offset_px) ||
+          [0, 0],
+      offsetPercent: composed ? composed.offsetPercent : null,
       anchor:
-        valueObject.anchor || (manifestAsset && manifestAsset.anchor) || "body",
+        (composed && composed.anchor) ||
+        valueObject.anchor ||
+        (manifestAsset && manifestAsset.anchor) ||
+        "body",
+      compose: composed,
     });
   }
 
@@ -901,7 +1126,7 @@ function itemAvailability(options = {}) {
 })();
 
 // desktop/src/anim/petAnimContract.json
-const __m6 = (function () {
+const __m7 = (function () {
 const __json = {
   "schema": "hermagotchi-pet-anim-contract-v1",
   "native_size": 32,
@@ -945,8 +1170,8 @@ const __json = {
 })();
 
 // desktop/src/anim/petAnimPlayer.js
-const __m7 = (function () {
-  const contract = __m6["default"];
+const __m8 = (function () {
+  const contract = __m7["default"];
 /**
  * Standalone pet animation helper for Hermagotchi desktop.
  * Pane UI imports this; do not put React/UI here.
@@ -1032,23 +1257,37 @@ function createPlayer(clip) {
 })();
 
 // desktop/src/ui/components/PetPreview.js
-const __m8 = (function () {
+const __m9 = (function () {
   const useEffect = __ext2;
   const useRef = __ext3;
   const useState = __ext4;
   const jsx = __ext0;
-  const buildPreviewLayers = __m5["buildPreviewLayers"];
+  const buildPreviewLayers = __m6["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const resolveAnimPalette = __m3["resolveAnimPalette"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const contract = __m7["contract"];
-  const createPlayer = __m7["createPlayer"];
-  const findClip = __m7["findClip"];
-  const resolveAnimState = __m7["resolveAnimState"];
+  const contract = __m8["contract"];
+  const createPlayer = __m8["createPlayer"];
+  const findClip = __m8["findClip"];
+  const resolveAnimState = __m8["resolveAnimState"];
 
 function layerStyle(layer) {
-  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
   const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
+  const percent = Array.isArray(layer.offsetPercent)
+    ? layer.offsetPercent
+    : null;
+  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
+  const translate = percent
+    ? "translate(" +
+      (Number(percent[0]) || 0) +
+      "%, " +
+      (Number(percent[1]) || 0) +
+      "%)"
+    : "translate(" +
+      (Number(offset[0]) || 0) +
+      "px, " +
+      (Number(offset[1]) || 0) +
+      "px)";
   return {
     position: "absolute",
     inset: "0",
@@ -1056,17 +1295,17 @@ function layerStyle(layer) {
     height: "100%",
     objectFit: "contain",
     zIndex: String(layer.z),
-    transform:
-      "translate(" +
-      (Number(offset[0]) || 0) +
-      "px, " +
-      (Number(offset[1]) || 0) +
-      "px) scale(" +
-      scale +
-      ")",
+    transform: translate + " scale(" + scale + ")",
     transformOrigin: "center",
     pointerEvents: "none",
   };
+}
+
+function numericSizeOf(value, fallback) {
+  const text = String(value == null ? "" : value).trim();
+  if (!text || text.endsWith("%")) return fallback;
+  const parsed = parseFloat(text);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function stripStyle(url, clip, frameIndex) {
@@ -1105,16 +1344,25 @@ function followAnchors() {
   return list.map((value) => String(value));
 }
 
-function withAnchorDelta(layer, delta, anchors, frameScale) {
+function withAnchorDelta(layer, delta, anchors, frameScale, nativeSize) {
   const anchor = String(layer.anchor || layer.slot || "");
   if (!anchors.includes(anchor)) return layer;
   const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
-  return Object.assign({}, layer, {
+  const next = Object.assign({}, layer, {
     offsetPx: [
       (Number(offset[0]) || 0) + (Number(delta[0]) || 0) * frameScale,
       (Number(offset[1]) || 0) + (Number(delta[1]) || 0) * frameScale,
     ],
   });
+  if (Array.isArray(layer.offsetPercent)) {
+    const percent = layer.offsetPercent;
+    const size = Number(nativeSize) > 0 ? Number(nativeSize) : 32;
+    next.offsetPercent = [
+      (Number(percent[0]) || 0) + ((Number(delta[0]) || 0) / size) * 100,
+      (Number(percent[1]) || 0) + ((Number(delta[1]) || 0) / size) * 100,
+    ];
+  }
+  return next;
 }
 
 /**
@@ -1137,12 +1385,17 @@ function PetPreview(props = {}) {
     (pet && pet.palette) ||
     "";
   const palette = resolveAnimPalette(rawPalette || "teal");
+  const spriteSize = props.size || "100%";
+  const nativeSize = Number(contract && contract.native_size) || 32;
+  const numericSize = numericSizeOf(spriteSize, nativeSize);
   const layers = buildPreviewLayers({
     pet: pet,
     loadout: props.loadout,
     catalog: props.catalog,
     manifest: manifest,
     assetBaseUrl: assetBaseUrl,
+    nativeSize: nativeSize,
+    displaySize: numericSize,
   });
 
   let baseLayer = null;
@@ -1253,14 +1506,8 @@ function PetPreview(props = {}) {
   const label =
     props.label ||
     (pet && pet.name ? pet.name + " preview" : "Pet preview");
-  const spriteSize = props.size || "100%";
   const anchors = followAnchors();
-  const numericSize = parseFloat(spriteSize);
-  const nativeSize = Number(contract && contract.native_size) || 32;
-  const frameScale =
-    Number.isFinite(numericSize) && numericSize > 0
-      ? numericSize / nativeSize
-      : 1;
+  const frameScale = numericSize / nativeSize;
 
   const children = [];
   if (animated) {
@@ -1305,7 +1552,7 @@ function PetPreview(props = {}) {
 
   for (const layer of itemLayers) {
     const adjusted = animated
-      ? withAnchorDelta(layer, anchorDelta, anchors, frameScale)
+      ? withAnchorDelta(layer, anchorDelta, anchors, frameScale, nativeSize)
       : layer;
     children.push(
       jsx(
@@ -1351,7 +1598,7 @@ function PetPreview(props = {}) {
 })();
 
 // desktop/src/ui/logic/battle.js
-const __m9 = (function () {
+const __m10 = (function () {
 /**
  * Pure battle presentation helpers for the Desktop Battle tab.
  *
@@ -1620,10 +1867,10 @@ function replaySummary(replay = {}, participants = {}) {
 })();
 
 // desktop/src/ui/components/TurnLog.js
-const __m10 = (function () {
+const __m11 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const formatTurnLog = __m9["formatTurnLog"];
+  const formatTurnLog = __m10["formatTurnLog"];
 
 function TypeChip(props) {
   const type = props.type;
@@ -1731,7 +1978,7 @@ function TurnLog(props = {}) {
 })();
 
 // desktop/src/ui/tabs/BattleTab.js
-const __m11 = (function () {
+const __m12 = (function () {
   const useEffect = __ext2;
   const useState = __ext4;
   const jsx = __ext0;
@@ -1739,10 +1986,10 @@ const __m11 = (function () {
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m8["PetPreview"];
-  const TurnLog = __m10["TurnLog"];
-  const battleParticipantsFromMatch = __m9["battleParticipantsFromMatch"];
-  const replaySummary = __m9["replaySummary"];
+  const PetPreview = __m9["PetPreview"];
+  const TurnLog = __m11["TurnLog"];
+  const battleParticipantsFromMatch = __m10["battleParticipantsFromMatch"];
+  const replaySummary = __m10["replaySummary"];
 
 const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 const PRACTICE_BOT_NAME = "Teknium";
@@ -2186,7 +2433,7 @@ function BattleTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/chat.js
-const __m12 = (function () {
+const __m13 = (function () {
   const npcHostLine = __m2["npcHostLine"];
 /** Pure chat helpers shared by the Desktop Chat tab and its tests. */
 
@@ -2435,7 +2682,7 @@ function chatHost() {
 })();
 
 // desktop/src/ui/tabs/ChatTab.js
-const __m13 = (function () {
+const __m14 = (function () {
   const useEffect = __ext2;
   const useState = __ext4;
   const jsx = __ext0;
@@ -2444,19 +2691,19 @@ const __m13 = (function () {
   const npcHostLine = __m2["npcHostLine"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CHAT_BLOCKS_PATH = __m12["CHAT_BLOCKS_PATH"];
-  const CHAT_MESSAGES_PATH = __m12["CHAT_MESSAGES_PATH"];
-  const CHAT_REPORT_PATH = __m12["CHAT_REPORT_PATH"];
-  const CHAT_REPORT_REASON = __m12["CHAT_REPORT_REASON"];
-  const chatActionNotice = __m12["chatActionNotice"];
-  const chatMessagePayload = __m12["chatMessagePayload"];
-  const chatModerationHost = __m12["chatModerationHost"];
-  const chatNoticeFromEnvelope = __m12["chatNoticeFromEnvelope"];
-  const isChatEnabled = __m12["isChatEnabled"];
-  const mergeMessages = __m12["mergeMessages"];
-  const messageFromEnvelope = __m12["messageFromEnvelope"];
-  const normalizeMessages = __m12["normalizeMessages"];
-  const validateChatDraft = __m12["validateChatDraft"];
+  const CHAT_BLOCKS_PATH = __m13["CHAT_BLOCKS_PATH"];
+  const CHAT_MESSAGES_PATH = __m13["CHAT_MESSAGES_PATH"];
+  const CHAT_REPORT_PATH = __m13["CHAT_REPORT_PATH"];
+  const CHAT_REPORT_REASON = __m13["CHAT_REPORT_REASON"];
+  const chatActionNotice = __m13["chatActionNotice"];
+  const chatMessagePayload = __m13["chatMessagePayload"];
+  const chatModerationHost = __m13["chatModerationHost"];
+  const chatNoticeFromEnvelope = __m13["chatNoticeFromEnvelope"];
+  const isChatEnabled = __m13["isChatEnabled"];
+  const mergeMessages = __m13["mergeMessages"];
+  const messageFromEnvelope = __m13["messageFromEnvelope"];
+  const normalizeMessages = __m13["normalizeMessages"];
+  const validateChatDraft = __m13["validateChatDraft"];
 
 function ChatOffStub(props) {
   const uiState = props.uiState || UI_STATES.NETWORK_OFF;
@@ -2833,7 +3080,7 @@ function ChatTab(props = {}) {
 })();
 
 // desktop/src/ui/components/CareMeter.js
-const __m14 = (function () {
+const __m15 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -2876,18 +3123,36 @@ function CareMeter(props = {}) {
 })();
 
 // desktop/src/ui/logic/habitat.js
-const __m15 = (function () {
+const __m16 = (function () {
 /**
  * Pure Habitat helpers. No React, network or DOM access so the same rules can
  * be exercised directly with `node --test`.
  */
 
-const SPECIES = Object.freeze(["byteblob", "patchfox", "nullgeist"]);
+const SPECIES = Object.freeze([
+  "byteblob",
+  "patchfox",
+  "nullgeist",
+  "kernelcrab",
+  "cachebat",
+  "stacktoise",
+  "daemowl",
+  "shellsnail",
+  "regexopus",
+  "firewyrm",
+]);
 
 const SPECIES_LABELS = Object.freeze({
   byteblob: "Byteblob",
   patchfox: "Patchfox",
   nullgeist: "Nullgeist",
+  kernelcrab: "Kernelcrab",
+  cachebat: "Cachebat",
+  stacktoise: "Stacktoise",
+  daemowl: "Daemowl",
+  shellsnail: "Shellsnail",
+  regexopus: "Regexopus",
+  firewyrm: "Firewyrm",
 });
 
 const CARE_ACTIONS = Object.freeze(["feed", "play", "rest"]);
@@ -3054,29 +3319,30 @@ function petFromCareResponse(data, previous) {
 })();
 
 // desktop/src/ui/tabs/HabitatTab.js
-const __m16 = (function () {
+const __m17 = (function () {
   const useEffect = __ext2;
   const useRef = __ext3;
   const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const CareMeter = __m14["CareMeter"];
+  const CareMeter = __m15["CareMeter"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m8["PetPreview"];
+  const PetPreview = __m9["PetPreview"];
+  const joinAssetUrl = __m3["joinAssetUrl"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CARE_ACTIONS = __m15["CARE_ACTIONS"];
-  const CARE_LABELS = __m15["CARE_LABELS"];
-  const MODES = __m15["MODES"];
-  const MODE_LABELS = __m15["MODE_LABELS"];
-  const SPECIES = __m15["SPECIES"];
-  const SPECIES_LABELS = __m15["SPECIES_LABELS"];
-  const buildAdoptRequest = __m15["buildAdoptRequest"];
-  const careMeters = __m15["careMeters"];
-  const extractPetId = __m15["extractPetId"];
-  const habitatView = __m15["habitatView"];
-  const petFromCareResponse = __m15["petFromCareResponse"];
-  const readEnvelope = __m15["readEnvelope"];
+  const CARE_ACTIONS = __m16["CARE_ACTIONS"];
+  const CARE_LABELS = __m16["CARE_LABELS"];
+  const MODES = __m16["MODES"];
+  const MODE_LABELS = __m16["MODE_LABELS"];
+  const SPECIES = __m16["SPECIES"];
+  const SPECIES_LABELS = __m16["SPECIES_LABELS"];
+  const buildAdoptRequest = __m16["buildAdoptRequest"];
+  const careMeters = __m16["careMeters"];
+  const extractPetId = __m16["extractPetId"];
+  const habitatView = __m16["habitatView"];
+  const petFromCareResponse = __m16["petFromCareResponse"];
+  const readEnvelope = __m16["readEnvelope"];
 
 const HABITAT_PLACEHOLDER = Object.freeze({
   name: "Not named yet",
@@ -3360,6 +3626,11 @@ function HabitatTab(props = {}) {
   }
 
   const view = habitatView({ pet, me, goal });
+  const speciesThumbPath = "px3/species/" + species + "_body.png";
+  const speciesThumbUrl =
+    api.assets && typeof api.assets.url === "function"
+      ? api.assets.url(speciesThumbPath)
+      : joinAssetUrl(assetBaseUrl, speciesThumbPath);
 
   async function adopt(event) {
     if (event && typeof event.preventDefault === "function") event.preventDefault();
@@ -3472,20 +3743,41 @@ function HabitatTab(props = {}) {
                 htmlFor: "hg-adopt-species",
                 children: "Species",
               }),
-              jsx(
-                "select",
-                {
-                  id: "hg-adopt-species",
-                  className: "hg-input",
-                  value: species,
-                  onChange: function (event) {
-                    setSpecies(event.target.value);
-                  },
-                  children: SPECIES.map((value) =>
-                    jsx("option", { value, children: SPECIES_LABELS[value] || value }, value)
+              jsxs("div", {
+                className: "hg-row hg-adopt-species",
+                children: [
+                  jsx(
+                    "select",
+                    {
+                      id: "hg-adopt-species",
+                      className: "hg-input",
+                      value: species,
+                      onChange: function (event) {
+                        setSpecies(event.target.value);
+                      },
+                      children: SPECIES.map((value) =>
+                        jsx(
+                          "option",
+                          { value, children: SPECIES_LABELS[value] || value },
+                          value
+                        )
+                      ),
+                    }
                   ),
-                }
-              ),
+                  speciesThumbUrl
+                    ? jsx("img", {
+                        className: "hg-adopt-species__thumb",
+                        src: speciesThumbUrl,
+                        alt: (SPECIES_LABELS[species] || species) + " body",
+                        width: 48,
+                        height: 48,
+                        loading: "lazy",
+                        decoding: "async",
+                        draggable: "false",
+                      })
+                    : null,
+                ],
+              }),
               jsx("label", {
                 className: "hg-label",
                 htmlFor: "hg-adopt-name",
@@ -3582,7 +3874,7 @@ function HabitatTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/leaderboard.js
-const __m17 = (function () {
+const __m18 = (function () {
 /**
  * Pure ranking and bounty presentation helpers for the Desktop Leaderboard tab.
  * No React, no network.
@@ -3721,7 +4013,7 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 })();
 
 // desktop/src/ui/tabs/LeaderboardTab.js
-const __m18 = (function () {
+const __m19 = (function () {
   const useEffect = __ext2;
   const useState = __ext4;
   const jsx = __ext0;
@@ -3729,10 +4021,10 @@ const __m18 = (function () {
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const bountyRows = __m17["bountyRows"];
-  const leaderboardRows = __m17["leaderboardRows"];
-  const mergeBountyClaim = __m17["mergeBountyClaim"];
-  const normalizeLeaderboard = __m17["normalizeLeaderboard"];
+  const bountyRows = __m18["bountyRows"];
+  const leaderboardRows = __m18["leaderboardRows"];
+  const mergeBountyClaim = __m18["mergeBountyClaim"];
+  const normalizeLeaderboard = __m18["normalizeLeaderboard"];
 
 function envelopeMessage(envelope) {
   if (!envelope) return "The bridge did not return a response.";
@@ -4062,7 +4354,7 @@ function LeaderboardTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/session.js
-const __m19 = (function () {
+const __m20 = (function () {
 /**
  * Pure pairing/session view-model helpers.
  *
@@ -4083,7 +4375,20 @@ const PAIRING_STATES = Object.freeze({
 const PAIRING_STATUS = PAIRING_STATES;
 const SESSION_STATES = PAIRING_STATES;
 
+const SIGNUP_ERROR_MESSAGES = Object.freeze({
+  signup_closed: "New account sign-ups are closed right now.",
+  signup_ip_limit: "This network has reached the new-account limit.",
+});
+
 const USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789";
+
+function signupMessageFor(failure) {
+  if (!failure) {
+    return failure;
+  }
+  const message = SIGNUP_ERROR_MESSAGES[failure.code];
+  return message ? Object.assign({}, failure, { message: message }) : failure;
+}
 
 function normalizeUserCode(value) {
   return String(value === undefined || value === null ? "" : value)
@@ -4232,7 +4537,7 @@ function withCountdown(state, now) {
 }
 
 function pairingStateFromStart(value, now) {
-  const failure = envelopeError(value);
+  const failure = signupMessageFor(envelopeError(value));
   if (failure) {
     return Object.assign(emptyPairingState(), {
       status:
@@ -4335,13 +4640,14 @@ function pairingStateFromPoll(value, previous, now) {
 
 function pairingStateFromError(value, previous) {
   const prior = Object.assign(emptyPairingState(), previous || {});
-  const failure =
+  const failure = signupMessageFor(
     envelopeError(value) || {
       status: "unavailable",
       code: "unavailable",
       message: "The request could not be completed.",
       retryAfterS: 0,
-    };
+    }
+  );
   return Object.assign(prior, {
     status: PAIRING_STATES.ERROR,
     paired: false,
@@ -4435,11 +4741,11 @@ function buildPairingViewModel(input, now) {
 
 const createPairingViewModel = buildPairingViewModel;
 
-  return { "PAIRING_STATES": PAIRING_STATES, "PAIRING_STATUS": PAIRING_STATUS, "SESSION_STATES": SESSION_STATES, "normalizeUserCode": normalizeUserCode, "normaliseUserCode": normaliseUserCode, "formatUserCode": formatUserCode, "formatUserCodeDisplay": formatUserCodeDisplay, "isValidUserCode": isValidUserCode, "parseExpiry": parseExpiry, "secondsRemaining": secondsRemaining, "formatCountdown": formatCountdown, "isExpired": isExpired, "envelopeData": envelopeData, "envelopeError": envelopeError, "emptyPairingState": emptyPairingState, "pairingStateFromStart": pairingStateFromStart, "pairingStateFromPoll": pairingStateFromPoll, "pairingStateFromError": pairingStateFromError, "deviceRowsFromEnvelope": deviceRowsFromEnvelope, "devicesFromEnvelope": devicesFromEnvelope, "countdownLabel": countdownLabel, "buildPairingViewModel": buildPairingViewModel, "createPairingViewModel": createPairingViewModel };
+  return { "PAIRING_STATES": PAIRING_STATES, "PAIRING_STATUS": PAIRING_STATUS, "SESSION_STATES": SESSION_STATES, "SIGNUP_ERROR_MESSAGES": SIGNUP_ERROR_MESSAGES, "normalizeUserCode": normalizeUserCode, "normaliseUserCode": normaliseUserCode, "formatUserCode": formatUserCode, "formatUserCodeDisplay": formatUserCodeDisplay, "isValidUserCode": isValidUserCode, "parseExpiry": parseExpiry, "secondsRemaining": secondsRemaining, "formatCountdown": formatCountdown, "isExpired": isExpired, "envelopeData": envelopeData, "envelopeError": envelopeError, "emptyPairingState": emptyPairingState, "pairingStateFromStart": pairingStateFromStart, "pairingStateFromPoll": pairingStateFromPoll, "pairingStateFromError": pairingStateFromError, "deviceRowsFromEnvelope": deviceRowsFromEnvelope, "devicesFromEnvelope": devicesFromEnvelope, "countdownLabel": countdownLabel, "buildPairingViewModel": buildPairingViewModel, "createPairingViewModel": createPairingViewModel };
 })();
 
 // desktop/src/ui/tabs/SettingsTab.js
-const __m20 = (function () {
+const __m21 = (function () {
   const useCallback = __ext5;
   const useEffect = __ext2;
   const useState = __ext4;
@@ -4451,13 +4757,14 @@ const __m20 = (function () {
   const connectionRows = __m0["connectionRows"];
   const deriveConnectionStatus = __m0["deriveConnectionStatus"];
   const resolveConnectionUiState = __m0["resolveConnectionUiState"];
-  const PAIRING_STATES = __m19["PAIRING_STATES"];
-  const deviceRowsFromEnvelope = __m19["deviceRowsFromEnvelope"];
-  const emptyPairingState = __m19["emptyPairingState"];
-  const formatCountdown = __m19["formatCountdown"];
-  const pairingStateFromPoll = __m19["pairingStateFromPoll"];
-  const pairingStateFromStart = __m19["pairingStateFromStart"];
-  const secondsRemaining = __m19["secondsRemaining"];
+  const PAIRING_STATES = __m20["PAIRING_STATES"];
+  const SIGNUP_ERROR_MESSAGES = __m20["SIGNUP_ERROR_MESSAGES"];
+  const deviceRowsFromEnvelope = __m20["deviceRowsFromEnvelope"];
+  const emptyPairingState = __m20["emptyPairingState"];
+  const formatCountdown = __m20["formatCountdown"];
+  const pairingStateFromPoll = __m20["pairingStateFromPoll"];
+  const pairingStateFromStart = __m20["pairingStateFromStart"];
+  const secondsRemaining = __m20["secondsRemaining"];
 
 const SETTINGS_PLACEHOLDER = Object.freeze([
   { key: "backend", label: "Python backend", value: "Disabled" },
@@ -4481,8 +4788,15 @@ function SettingRow(props) {
 }
 
 function noticeText(envelope, fallback) {
-  if (envelope && envelope.error && envelope.error.message) {
-    return envelope.error.message;
+  const error = envelope && envelope.error;
+  if (error) {
+    const signupMessage = SIGNUP_ERROR_MESSAGES[error.code];
+    if (signupMessage) {
+      return signupMessage;
+    }
+    if (error.message) {
+      return error.message;
+    }
   }
   return fallback;
 }
@@ -5046,7 +5360,7 @@ function SettingsTab(props = {}) {
 })();
 
 // desktop/src/ui/tabs/ShopTab.js
-const __m21 = (function () {
+const __m22 = (function () {
   const useEffect = __ext2;
   const useState = __ext4;
   const jsx = __ext0;
@@ -5054,14 +5368,14 @@ const __m21 = (function () {
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
   const NpcHostBanner = __m4["NpcHostBanner"];
-  const PetPreview = __m8["PetPreview"];
-  const extractPetId = __m15["extractPetId"];
-  const groupCatalogBySlot = __m5["groupCatalogBySlot"];
-  const itemAvailability = __m5["itemAvailability"];
-  const joinAssetUrl = __m5["joinAssetUrl"];
-  const manifestFromCatalog = __m5["manifestFromCatalog"];
-  const normaliseWallet = __m5["normaliseWallet"];
-  const readEnvelope = __m5["readEnvelope"];
+  const PetPreview = __m9["PetPreview"];
+  const extractPetId = __m16["extractPetId"];
+  const groupCatalogBySlot = __m6["groupCatalogBySlot"];
+  const itemAvailability = __m6["itemAvailability"];
+  const joinAssetUrl = __m6["joinAssetUrl"];
+  const manifestFromCatalog = __m6["manifestFromCatalog"];
+  const normaliseWallet = __m6["normaliseWallet"];
+  const readEnvelope = __m6["readEnvelope"];
 
 const SHOP_PLACEHOLDER_ITEMS = Object.freeze([
   { id: "placeholder.crown", name: "Binary Crown", slot: "head", priceBits: 2000 },
@@ -5713,19 +6027,19 @@ function ShopTab(props = {}) {
 })();
 
 // desktop/src/ui/pane.js
-const __m22 = (function () {
+const __m23 = (function () {
   const useEffect = __ext2;
   const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
   const deriveConnectionStatus = __m0["deriveConnectionStatus"];
   const resolveConnectionUiState = __m0["resolveConnectionUiState"];
-  const BattleTab = __m11["BattleTab"];
-  const ChatTab = __m13["ChatTab"];
-  const HabitatTab = __m16["HabitatTab"];
-  const LeaderboardTab = __m18["LeaderboardTab"];
-  const SettingsTab = __m20["SettingsTab"];
-  const ShopTab = __m21["ShopTab"];
+  const BattleTab = __m12["BattleTab"];
+  const ChatTab = __m14["ChatTab"];
+  const HabitatTab = __m17["HabitatTab"];
+  const LeaderboardTab = __m19["LeaderboardTab"];
+  const SettingsTab = __m21["SettingsTab"];
+  const ShopTab = __m22["ShopTab"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
 
@@ -5906,7 +6220,7 @@ function HermagotchiPane(props = {}) {
 })();
 
 // desktop/src/ui/api.js
-const __m23 = (function () {
+const __m24 = (function () {
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
@@ -6242,10 +6556,10 @@ function uiStateFromEnvelope(envelope) {
 })();
 
 // desktop/src/ui/register.js
-const __m24 = (function () {
+const __m25 = (function () {
   const jsx = __ext0;
-  const HermagotchiPane = __m22["HermagotchiPane"];
-  const createApiClient = __m23["createApiClient"];
+  const HermagotchiPane = __m23["HermagotchiPane"];
+  const createApiClient = __m24["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -6286,13 +6600,13 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m25 = (function () {
+const __m26 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m22["HermagotchiPane"], "TAB_IDS": __m22["TAB_IDS"], "TAB_LABELS": __m22["TAB_LABELS"], "TAB_COMPONENTS": __m22["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m24["PANE_ID"], "PANE_TITLE": __m24["PANE_TITLE"], "createPaneContribution": __m24["createPaneContribution"], "registerHermagotchiPane": __m24["registerHermagotchiPane"], "createDesktopPlugin": __m24["createDesktopPlugin"], "HabitatTab": __m16["HabitatTab"], "HABITAT_PLACEHOLDER": __m16["HABITAT_PLACEHOLDER"], "BattleTab": __m11["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m11["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m21["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m21["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m18["LeaderboardTab"], "ChatTab": __m13["ChatTab"], "SettingsTab": __m20["SettingsTab"], "SETTINGS_PLACEHOLDER": __m20["SETTINGS_PLACEHOLDER"], "CareMeter": __m14["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m2["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m2["NPC_NAMES"], "npcHostLine": __m2["npcHostLine"] };
+  return { "HermagotchiPane": __m23["HermagotchiPane"], "TAB_IDS": __m23["TAB_IDS"], "TAB_LABELS": __m23["TAB_LABELS"], "TAB_COMPONENTS": __m23["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m25["PANE_ID"], "PANE_TITLE": __m25["PANE_TITLE"], "createPaneContribution": __m25["createPaneContribution"], "registerHermagotchiPane": __m25["registerHermagotchiPane"], "createDesktopPlugin": __m25["createDesktopPlugin"], "HabitatTab": __m17["HabitatTab"], "HABITAT_PLACEHOLDER": __m17["HABITAT_PLACEHOLDER"], "BattleTab": __m12["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m12["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m22["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m22["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m19["LeaderboardTab"], "ChatTab": __m14["ChatTab"], "SettingsTab": __m21["SettingsTab"], "SETTINGS_PLACEHOLDER": __m21["SETTINGS_PLACEHOLDER"], "CareMeter": __m15["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m2["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m2["NPC_NAMES"], "npcHostLine": __m2["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
@@ -6311,8 +6625,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m25["createDesktopPlugin"];
-const __hgRegisterPane = __m25["registerHermagotchiPane"];
+const __hgCreatePlugin = __m26["createDesktopPlugin"];
+const __hgRegisterPane = __m26["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -6330,34 +6644,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m25["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m25["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m25["CareMeter"];
-export const ChatTab = __m25["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m25["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m25["HabitatTab"];
-export const HermagotchiPane = __m25["HermagotchiPane"];
-export const LeaderboardTab = __m25["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m25["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m25["NPC_NAMES"];
-export const NpcHostBanner = __m25["NpcHostBanner"];
-export const PANE_ID = __m25["PANE_ID"];
-export const PANE_TITLE = __m25["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m25["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m25["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m25["SettingsTab"];
-export const ShopTab = __m25["ShopTab"];
-export const StateNotice = __m25["StateNotice"];
-export const TAB_COMPONENTS = __m25["TAB_COMPONENTS"];
-export const TAB_IDS = __m25["TAB_IDS"];
-export const TAB_LABELS = __m25["TAB_LABELS"];
-export const UI_STATES = __m25["UI_STATES"];
-export const UI_STATE_COPY = __m25["UI_STATE_COPY"];
-export const createDesktopPlugin = __m25["createDesktopPlugin"];
-export const createPaneContribution = __m25["createPaneContribution"];
-export const npcHostLine = __m25["npcHostLine"];
-export const registerHermagotchiPane = __m25["registerHermagotchiPane"];
-export const resolveUiState = __m25["resolveUiState"];
+export const BattleTab = __m26["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m26["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m26["CareMeter"];
+export const ChatTab = __m26["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m26["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m26["HabitatTab"];
+export const HermagotchiPane = __m26["HermagotchiPane"];
+export const LeaderboardTab = __m26["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m26["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m26["NPC_NAMES"];
+export const NpcHostBanner = __m26["NpcHostBanner"];
+export const PANE_ID = __m26["PANE_ID"];
+export const PANE_TITLE = __m26["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m26["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m26["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m26["SettingsTab"];
+export const ShopTab = __m26["ShopTab"];
+export const StateNotice = __m26["StateNotice"];
+export const TAB_COMPONENTS = __m26["TAB_COMPONENTS"];
+export const TAB_IDS = __m26["TAB_IDS"];
+export const TAB_LABELS = __m26["TAB_LABELS"];
+export const UI_STATES = __m26["UI_STATES"];
+export const UI_STATE_COPY = __m26["UI_STATE_COPY"];
+export const createDesktopPlugin = __m26["createDesktopPlugin"];
+export const createPaneContribution = __m26["createPaneContribution"];
+export const npcHostLine = __m26["npcHostLine"];
+export const registerHermagotchiPane = __m26["registerHermagotchiPane"];
+export const resolveUiState = __m26["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;
