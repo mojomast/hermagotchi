@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass, field
 
 from .ruleset import (
-    BASE_HP,
+    BATTLE_2_VERSION,
     FOCUS_BONUS_BASE,
     FOCUS_MAX_CHARGES,
     GUARD_REDUCTION_PCT,
@@ -12,6 +12,12 @@ from .ruleset import (
     MOVES,
     SPECIES_STATS,
     STANCES,
+)
+from .types import (
+    STAB,
+    apply_multiplier,
+    effectiveness,
+    resolve_move_type,
 )
 from .validation import (
     CombatError,
@@ -76,6 +82,7 @@ class Replay:
 class _Fighter:
     side: str
     species: str
+    pet_type: object
     max_hp: int
     attack: int
     guard: int
@@ -87,6 +94,10 @@ class _Fighter:
     round_guarding: bool = False
     cooldowns: dict = field(default_factory=dict)
     damage_dealt: int = 0
+    # battle-2 passive state
+    payload_first_hit_pending: bool = False
+    firewall_first_hit_pending: bool = False
+    base_attack: int = 0
 
 
 class _SeededRng:
@@ -112,19 +123,52 @@ def _normalize_seed(seed):
     raise CombatError("seed_invalid", "seed must be an integer or string")
 
 
-def _make_fighter(side, species, stance):
+def _make_fighter(side, species, stance, pet_type, ruleset_version):
     stats = SPECIES_STATS[species]
     modifiers = STANCES[stance]
+    attack = max(1, stats["attack"] + modifiers["attack"])
+    guard = max(0, stats["guard"] + modifiers["guard"])
+    speed = max(0, stats["speed"] + modifiers["speed"])
+    focus = stats["focus"]
+
+    payload_pending = False
+    firewall_pending = False
+    if ruleset_version == BATTLE_2_VERSION and pet_type is not None:
+        if pet_type == "signal":
+            speed += 1
+        elif pet_type == "kernel":
+            focus += 1
+        elif pet_type == "payload":
+            payload_pending = True
+        elif pet_type == "firewall":
+            firewall_pending = True
+        # glitch passive is dynamic (undefined) — applied at damage time
+
     return _Fighter(
         side=side,
         species=species,
+        pet_type=pet_type,
         max_hp=stats["max_hp"],
-        attack=max(1, stats["attack"] + modifiers["attack"]),
-        guard=max(0, stats["guard"] + modifiers["guard"]),
-        speed=max(0, stats["speed"] + modifiers["speed"]),
-        focus=stats["focus"],
+        attack=attack,
+        guard=guard,
+        speed=speed,
+        focus=focus,
         hp=stats["max_hp"],
+        payload_first_hit_pending=payload_pending,
+        firewall_first_hit_pending=firewall_pending,
+        base_attack=attack,
     )
+
+
+def _effective_attack(fighter, ruleset_version):
+    attack = fighter.attack
+    if (
+        ruleset_version == BATTLE_2_VERSION
+        and fighter.pet_type == "glitch"
+        and fighter.hp * 2 <= fighter.max_hp
+    ):
+        attack = fighter.base_attack + 1
+    return attack
 
 
 def _predicate_matches(when, fighter, opponent):
@@ -177,7 +221,7 @@ def _snapshot_hp(fighter_a, fighter_b):
     return {"a": fighter_a.hp, "b": fighter_b.hp}
 
 
-def _apply_move(round_number, actor, defender, move, fallback, rng):
+def _apply_move(round_number, actor, defender, move, fallback, rng, ruleset_version):
     move_def = MOVES[move]
     hp_before = _snapshot_hp(
         actor if actor.side == "a" else defender,
@@ -189,15 +233,48 @@ def _apply_move(round_number, actor, defender, move, fallback, rng):
     if kind == "attack":
         focus_spent = actor.focus_charge
         actor.focus_charge = 0
-        raw = move_def["power"] + 2 * actor.attack - defender.guard
+        attack_stat = _effective_attack(actor, ruleset_version)
+        raw = move_def["power"] + 2 * attack_stat - defender.guard
         if focus_spent:
             raw += focus_spent * _focus_bonus(actor)
+        if (
+            ruleset_version == BATTLE_2_VERSION
+            and actor.payload_first_hit_pending
+        ):
+            raw += 1
+            actor.payload_first_hit_pending = False
+            status_payload = True
+        else:
+            status_payload = False
         raw = max(1, raw)
         guarded = defender.round_guarding
         guard_reduced = guarded and not move_def.get("pierce_guard", False)
         damage = raw
         if guard_reduced:
             damage = max(1, raw * (100 - GUARD_REDUCTION_PCT) // 100)
+
+        type_mult = (1, 1)
+        stab_mult = (1, 1)
+        move_type = None
+        if ruleset_version == BATTLE_2_VERSION and actor.pet_type is not None:
+            move_type = resolve_move_type(move, actor.pet_type)
+            if move_type is not None and defender.pet_type is not None:
+                type_mult = effectiveness(move_type, defender.pet_type)
+                damage = apply_multiplier(damage, type_mult[0], type_mult[1])
+            if move_type is not None and move_type == actor.pet_type:
+                stab_mult = STAB
+                damage = apply_multiplier(damage, stab_mult[0], stab_mult[1])
+
+        if (
+            ruleset_version == BATTLE_2_VERSION
+            and defender.firewall_first_hit_pending
+        ):
+            damage = max(1, damage - 1)
+            defender.firewall_first_hit_pending = False
+            status_firewall = True
+        else:
+            status_firewall = False
+
         defender.hp = max(0, defender.hp - damage)
         actor.damage_dealt += damage
         status = {
@@ -209,6 +286,14 @@ def _apply_move(round_number, actor, defender, move, fallback, rng):
             "focus_spent": focus_spent,
             "hp_remaining": defender.hp,
         }
+        if ruleset_version == BATTLE_2_VERSION:
+            status["move_type"] = move_type
+            status["type_multiplier"] = [type_mult[0], type_mult[1]]
+            status["stab_multiplier"] = [stab_mult[0], stab_mult[1]]
+            if status_payload:
+                status["passive"] = "zero_day"
+            if status_firewall:
+                status["defender_passive"] = "hardened"
         result = "ko" if defender.hp == 0 else "hit"
     elif kind == "guard":
         status = {"guarding": True}
@@ -276,15 +361,27 @@ def _decide_winner(fighter_a, fighter_b, rng):
 
 def resolve_match(ruleset, pet_a, pet_b, tactics_a, tactics_b, seed):
     version = normalize_ruleset(ruleset)
-    species_a = normalize_pet(pet_a)
-    species_b = normalize_pet(pet_b)
+    identity_a = normalize_pet(pet_a, version)
+    identity_b = normalize_pet(pet_b, version)
     tactic_a = validate_tactic_card(tactics_a, version)
     tactic_b = validate_tactic_card(tactics_b, version)
     normalized_seed = _normalize_seed(seed)
     rng = _SeededRng(normalized_seed)
 
-    fighter_a = _make_fighter("a", species_a, tactic_a["stance"])
-    fighter_b = _make_fighter("b", species_b, tactic_b["stance"])
+    fighter_a = _make_fighter(
+        "a",
+        identity_a["species"],
+        tactic_a["stance"],
+        identity_a["type"],
+        version,
+    )
+    fighter_b = _make_fighter(
+        "b",
+        identity_b["species"],
+        tactic_b["stance"],
+        identity_b["type"],
+        version,
+    )
 
     events = []
     rounds = 0
@@ -314,7 +411,9 @@ def resolve_match(ruleset, pet_a, pet_b, tactics_a, tactics_b, seed):
             move = move_a if actor.side == "a" else move_b
             fallback = fallback_a if actor.side == "a" else fallback_b
             events.append(
-                _apply_move(round_number, actor, defender, move, fallback, rng)
+                _apply_move(
+                    round_number, actor, defender, move, fallback, rng, version
+                )
             )
             if fighter_a.hp == 0 or fighter_b.hp == 0:
                 break

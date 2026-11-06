@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 
 RULESET_VERSION = "battle-1"
+BATTLE_1_VERSION = "battle-1"
+BATTLE_2_VERSION = "battle-2"
+SUPPORTED_RULESETS = frozenset({BATTLE_1_VERSION, BATTLE_2_VERSION})
+
 BASE_HP = 100
 MAX_ROUNDS = 6
 STAT_BUDGET = 20
@@ -81,6 +85,16 @@ NEUTRAL_TACTIC = {
     "actions": [{"when": {"always": True}, "move": "basic_attack"}],
 }
 
+
+def neutral_tactic_for(version: str) -> dict:
+    tactic = {
+        "ruleset_version": version,
+        "stance": "balanced",
+        "actions": [{"when": {"always": True}, "move": "basic_attack"}],
+    }
+    return tactic
+
+
 ALLOWED_STANCES = frozenset(STANCES)
 ALLOWED_MOVES = frozenset(MOVES)
 ALLOWED_PREDICATES = frozenset(
@@ -100,5 +114,6 @@ class Ruleset:
     stat_budget: int = STAT_BUDGET
 
 
-BATTLE_1 = Ruleset()
+BATTLE_1 = Ruleset(version=BATTLE_1_VERSION)
+BATTLE_2 = Ruleset(version=BATTLE_2_VERSION)
 RULESET = BATTLE_1

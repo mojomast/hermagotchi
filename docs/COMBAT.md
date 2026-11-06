@@ -1,7 +1,8 @@
 # Hermagotchi Combat — `battle-1`
 
-Status: wave-1 pure engine. Authoritative, deterministic, and intentionally
-separated from HTTP, wallets, ledgers, rewards, ratings, and persistence.
+Status: wave-1 pure engine + wave-hackathon `battle-2` types. Authoritative,
+deterministic, and intentionally separated from HTTP, wallets, ledgers,
+rewards, ratings, and persistence. Type chart details live in `docs/TYPES.md`.
 
 Implementation: `server/app/combat/`
 Tests: `server/tests/test_combat_engine.py`
@@ -43,7 +44,7 @@ rejected with a typed code; it does not silently become the default.
 
 | Constant | Value |
 |---|---:|
-| Ruleset version | `battle-1` |
+| Ruleset version | `battle-1` (default) / `battle-2` (types + passives) |
 | Base / max HP | 100 |
 | Round cap | 6 |
 | Stat budget | 20 per species |
@@ -149,7 +150,9 @@ Rules:
 | `tactic_predicate_unknown` | predicate is not allowlisted |
 | `tactic_predicate_invalid` | predicate value or shape is invalid |
 | `tactic_emote_invalid` | emote identifier is invalid |
-| `ruleset_unsupported` | ruleset version is not `battle-1` |
+| `ruleset_unsupported` | ruleset version is not `battle-1` or `battle-2` |
+| `type_unknown` | `battle-2` pet type is not one of the five |
+| `type_unmapped` | `battle-2` species has no type mapping |
 | `pet_invalid` | pet does not declare a species |
 | `species_unknown` | species is not one of the three v1 species |
 | `seed_invalid` | seed is not an integer or short string |
@@ -286,3 +289,13 @@ python3 -m pytest -q server/tests/test_combat_engine.py
 The tests and engine require only the Python 3 standard library plus pytest.
 No real network, HTTP routes, database, ledger, wallet, reward entitlement, or
 rating code is part of this slice.
+
+## Type effectiveness (`battle-2`)
+
+`battle-2` extends the same species stats, stances, moves, and round structure
+with a five-type pentagon chart, STAB, and one passive per type. `battle-1`
+inputs and golden replays are unchanged — type fields on pets are ignored under
+`battle-1`. See [`TYPES.md`](./TYPES.md) for the chart, species mapping, and
+balance targets. Opt into types by passing `ruleset="battle-2"` (and matching
+tactic `ruleset_version`).
+

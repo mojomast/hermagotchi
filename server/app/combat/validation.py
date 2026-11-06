@@ -7,11 +7,14 @@ from .ruleset import (
     ALLOWED_PREDICATES,
     ALLOWED_STANCES,
     ALLOWED_TACTIC_FIELDS,
-    NEUTRAL_TACTIC,
+    BATTLE_1_VERSION,
     RULESET_VERSION,
     SPECIES_STATS,
+    SUPPORTED_RULESETS,
     Ruleset,
+    neutral_tactic_for,
 )
+from .types import SPECIES_TYPES, TYPES
 
 EMOTE_RE = re.compile(r"^emote\.[A-Za-z0-9][A-Za-z0-9_.-]{0,56}$")
 
@@ -47,24 +50,43 @@ def normalize_ruleset(ruleset):
         version = getattr(
             ruleset, "ruleset_version", getattr(ruleset, "version", None)
         )
-    if version != RULESET_VERSION:
+    if version not in SUPPORTED_RULESETS:
         raise RulesetError(
             "ruleset_unsupported",
             f"unsupported ruleset: {version!r}",
         )
-    return RULESET_VERSION
+    return version
 
 
-def normalize_pet(pet):
+def normalize_pet(pet, ruleset_version=RULESET_VERSION):
     if isinstance(pet, Mapping):
         species = pet.get("species")
+        explicit_type = pet.get("type")
     else:
         species = getattr(pet, "species", None)
+        explicit_type = getattr(pet, "type", None)
     if not isinstance(species, str):
         raise CombatError("pet_invalid", "pet must declare a species")
     if species not in SPECIES_STATS:
         raise CombatError("species_unknown", f"unknown species: {species!r}")
-    return species
+
+    if ruleset_version == BATTLE_1_VERSION:
+        # battle-1 ignores type; keep replays identical.
+        return {"species": species, "type": None}
+
+    pet_type = None
+    if explicit_type is not None:
+        if not isinstance(explicit_type, str) or explicit_type not in TYPES:
+            raise CombatError("type_unknown", f"unknown type: {explicit_type!r}")
+        pet_type = explicit_type
+    else:
+        pet_type = SPECIES_TYPES.get(species)
+        if pet_type is None:
+            raise CombatError(
+                "type_unmapped",
+                f"species {species!r} has no battle-2 type mapping",
+            )
+    return {"species": species, "type": pet_type}
 
 
 def _reject(code, message):
@@ -104,7 +126,7 @@ def _validate_action(action):
 
 def validate_tactic_card(card, ruleset_version=RULESET_VERSION):
     if card is None:
-        return copy.deepcopy(NEUTRAL_TACTIC)
+        return neutral_tactic_for(ruleset_version)
     if not isinstance(card, Mapping):
         _reject("tactic_not_object", "tactic card must be an object")
     unknown = set(card.keys()) - ALLOWED_TACTIC_FIELDS
