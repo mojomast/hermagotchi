@@ -13,12 +13,19 @@ import {
   CHAT_SETTINGS_PATH,
   CHAT_TAUNTS_PATH,
   CHAT_TAUNT_MAX_CHARS,
+  LOBBY_RAIL_BREAKPOINT,
   chatActionNotice,
   chatMessagePayload,
   chatModerationHost,
   chatNoticeFromEnvelope,
   isChatEnabled,
   isTauntMessage,
+  lobbyRailAutoCollapsed,
+  formatRelativeTime,
+  formatPlayerLabel,
+  displayActorLabel,
+  lobbyUnreadCount,
+  lobbyUnreadLabel,
   markInboxRead,
   mergeMessages,
   messageFromEnvelope,
@@ -64,6 +71,20 @@ test("stub is required without an api or while chat is disabled", () => {
   assert.equal(shouldShowChatStub({}), true);
   assert.equal(shouldShowChatStub({ api: {}, chatEnabled: false }), true);
   assert.equal(shouldShowChatStub({ api: {}, chatEnabled: true }), false);
+});
+
+test("lobby rail helpers share the narrow breakpoint and unread badge", () => {
+  assert.equal(LOBBY_RAIL_BREAKPOINT, 840);
+  assert.equal(lobbyRailAutoCollapsed(320), true);
+  assert.equal(lobbyRailAutoCollapsed(839), true);
+  assert.equal(lobbyRailAutoCollapsed(840), false);
+  assert.equal(lobbyRailAutoCollapsed("1280"), false);
+  assert.equal(lobbyRailAutoCollapsed("wide"), false);
+  assert.equal(lobbyUnreadCount({ data: { unread_count: 3 } }), 3);
+  assert.equal(lobbyUnreadCount({ items: [{ id: "n1", unread: true, body: "hi" }] }), 1);
+  assert.equal(lobbyUnreadLabel(0), "");
+  assert.equal(lobbyUnreadLabel(3), "3");
+  assert.equal(lobbyUnreadLabel(400), "99+");
 });
 
 test("message normalization keeps untrusted bodies as plain strings", () => {
@@ -423,4 +444,36 @@ test("ChatTab wires the inbox badge, taunt bubbles and DM target", () => {
   assert.ok(source.includes("tauntSummary"));
   assert.ok(source.includes("data-chat-dm-target"));
   assert.ok(source.includes("validateDmTarget"));
+});
+
+test("formatPlayerLabel prefers display then handle · pet without raw ids", () => {
+  assert.equal(
+    formatPlayerLabel({ display: "Firewyrm · ShotWyrm", handle: "x", pet: "y" }),
+    "Firewyrm · ShotWyrm"
+  );
+  assert.equal(
+    formatPlayerLabel({ handle: "Firewyrm", pet: "ShotWyrm" }),
+    "Firewyrm · ShotWyrm"
+  );
+  assert.equal(formatPlayerLabel({ handle: "Ada" }), "Ada");
+  assert.equal(formatPlayerLabel({}), "Player");
+});
+
+test("displayActorLabel uses author_name and falls back to Player/Agent", () => {
+  assert.equal(
+    displayActorLabel({ author_name: "Ada · Bit", actor_mode: "human" }),
+    "Ada · Bit"
+  );
+  assert.equal(displayActorLabel({ actor_mode: "agent" }), "Agent");
+  assert.equal(displayActorLabel({ actor_mode: "human" }), "Player");
+});
+
+test("formatRelativeTime covers now, minutes, hours, and calendar days", () => {
+  const now = Date.parse("2026-11-06T12:00:00.000Z");
+  assert.equal(formatRelativeTime("2026-11-06T11:59:30.000Z", now), "now");
+  assert.equal(formatRelativeTime("2026-11-06T11:58:00.000Z", now), "2m ago");
+  assert.equal(formatRelativeTime("2026-11-06T09:00:00.000Z", now), "3h ago");
+  assert.equal(formatRelativeTime("2026-11-05T12:00:00.000Z", now), "Nov 5");
+  assert.equal(formatRelativeTime("", now), "");
+  assert.equal(formatRelativeTime(null, now), "");
 });

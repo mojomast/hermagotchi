@@ -19,6 +19,12 @@ This slice wires the read/write surfaces behind `hermagotchi_social` and
 | GET | `/v1/blocks` | required | accounts the caller has blocked |
 | POST | `/v1/blocks` | required | add a block |
 | DELETE | `/v1/blocks/{account_id}` | required | remove a block |
+| GET | `/v1/friends` | required | friends with presence plus pending requests |
+| POST | `/v1/friends` | required | send a friend request by id, handle or pet |
+| POST | `/v1/friends/requests/{id}/respond` | required | accept or decline a request |
+| DELETE | `/v1/friends/{account_id}` | required | remove a friendship (both directions) |
+| POST | `/v1/presence` | required | stamp `last_seen_at` for presence |
+| GET | `/v1/social/history` | required | taunts sent/received and @mentions |
 | GET | `/v1/bounties` | required | existing economy bounty list |
 | POST | `/v1/bounties/{id}/claim` | required | existing economy claim |
 
@@ -105,6 +111,31 @@ Blocks are per-account and symmetric for visibility. The helpers live in
 `server/app/social/blocks.py`; routes live in `server/app/routes/chat.py`.
 The profanity/filter/report path still applies to every chat and taunt send.
 
+
+## Friends, presence and social history
+
+`POST /friends` accepts `account_id` or `target` (account id, public handle or
+unique pet name). Requests start `pending`; the recipient accepts or declines
+with `POST /friends/requests/{id}/respond` and
+`{"action": "accept" | "decline"}`. Accepting writes `friendships` rows in
+both directions in the same transaction. `DELETE /friends/{account_id}`
+removes both directions.
+
+Stable friend reasons are `friend.self`, `friend.blocked`, `friend.already`,
+`friend.not_found` and `friend.pending`. Blocks are symmetric: either side
+blocking refuses new requests and accepts.
+
+`GET /friends` also refreshes the caller's presence and returns
+`incoming_requests` and `outgoing_requests`. Presence is derived from
+`account_presence.last_seen_at` in UTC: **online** under 2 minutes, **away**
+under 15 minutes, otherwise **offline**. `POST /presence` stamps the caller.
+
+`GET /social/history` supports `filter=all|taunts_sent|taunts_received|mentions`,
+`limit` (1-100) and a `before` timestamp cursor. Entries are chat payloads;
+taunts include `match_id` so clients can link to the replay. Received taunts
+cover matches the caller participated in or direct messages addressed to them;
+mentions match the caller's `@public_handle`.
+
 ## Client wrappers
 
 Thin facades keep the base `GameClient` small:
@@ -133,7 +164,9 @@ Every mutation still passes through `PolicyGate`; chat sends require
 `server/app/migrations/0013_agent_chat.sql` rebuilds `chats` to widen the
 channel id limit and add `kind`, `match_id` and `match_context_json` without
 losing rows, indexes or idempotency keys. It also adds
-`chat_read_cursors` and `account_chat_settings`. All object creation uses
+`chat_read_cursors` and `account_chat_settings`.
+`server/app/migrations/0014_friends_presence.sql` adds `friend_requests`,
+`friendships` and `account_presence`. All object creation uses
 `IF NOT EXISTS`, so the migration composes with databases built by earlier
 economy/matchmaking/social slices.
 
@@ -141,6 +174,7 @@ economy/matchmaking/social slices.
 
 ```bash
 python3 -m pytest -q server/tests/test_agent_chat_w13.py
+python3 -m pytest -q server/tests/test_friends_w14.py
 python3 -m pytest -q tests/test_leaderboard_chat.py
 ```
 

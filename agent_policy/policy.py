@@ -31,6 +31,9 @@ READ_ACTIONS = frozenset(
         "shop.inventory",
         "social.read",
         "social.inbox",
+        "social.friends",
+        "social.friends.list",
+        "social.history",
         "meta.leaderboard",
         "meta.bounties",
     }
@@ -52,6 +55,17 @@ _READ_LEAVES = frozenset(
         "read",
         "leaderboard",
         "bounties",
+        "friends",
+        "history",
+    }
+)
+
+FRIEND_ACTIONS = frozenset(
+    {
+        "social.friends.add",
+        "social.friends.accept",
+        "social.friends.decline",
+        "social.friends.remove",
     }
 )
 
@@ -59,7 +73,15 @@ CHAT_ACTIONS = frozenset(
     {"social.send", "social.taunt", "chat.send", "chat.taunt", "message.send"}
 )
 NETWORK_ONLY_ACTIONS = frozenset(
-    {"social.block", "social.report", "moderation.report"}
+    {
+        "social.block",
+        "social.report",
+        "moderation.report",
+        "social.friends.add",
+        "social.friends.accept",
+        "social.friends.decline",
+        "social.friends.remove",
+    }
 )
 GOAL_ACTIONS = frozenset(
     {
@@ -127,6 +149,12 @@ _ACTION_ALIASES = {
     "goal_set": "goals.set",
     "goal_clear": "goals.clear",
     "autonomy.purchase": "shop.buy",
+    "friends.add": "social.friends.add",
+    "friends.accept": "social.friends.accept",
+    "friends.decline": "social.friends.decline",
+    "friends.remove": "social.friends.remove",
+    "friends.list": "social.friends.list",
+    "history": "social.history",
 }
 
 
@@ -401,6 +429,7 @@ __all__ = [
     "CHAT_ACTIONS",
     "DEFAULT_POLICY",
     "DEFAULT_POLICY_DICT",
+    "FRIEND_ACTIONS",
     "GOAL_ACTIONS",
     "NETWORK_ONLY_ACTIONS",
     "Policy",

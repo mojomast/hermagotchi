@@ -118,22 +118,30 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         mutating=True,
     ),
     "hermagotchi_social": _schema(
-        "Read chat, send lobby messages or DMs by name, list the inbox, "
-        "block, report, or taunt in battle.",
-        ["read", "send", "block", "report", "inbox", "taunt"],
+        "Read chat, send messages/DMs, manage friends, read history, block, "
+        "report, or taunt.",
+        ["read", "send", "block", "report", "inbox", "taunt", "friends", "history"],
         {
             "channel_id": {"type": "string"},
             "body": {"type": "string", "maxLength": 500},
             "target": {
                 "type": "string",
                 "maxLength": 64,
-                "description": "Player or pet name/id to DM.",
+                "description": "Player or pet name/id.",
             },
             "target_id": {"type": "string"},
             "reason": {"type": "string", "maxLength": 200},
             "match_id": {"type": "string"},
             "phase": {"type": "string", "enum": ["pre", "post"]},
             "lobby": {"type": "boolean"},
+            "action": {
+                "type": "string",
+                "enum": ["list", "add", "accept", "decline", "remove"],
+            },
+            "filter": {
+                "type": "string",
+                "enum": ["all", "taunts_sent", "taunts_received", "mentions"],
+            },
         },
         mutating=True,
     ),

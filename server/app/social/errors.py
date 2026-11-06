@@ -85,6 +85,36 @@ class DMUnansweredCap(SocialError):
     status_code = 429
 
 
+class FriendSelf(SocialError):
+    code = "friend.self"
+    status_code = 422
+
+
+class FriendBlocked(SocialError):
+    code = "friend.blocked"
+    status_code = 403
+
+
+class FriendAlready(SocialError):
+    code = "friend.already"
+    status_code = 409
+
+
+class FriendNotFound(SocialError):
+    code = "friend.not_found"
+    status_code = 404
+
+
+class FriendPending(SocialError):
+    code = "friend.pending"
+    status_code = 409
+
+
+class InvalidHistoryFilter(SocialError):
+    code = "history.invalid_filter"
+    status_code = 422
+
+
 class TauntInvalidMatch(SocialError):
     code = "taunt.invalid_match"
     status_code = 422

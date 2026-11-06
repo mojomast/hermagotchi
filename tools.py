@@ -45,7 +45,7 @@ MUTATING_OPS: dict[str, set[str]] = {
     "hermagotchi_challenge": {"invite", "respond", "submit_tactics"},
     "hermagotchi_battle": {"practice", "claim"},
     "hermagotchi_shop": {"buy", "equip"},
-    "hermagotchi_social": {"send", "block", "report", "taunt"},
+    "hermagotchi_social": {"send", "block", "report", "taunt", "friends"},
     "hermagotchi_meta": {"claim_bounty"},
 }
 
@@ -139,6 +139,11 @@ class FakeGameClient:
         self.expired_user_codes: set[str] = set()
         self.chat_usage: dict[str, int] = {"lobby": 0, "dm": 0}
         self.chat_usage_day = self._today()
+        self.friend_ids: set[str] = set()
+        self.friend_incoming: set[str] = set()
+        self.friend_outgoing: set[str] = set()
+        self.blocked_accounts: set[str] = set()
+        self.social_history: list[dict[str, Any]] = []
 
     # -- dispatch ---------------------------------------------------------
     def execute(self, tool: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -188,6 +193,9 @@ class FakeGameClient:
             return False
         if tool == "hermagotchi_status" and op == "pair":
             return bool(args.get("user_code") or args.get("revoke_device_id"))
+        if tool == "hermagotchi_social" and op == "friends":
+            choice = str(args.get("action") or "list").strip().lower()
+            return choice in {"add", "accept", "decline", "remove"}
         return True
 
     def _policy_action(self, tool: str, op: str, args: dict[str, Any]) -> str:
@@ -213,6 +221,11 @@ class FakeGameClient:
         if tool == "hermagotchi_battle" and op == "practice":
             if args.get("mode") == "ranked":
                 return "battle.ranked"
+        if tool == "hermagotchi_social" and op == "friends":
+            choice = str(args.get("action") or "list").strip().lower()
+            return f"social.friends.{choice}"
+        if tool == "hermagotchi_social" and op == "history":
+            return "social.history"
         return action
 
     def _map_policy_error(self, tool: str, op: str, code: str) -> str:
@@ -269,6 +282,29 @@ class FakeGameClient:
         ids = sorted({self._self_account_id(), target_id})
         return "dm:" + ":".join(ids)
 
+    def _friend_target(self, args: dict[str, Any]) -> str | None:
+        raw = args.get("target_id")
+        if not isinstance(raw, str) or not raw.strip():
+            raw = args.get("target")
+        if not isinstance(raw, str):
+            return None
+        value = raw.strip()
+        if not value or len(value) > 64:
+            return None
+        return self._resolve_target_id(value)
+
+    def _is_self_target(self, target_id: str) -> bool:
+        ids = {self._self_account_id(), "self"}
+        if self.pet is not None:
+            ids.update(
+                {
+                    str(self.pet.get("pet_id") or ""),
+                    str(self.pet.get("name") or ""),
+                }
+            )
+        ids.discard("")
+        return target_id in ids
+
     def _handlers(self) -> dict[tuple[str, str], Callable[[dict[str, Any], str], dict[str, Any]]]:
         return {
             ("hermagotchi_status", "me"): self._status_me,
@@ -303,6 +339,8 @@ class FakeGameClient:
             ("hermagotchi_social", "report"): self._social_report,
             ("hermagotchi_social", "inbox"): self._social_inbox,
             ("hermagotchi_social", "taunt"): self._social_taunt,
+            ("hermagotchi_social", "friends"): self._social_friends,
+            ("hermagotchi_social", "history"): self._social_history,
             ("hermagotchi_meta", "leaderboard"): self._meta_leaderboard,
             ("hermagotchi_meta", "bounties"): self._meta_bounties,
             ("hermagotchi_meta", "claim_bounty"): self._meta_claim_bounty,
@@ -942,15 +980,145 @@ class FakeGameClient:
             "status": "stub",
             "opponent": None,
         }
+        self.social_history.append(
+            {
+                "kind": "taunts_sent",
+                "message_id": message["message_id"],
+                "match_id": match_id,
+                "body": body,
+                "phase": phase,
+                "created_at": message["created_at"],
+            }
+        )
         return _ok({"message": message, "match_context": match_context}, cid)
+
+    def _social_friends(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
+        action = str(args.get("action") or "list").strip().lower()
+        if action == "list":
+            return _ok(
+                {
+                    "friends": [
+                        {"target_id": target, "status": "friends"}
+                        for target in sorted(self.friend_ids)
+                    ],
+                    "incoming": [
+                        {"target_id": target, "status": "pending"}
+                        for target in sorted(self.friend_incoming)
+                    ],
+                    "outgoing": [
+                        {"target_id": target, "status": "pending"}
+                        for target in sorted(self.friend_outgoing)
+                    ],
+                    "count": len(self.friend_ids),
+                },
+                cid,
+            )
+        if action not in {"add", "accept", "decline", "remove"}:
+            return _error("invalid_arguments", cid)
+        target = self._friend_target(args)
+        if target is None:
+            return _error("invalid_arguments", cid)
+        if self._is_self_target(target):
+            return _error("friend.self", cid)
+
+        if action == "add":
+            if target in self.blocked_accounts:
+                return _error("friend.blocked", cid)
+            if target in self.friend_ids:
+                return _error("friend.already", cid)
+            if target in self.friend_outgoing or target in self.friend_incoming:
+                return _error("friend.pending", cid)
+            self.friend_outgoing.add(target)
+            return _ok(
+                {
+                    "friend": {"target_id": target, "status": "pending"},
+                    "status": "pending",
+                    "pending": True,
+                },
+                cid,
+            )
+
+        if action == "accept":
+            if target in self.blocked_accounts:
+                return _error("friend.blocked", cid)
+            if target in self.friend_ids:
+                return _error("friend.already", cid)
+            if target in self.friend_outgoing:
+                return _error("friend.pending", cid)
+            if target not in self.friend_incoming:
+                return _error("friend.not_found", cid)
+            self.friend_incoming.discard(target)
+            self.friend_ids.add(target)
+            return _ok(
+                {
+                    "friend": {"target_id": target, "status": "friends"},
+                    "status": "friends",
+                    "accepted": True,
+                },
+                cid,
+            )
+
+        if action == "decline":
+            if target in self.friend_ids:
+                return _error("friend.already", cid)
+            if target not in self.friend_incoming and target not in self.friend_outgoing:
+                return _error("friend.not_found", cid)
+            self.friend_incoming.discard(target)
+            self.friend_outgoing.discard(target)
+            return _ok(
+                {
+                    "friend": {"target_id": target, "status": "declined"},
+                    "status": "declined",
+                    "declined": True,
+                },
+                cid,
+            )
+
+        if target in self.friend_ids:
+            self.friend_ids.discard(target)
+            return _ok(
+                {
+                    "friend": {"target_id": target, "status": "removed"},
+                    "status": "removed",
+                    "removed": True,
+                },
+                cid,
+            )
+        if target in self.friend_incoming or target in self.friend_outgoing:
+            self.friend_incoming.discard(target)
+            self.friend_outgoing.discard(target)
+            return _ok(
+                {
+                    "friend": {"target_id": target, "status": "removed"},
+                    "status": "removed",
+                    "removed": True,
+                },
+                cid,
+            )
+        return _error("friend.not_found", cid)
+
+    def _social_history(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
+        choice = str(args.get("filter") or "all").strip().lower()
+        allowed = {"all", "taunts_sent", "taunts_received", "mentions"}
+        if choice not in allowed:
+            return _error("invalid_arguments", cid)
+        items = list(self.social_history)
+        if choice != "all":
+            items = [item for item in items if item.get("kind") == choice]
+        return _ok(
+            {"filter": choice, "items": items, "count": len(items)},
+            cid,
+        )
 
     def _social_block(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         blocked = self._require_network(cid)
         if blocked:
             return blocked
         target_id = args.get("target_id")
-        if not isinstance(target_id, str):
+        if not isinstance(target_id, str) or not target_id.strip():
             return _error("invalid_arguments", cid)
+        target_id = target_id.strip()
+        self.blocked_accounts.add(target_id)
         return _ok({"blocked": target_id}, cid)
 
     def _social_report(self, args: dict[str, Any], cid: str) -> dict[str, Any]:

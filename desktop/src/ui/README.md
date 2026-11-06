@@ -14,7 +14,7 @@ no JSX markup or extra npm dependencies.
 | Battle | `tabs/BattleTab.js` | Challenge inbox placeholder, empty-state copy, disabled practice action |
 | Shop | `tabs/ShopTab.js` | Bits balance placeholder, price table, preview-only note; purchase controls disabled (no spend) |
 | Leaderboard | `tabs/LeaderboardTab.js` | Season/rank table header, empty ranked state, personal-neighborhood placeholder |
-| Chat | `tabs/ChatTab.js` | Chat-off notice, disabled composer and mute/block/report actions |
+| Social | `tabs/ChatTab.js` | Chat-off notice, disabled composer and mute/block/report actions |
 | Settings | `tabs/SettingsTab.js` | Read-only backend, network, identity, chat, autonomy and service placeholders |
 
 `pane.js` exports `TAB_IDS`, `TAB_LABELS`, `TAB_COMPONENTS` and the

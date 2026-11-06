@@ -83,6 +83,7 @@ function StubHabitat(props) {
         : null,
       jsx(NpcHostBanner, {
         surface: "habitat",
+        api: props.api,
         assetBaseUrl: props.assetBaseUrl,
       }),
       jsxs("div", {
@@ -362,6 +363,7 @@ export function HabitatTab(props = {}) {
         : null,
       jsx(NpcHostBanner, {
         surface: "habitat",
+        api: api,
         assetBaseUrl: assetBaseUrl,
       }),
       error

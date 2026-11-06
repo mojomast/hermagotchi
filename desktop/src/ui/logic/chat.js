@@ -15,6 +15,16 @@ export const CHAT_MESSAGE_MAX_CHARS = 400;
 export const CHAT_TAUNT_MAX_CHARS = 90;
 export const CHAT_DM_TARGET_MAX_CHARS = 64;
 export const CHAT_REPORT_REASON = "Reported from the Hermagotchi Desktop lobby.";
+export const LOBBY_RAIL_BREAKPOINT = 840;
+export const LOBBY_RAIL_COLLAPSED_KEY = "hermagotchi.lobbyRail.collapsed";
+export const LOBBY_RAIL_WIDTH_KEY = "hermagotchi.lobbyRail.width";
+export const LOBBY_RAIL_HOST_DISMISSED_KEY = "hermagotchi.lobbyRail.hostDismissed";
+export const LOBBY_RAIL_WIDTH_MIN = 260;
+export const LOBBY_RAIL_WIDTH_MAX = 480;
+export const LOBBY_RAIL_WIDTH_DEFAULT = 320;
+export const LOBBY_RAIL_WIDTH_WIDE = 380;
+
+
 
 const TRUE_FLAGS = new Set(["1", "true", "yes", "on"]);
 
@@ -68,6 +78,68 @@ function normalNullableText(value) {
   return typeof value === "string" ? value : null;
 }
 
+
+/** Build a human label like "Handle · Pet" without leaking raw UUIDs. */
+export function formatPlayerLabel(parts = {}) {
+  const handle = normalText(
+    parts.handle || parts.public_handle || parts.publicHandle || parts.author_handle
+  );
+  const pet = normalText(
+    parts.pet || parts.pet_name || parts.petName || parts.author_pet_name
+  );
+  const explicit = normalText(
+    parts.display || parts.display_name || parts.displayName || parts.author_name || parts.peer_name
+  );
+  if (explicit) return explicit;
+  if (handle && pet) return handle + " · " + pet;
+  if (handle) return handle;
+  if (pet) return pet;
+  return normalText(parts.fallback, "Player");
+}
+
+/** Prefer server author_name; fall back to Player/Agent without IDs. */
+export function displayActorLabel(message = {}) {
+  const named = formatPlayerLabel({
+    display: message.author_name,
+    handle: message.author_handle,
+    pet: message.author_pet_name,
+  });
+  if (named && named !== "Player") return named;
+  return message.actor_mode === "agent" ? "Agent" : "Player";
+}
+
+function _parseIsoMs(value) {
+  if (!value || typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  const normalized = text.endsWith("Z") || /[+-]\d\d:\d\d$/.test(text)
+    ? text
+    : text + "Z";
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Relative clock for chat rows; full ISO stays available for tooltips. */
+export function formatRelativeTime(iso, nowMs = Date.now()) {
+  const ms = _parseIsoMs(iso);
+  if (ms == null) return "";
+  const delta = Math.max(0, nowMs - ms);
+  const sec = Math.floor(delta / 1000);
+  if (sec < 45) return "now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min + "m ago";
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + "h ago";
+  try {
+    return new Date(ms).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  } catch (_err) {
+    return iso;
+  }
+}
+
 /** Coerce one server chat row into the display shape without interpreting it. */
 export function normalizeMessage(item) {
   if (!item || typeof item !== "object") return null;
@@ -85,10 +157,36 @@ export function normalizeMessage(item) {
     match_context: matchContext,
     created_at: normalText(item.created_at),
     deleted_at: normalNullableText(item.deleted_at),
+    author_name: normalNullableText(item.author_name || item.authorName),
+    author_handle: normalNullableText(item.author_handle || item.authorHandle),
+    author_pet_name: normalNullableText(
+      item.author_pet_name || item.authorPetName
+    ),
+    peer_name: normalNullableText(item.peer_name || item.peerName),
+    peer_id: normalNullableText(item.peer_id || item.peerId),
   };
 }
 
-/** Read the message list from either a bridge envelope or decoded data. */
+/** Ascending chat order: oldest first, newest last (above the composer). */
+export function compareLobbyMessages(left, right) {
+  const a = left && left.created_at ? String(left.created_at) : "";
+  const b = right && right.created_at ? String(right.created_at) : "";
+  if (a !== b) return a < b ? -1 : 1;
+  const idA = left && left.id ? String(left.id) : "";
+  const idB = right && right.id ? String(right.id) : "";
+  if (idA === idB) return 0;
+  return idA < idB ? -1 : 1;
+}
+
+export function sortLobbyMessages(messages) {
+  const rows = Array.isArray(messages) ? messages.slice() : [];
+  rows.sort(compareLobbyMessages);
+  return rows;
+}
+
+/** Read the message list from either a bridge envelope or decoded data.
+ *  Always returns ascending created_at/id order even when the API is newest-first.
+ */
 export function normalizeMessages(envelopeOrData) {
   if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
   const payload =
@@ -96,7 +194,7 @@ export function normalizeMessages(envelopeOrData) {
       ? envelopeOrData.data
       : envelopeOrData;
   const rows = Array.isArray(payload.messages) ? payload.messages : [];
-  return rows.map(normalizeMessage).filter(Boolean);
+  return sortLobbyMessages(rows.map(normalizeMessage).filter(Boolean));
 }
 
 /** Read the message returned by a send envelope. */
@@ -112,12 +210,7 @@ export function mergeMessages(existing, incoming) {
     const normalized = normalizeMessage(message);
     if (normalized) byId.set(normalized.id, normalized);
   }
-  return [...byId.values()].sort(function (left, right) {
-    if (left.created_at === right.created_at) {
-      return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
-    }
-    return left.created_at < right.created_at ? -1 : 1;
-  });
+  return [...byId.values()].sort(compareLobbyMessages);
 }
 
 /** Validate a composer draft before it is sent to the bridge. */
@@ -251,13 +344,15 @@ function inboxRows(payload) {
 function inboxFromName(item) {
   const source = item && typeof item === "object" ? item : {};
   return (
+    normalText(source.peer_name || source.peerName) ||
+    normalText(source.author_name || source.authorName) ||
+    normalText(source.display_name || source.displayName) ||
+    normalText(source.public_handle || source.publicHandle) ||
     normalText(source.from) ||
     normalText(source.sender) ||
     normalText(source.player) ||
-    normalText(source.pet_name) ||
-    normalText(source.petName) ||
-    normalText(source.actor_name) ||
-    normalText(source.account_id)
+    normalText(source.pet_name || source.petName) ||
+    normalText(source.actor_name)
   );
 }
 
@@ -294,6 +389,12 @@ export function normalizeInboxItem(item) {
     channel_id: channelId || null,
     account_id: normalText(item.account_id || item.accountId) || null,
     from: inboxFromName(item) || null,
+    peer_name: normalNullableText(item.peer_name || item.peerName),
+    peer_id: normalNullableText(item.peer_id || item.peerId),
+    author_name: normalNullableText(item.author_name || item.authorName),
+    public_handle: normalNullableText(
+      item.public_handle || item.publicHandle
+    ),
     body,
     created_at: normalText(item.created_at),
     read: item.read === true || item.unread === false,
@@ -342,6 +443,134 @@ export function normalizeInbox(envelopeOrData) {
       return item.kind === "mention";
     }),
   };
+}
+
+/** The persistent rail collapses below this viewport width. */
+export function lobbyRailAutoCollapsed(width) {
+  const value = Number(width);
+  if (!Number.isFinite(value)) return false;
+  return value < LOBBY_RAIL_BREAKPOINT;
+}
+
+/** Wider default rail on large panes; clamp to min/max. */
+export function defaultLobbyRailWidth(viewportWidth) {
+  const value = Number(viewportWidth);
+  if (Number.isFinite(value) && value >= 1280) return LOBBY_RAIL_WIDTH_WIDE;
+  return LOBBY_RAIL_WIDTH_DEFAULT;
+}
+
+export function clampLobbyRailWidth(width, viewportWidth) {
+  const value = Number(width);
+  if (!Number.isFinite(value)) return defaultLobbyRailWidth(viewportWidth);
+  const max =
+    Number.isFinite(Number(viewportWidth)) && Number(viewportWidth) > 0
+      ? Math.min(LOBBY_RAIL_WIDTH_MAX, Math.floor(Number(viewportWidth) * 0.45))
+      : LOBBY_RAIL_WIDTH_MAX;
+  return Math.max(LOBBY_RAIL_WIDTH_MIN, Math.min(max, Math.round(value)));
+}
+
+export const LOBBY_GROUP_WINDOW_MS = 5 * 60 * 1000;
+
+function lobbyAuthorKey(message) {
+  if (!message || typeof message !== "object") return "";
+  if (message.account_id) return "id:" + String(message.account_id);
+  const name =
+    message.author_name ||
+    message.author_handle ||
+    message.peer_name ||
+    "";
+  return name ? "name:" + String(name) : "anon";
+}
+
+function lobbyGroupBreak(message) {
+  if (!message || typeof message !== "object") return true;
+  if (isTauntMessage(message) || isUpsetMessage(message)) return true;
+  if (message.kind === "system" || message.kind === "notice") return true;
+  return false;
+}
+
+function lobbyCreatedMs(message) {
+  if (!message || !message.created_at) return null;
+  const text = String(message.created_at).trim();
+  if (!text) return null;
+  const normalized = text.endsWith("Z") || /[+-]\d\d:\d\d$/.test(text)
+    ? text
+    : text + "Z";
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Consecutive same-author runs only (within 5m); taunt/system rows break groups.
+ *  Input should already be ascending by created_at/id.
+ */
+export function groupLobbyMessages(messages) {
+  const rows = sortLobbyMessages(Array.isArray(messages) ? messages : []);
+  return rows.map(function (message, index) {
+    const prev = index > 0 ? rows[index - 1] : null;
+    let grouped = false;
+    if (
+      prev &&
+      !lobbyGroupBreak(prev) &&
+      !lobbyGroupBreak(message) &&
+      lobbyAuthorKey(prev) === lobbyAuthorKey(message) &&
+      lobbyAuthorKey(message) !== "" &&
+      lobbyAuthorKey(message) !== "anon"
+    ) {
+      const prevMs = lobbyCreatedMs(prev);
+      const nextMs = lobbyCreatedMs(message);
+      if (
+        prevMs != null &&
+        nextMs != null &&
+        nextMs >= prevMs &&
+        nextMs - prevMs <= LOBBY_GROUP_WINDOW_MS
+      ) {
+        grouped = true;
+      }
+    }
+    return {
+      message,
+      showHeader: !grouped,
+      grouped,
+    };
+  });
+}
+
+/** True when the message list is stuck near the bottom (auto-scroll allowed). */
+export function shouldStickLobbyScroll(element, thresholdPx = 48) {
+  if (!element || typeof element.scrollHeight !== "number") return true;
+  const remaining =
+    element.scrollHeight - element.scrollTop - element.clientHeight;
+  return remaining <= thresholdPx;
+}
+
+/** Simple stable hue for an author label (IRC-style name colors). */
+export function lobbyAuthorHue(key) {
+  const text = String(key || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return hash % 360;
+}
+
+export function isUpsetMessage(message) {
+  if (!message || typeof message !== "object") return false;
+  if (message.kind === "upset" || message.kind === "callout") return true;
+  const context = message.match_context;
+  if (context && typeof context === "object" && context.upset) return true;
+  return false;
+}
+
+/** Unread count for the collapsed lobby rail badge. */
+export function lobbyUnreadCount(inbox) {
+  return normalizeInbox(inbox).unreadCount;
+}
+
+/** Compact badge label; empty at zero and capped for very busy lobbies. */
+export function lobbyUnreadLabel(count) {
+  const value = Math.trunc(Number(count));
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return value > 99 ? "99+" : String(value);
 }
 
 /** Mark every inbox row read locally without mutating the input. */

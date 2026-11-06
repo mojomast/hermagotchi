@@ -20,7 +20,16 @@ EXPECTED_OPS = {
     ],
     "hermagotchi_battle": ["practice", "get", "replay", "claim"],
     "hermagotchi_shop": ["catalog", "inventory", "buy", "equip"],
-    "hermagotchi_social": ["read", "send", "block", "report", "inbox", "taunt"],
+    "hermagotchi_social": [
+        "read",
+        "send",
+        "block",
+        "report",
+        "inbox",
+        "taunt",
+        "friends",
+        "history",
+    ],
     "hermagotchi_meta": ["leaderboard", "bounties", "claim_bounty"],
 }
 

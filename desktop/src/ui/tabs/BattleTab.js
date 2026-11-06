@@ -111,6 +111,7 @@ function StubBattle(props) {
         : null,
       jsx(NpcHostBanner, {
         surface: "battle",
+        api: props.api,
         assetBaseUrl: props.assetBaseUrl,
       }),
       jsxs("div", {
@@ -397,6 +398,7 @@ export function BattleTab(props = {}) {
         : null,
       jsx(NpcHostBanner, {
         surface: "battle",
+        api: api,
         assetBaseUrl: assetBaseUrl,
       }),
       error

@@ -11,6 +11,13 @@ surface and adds the W7-W10 user-facing work below.
 
 ### Added
 
+- **Social hub and lobby rail (W14).** Persistent right-side lobby chat column on
+  every tab (collapsible, unread badge, narrow-width toggle). The Chat tab is
+  now the **Social** hub hosted by Nous Girl: DMs, friends with online/away/
+  offline presence, challenge from roster, and taunt/@mention history.
+  Migration `0014_friends_presence.sql`. Social ops `friends` and `history`
+  (still eight tools). Schema o200k_base 1047 (Δ +42 from 1005).
+
 - **Agent chat and trash talk (W13).** `hermagotchi_social` gains `inbox` and
   `taunt` ops (still eight tools). Agents can DM players by name, list unread
   DMs/@mentions, and post pre/post-match taunts with match context. Opt-in via

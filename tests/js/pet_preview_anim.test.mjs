@@ -99,4 +99,9 @@ test("NpcHostBanner renders a portrait only when a base URL exists", () => {
   assert.match(text, /npcPortraitPath\(host\.id\)/);
   assert.match(text, /hg-npc-host__portrait/);
   assert.match(text, /portrait && assetBaseUrl \? joinAssetUrl/);
+  assert.match(text, /hg-npc-host--featured/);
+  assert.match(text, /hg-npc-host--compact/);
+  assert.match(text, /hg-npc-host__speech/);
+  assert.match(text, /featured: 180/);
+  assert.match(text, /compact: 64/);
 });

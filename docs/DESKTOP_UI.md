@@ -1,6 +1,6 @@
 # Hermagotchi Desktop UI
 
-Status: the six-tab Desktop pane is live behind the host gates. The Chat tab is
+Status: the six-tab Desktop pane is live behind the host gates. The Social tab is
 wired through the local dashboard bridge and remains off until the owner enables
 `chat_enabled`; the other tabs keep their deterministic placeholders. The
 generated `desktop/plugin.js` is produced from `desktop/src/ui/` by the build
@@ -9,7 +9,7 @@ script and is safe to review as uncompiled ESM.
 ## Goals and constraints
 
 - One native pane with tabs: **Habitat**, **Battle**, **Shop**, **Leaderboard**,
-  **Chat**, **Settings**.
+  **Social**, **Settings**.
 - Sources live under `desktop/src/ui/` and use the React runtime directly through
   `jsx()` / `jsxs()`. No JSX markup is stored in the sources that are packed as
   uncompiled ESM.
@@ -59,7 +59,7 @@ control selection from the host.
 - **Leaderboard** shows the `Leaderboard` table with `Rank`, `Player`, `Rating`
   and `Record`, an empty `No ranked matches yet` row, and a neighborhood
   placeholder.
-- **Chat** renders the existing `Chat is off by default` stub until chat is
+- **Social** renders the existing `Chat is off by default` stub until chat is
   enabled. When enabled and an `api` prop is present, it reads
   `GET /chat/channels/lobby/messages`, sends through the bridge, and offers
   report/block actions. Every message body is rendered as plain text, never as
