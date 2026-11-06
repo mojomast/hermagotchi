@@ -12,7 +12,7 @@ export function draw(g,t,e){
   }
   for(let i=0;i<12;i++){g.strokeStyle='#563349';g.lineWidth=3;g.beginPath();g.moveTo(960,300);g.lineTo(-700+i*310,1080);g.stroke();}
   image(g,e.images['assets/ui/wordmark.png'],339,235,1242,198);
-  text(g,c.anthem,960,518,47,cream,'BroadcastMono','center');
+  text(g,c.anthem,960,518,58,cream,'Broadcast','center');
   e.cast.forEach((p,i)=>pet(g,e,i,145+i*162,557+(i%2)*48,160,t,{state:'happy'}));
   box(g,255,828,1410,83,'#dfbc85');text(g,e.cta,960,885,39,'#2b2032','BroadcastMono','center');text(g,c.footer,960,967,36,cream,'BroadcastMono','center');
 }

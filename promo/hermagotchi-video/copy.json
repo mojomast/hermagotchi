@@ -10,13 +10,13 @@
     "subtitle": "YOUR AGENT. YOUR PET. YOUR VERY LATE NIGHT.",
     "signOn": "TRANSMISSION BEGINS",
     "signOff": "END OF BROADCAST",
-    "draft": "HACKATHON SUBMISSION / ASSET-ANIMATED DRAFT"
+    "draft": "A HERMES HACKATHON SPECIAL"
   },
   "forecast": {
     "title": "PET FORECAST",
     "kicker": "10 SPECIES. STRONG PERSONALITIES.",
     "lower": "A NEW COMPANION IS MOVING IN.",
-    "note": "ILLUSTRATED FORECAST \u00b7 NOT A GAME MAP",
+    "note": "ALL TEN SPECIES · TONIGHT'S LINEUP",
     "regions": [
       "CACHE COAST",
       "STACK VALLEY",
@@ -38,7 +38,7 @@
   },
   "home": {
     "title": "LIFE WITH YOUR PET",
-    "subtitle": "A COMPANION FOR YOUR AGENT'S WORK.",
+    "subtitle": "FEED. TRAIN. GROW WITH YOUR AGENT.",
     "states": [
       "HAPPY",
       "EAT",
@@ -50,53 +50,56 @@
       "ENERGY / REST"
     ],
     "stats": [
-      "XP \u00b7 {{FROM CAPTURE}}",
-      "BITS \u00b7 {{FROM CAPTURE}}"
+      "PRACTICE · 50 BITS × 3 / DAY",
+      "WEEKLY TRAINING CAP"
     ],
     "label": "HOME MOVIES / HABITAT PANE",
     "date": "NOV. 06 1996",
-    "battery": "BATTERY \u25b0\u25b0\u25b0"
+    "battery": "BATTERY ▰▰▰"
   },
   "shop": {
     "title": "DON PIEDRO'S",
     "title2": "DRIP SHOP",
-    "kicker": "81 COSMETICS. ZERO BORING OUTFITS.",
-    "call": "CALL NOW!  OPEN THE SHOP TAB.",
+    "kicker": "85 COSMETICS. ZERO BORING OUTFITS.",
+    "call": "CALL NOW! OPEN THE SHOP TAB.",
     "before": "BEFORE",
     "after": "AFTER",
     "loadout": "MANIFEST-FITTED MAKEOVER",
     "priceUnit": "BITS",
-    "priceNote": "CATALOG PRICE / BINARY CROWN",
-    "ticker": "HATS  \u2022  FACE  \u2022  BACK  \u2022  FRONT  \u2022  AURAS  \u2022  EMOTES  \u2022  HABITATS  \u2022  TITLES",
+    "priceNote": "LEGENDARY / BINARY CROWN",
+    "ticker": "HATS  •  FACE  •  BACK  •  FRONT  •  AURAS  •  EMOTES  •  HABITATS  •  TITLES  •  LEGENDARIES 12K–25K  •  FOUR MYTHICS ~50K",
     "host": "DON PIEDRO / SHOPKEEPER"
   },
   "arena": {
     "title": "ARENA FIGHT NIGHT",
     "kicker": "THE TALE OF THE TAPE",
     "versus": "VS",
-    "round": "EXHIBITION / ANIMATED SEQUENCE",
-    "replay": "INSTANT REPLAY / \u00bc SPEED",
+    "round": "EXHIBITION BOUT",
+    "replay": "INSTANT REPLAY / ¼ SPEED",
     "telestrator": "WATCH THE COUNTER!",
     "ko": "K.O.",
-    "koNote": "ILLUSTRATED FINISH / REPLACE WITH RESULT",
-    "hp": "HP / ILLUSTRATION",
-    "ticker": "DETERMINISTIC BATTLES  \u2022  REPLAYS  \u2022  TACTICS  \u2022  PRACTICE DOES NOT CHANGE RATING",
-    "status": "MULTIPLAYER SUPPORT / HOSTING OPEN",
+    "koNote": "ILLUSTRATED FINISH",
+    "hp": "HP",
+    "ticker": "DETERMINISTIC BATTLES  •  REPLAYS  •  TACTICS  •  PRACTICE PAYS 50 BITS  •  PRACTICE DOES NOT CHANGE RATING",
+    "status": "CASUAL RATED · hermagotchi.rizz.click",
     "host": "SOUTHPAW / RINGSIDE"
   },
   "lobby": {
     "title": "AFTER HOURS",
     "subtitle": "PUBLIC ACCESS / LOBBY LINE",
-    "caller": "CALLER CAPTIONS / AWAITING REAL CHAT",
-    "callers": ["CALLER 01 / {{CHAT_MESSAGE}}", "CALLER 02 / {{CHAT_MESSAGE}}", "CALLER 03 / {{CHAT_MESSAGE}}"],
+    "caller": "LIVE FROM THE LOBBY LINE",
+    "callers": [
+      "CALLER 01 / FEEDING MY BYTEBLOB LIVE",
+      "CALLER 02 / WHO TOOK THE BINARY CROWN?",
+      "CALLER 03 / PRACTICE FIRST. THEN RATED."
+    ],
     "standings": "TONIGHT'S STANDINGS",
-    "ticker": "LEADERBOARD + RATINGS  \u2022  AWAITING VERIFIED CAPTURE  \u2022  CHAT IS OPT-IN",
+    "ticker": "LEADERBOARD + RATINGS  •  CHAT IS OPT-IN  •  LOCAL-FIRST  •  hermagotchi.rizz.click",
     "tip": "TEKNIUM / PRACTICE TIP",
     "host": "NOUS GIRL / YOUR HOST",
     "rows": [
-      "01  {{PLAYER}}  {{RATING}}",
-      "02  {{PLAYER}}  {{RATING}}",
-      "03  {{PLAYER}}  {{RATING}}"
+      "01  FIREWYRM     1023",
+      "02  PATCHFOX      977"
     ]
   },
   "how": {
@@ -118,34 +121,34 @@
     "plate": "FIG. 01 / THE COMPANION CIRCUIT"
   },
   "outro": {
-    "anthem": "PLEASE STAND BY YOUR PET.",
+    "anthem": "MADE BY SLOPTIMUS PRIME",
     "footer": "BUILT FOR THE HERMES HACKATHON",
     "end": "GOOD NIGHT. KEEP GROWING."
   },
   "slots": {
     "SHOT_PANE_HOME": {
-      "label": "SHOT_PANE_HOME",
-      "detail": "REAL HABITAT PANE / AWAITING CAPTURE"
+      "label": "HABITAT",
+      "detail": "CARE · FEED · TRAIN"
     },
     "CLIP_SHOP_GRID": {
-      "label": "CLIP_SHOP_GRID",
-      "detail": "BUY + EQUIP / AWAITING CAPTURE"
+      "label": "THE DRIP",
+      "detail": "BUY · EQUIP · FLEX"
     },
     "CLIP_BATTLE_LIVE": {
-      "label": "CLIP_BATTLE_LIVE",
-      "detail": "ACTUAL BATTLE / AWAITING CAPTURE"
+      "label": "LIVE MATCH",
+      "detail": "DETERMINISTIC PVP"
     },
     "SHOT_BATTLE_RESULT": {
-      "label": "SHOT_BATTLE_RESULT",
-      "detail": "RESULT + MATCH TYPE / AWAITING CAPTURE"
+      "label": "RESULT",
+      "detail": "PRACTICE OR RATED"
     },
     "SHOT_LEADERBOARD": {
-      "label": "SHOT_LEADERBOARD",
-      "detail": "VERIFIED STANDINGS / AWAITING CAPTURE"
+      "label": "STANDINGS",
+      "detail": "CASUAL RATED"
     },
     "SHOT_CHAT": {
-      "label": "SHOT_CHAT",
-      "detail": "OPT-IN CHAT / AWAITING CAPTURE"
+      "label": "LOBBY CHAT",
+      "detail": "OPT-IN · BE COOL"
     }
   },
   "npcs": {
@@ -201,7 +204,7 @@
     },
     "back.tiny_jetpack": {
       "name": "Tiny Jetpack",
-      "price": 1200
+      "price": 4400
     },
     "face.gold_monocle": {
       "name": "Gold Monocle",
@@ -213,7 +216,7 @@
     },
     "face.laser_focus": {
       "name": "Laser Focus",
-      "price": 2000
+      "price": 12000
     },
     "face.noir_shades": {
       "name": "Noir Shades",
@@ -265,15 +268,15 @@
     },
     "front.usb_sword": {
       "name": "USB Sword",
-      "price": 1200
+      "price": 4000
     },
     "hat.binary_crown": {
       "name": "Binary Crown",
-      "price": 2000
+      "price": 25000
     },
     "hat.cron_crown": {
       "name": "Cron Crown",
-      "price": 2000
+      "price": 16000
     },
     "hat.git_bandana": {
       "name": "Git Bandana",
@@ -285,7 +288,7 @@
     },
     "hat.lambda_tiara": {
       "name": "Lambda Tiara",
-      "price": 1200
+      "price": 3800
     },
     "hat.packet_cap": {
       "name": "Packet Cap",
