@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "asset_pack_id": "launch-001",
+  "notes": "PLACEHOLDER_NOT_SHIP: skeleton pack wiring only. Every PNG under fixtures/ is a solid-color stand-in produced locally, not final art. Replace each fixture path and sha256 before any release or demo that claims finished visuals.",
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "baseline_y": 448
+  },
+  "rigs": {
+    "small_front_v1": {
+      "anchors": {
+        "head": [0.50, 0.23],
+        "face": [0.50, 0.42],
+        "back": [0.50, 0.47],
+        "front": [0.50, 0.66],
+        "ground": [0.50, 0.88]
+      }
+    }
+  },
+  "species": {
+    "byteblob": {
+      "rig": "small_front_v1",
+      "base": "fixtures/species/PLACEHOLDER_byteblob_body.png",
+      "overrides": {},
+      "features": {
+        "marking": ["bubble"],
+        "eye_style": ["dot", "wide"],
+        "mouth_style": ["smile"]
+      }
+    },
+    "patchfox": {
+      "rig": "small_front_v1",
+      "base": "fixtures/species/PLACEHOLDER_patchfox_body.png",
+      "overrides": {
+        "head": [0.50, 0.17]
+      },
+      "features": {
+        "ear_type": ["pointed", "rounded"],
+        "tail_type": ["single", "split"],
+        "marking": ["patch"],
+        "eye_style": ["dot", "wide"],
+        "mouth_style": ["smile"]
+      }
+    },
+    "nullgeist": {
+      "rig": "small_front_v1",
+      "base": "fixtures/species/PLACEHOLDER_nullgeist_body.png",
+      "overrides": {},
+      "features": {
+        "marking": ["glitch"],
+        "eye_style": ["void", "spark"],
+        "mouth_style": ["wisp"]
+      }
+    }
+  },
+  "assets": [
+    {
+      "id": "hat.binary_crown",
+      "slot": "head",
+      "path": "fixtures/items/PLACEHOLDER_binary_crown.png",
+      "rig_families": ["small_front_v1"],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [0, -4],
+      "scale": 1.0,
+      "occludes": ["ear_tip_optional"],
+      "notes": "PLACEHOLDER_NOT_SHIP: solid-color crown stand-in; not final art.",
+      "placeholder": true,
+      "sha256": "2abed09d8f309210c6dbebb96c1b4f4128c1a18e81a7bad1011da3bbef6cb04c"
+    }
+  ]
+}
