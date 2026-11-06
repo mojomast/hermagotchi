@@ -406,41 +406,29 @@ def _reward_awards(
 ) -> list[dict[str, Any]]:
     mode = challenge["mode"]
     if mode == "practice":
-        day = now_iso[:10]
-        prior = conn.execute(
-            """
-            SELECT COUNT(*) AS total
-            FROM matches m
-            JOIN challenges c ON c.id = m.challenge_id
-            WHERE m.id != ?
-              AND m.status = 'resolved'
-              AND c.mode = 'practice'
-              AND c.challenger_id = ?
-              AND substr(m.resolved_at, 1, 10) = ?
-            """,
-            (match["id"], challenge["challenger_id"], day),
-        ).fetchone()["total"]
-        if prior >= 3:
-            return []
+        # Daily/weekly caps are enforced atomically by the reward bridge.
         return [
             {
                 "account_id": challenge["challenger_id"],
                 "kind": "bits",
                 "amount": 50,
                 "reason": "battle.practice.bits",
+                "mode": "practice",
             },
             {
                 "account_id": challenge["challenger_id"],
                 "kind": "xp",
                 "amount": 15,
                 "reason": "battle.practice.xp",
+                "mode": "practice",
             },
         ]
 
     accounts = (challenge["challenger_id"], challenge["defender_id"])
     awards: list[dict[str, Any]] = []
     day = now_iso[:10]
-    for side, account_id in zip(("a", "b"), accounts):
+    for index, (side, account_id) in enumerate(zip(("a", "b"), accounts)):
+        opponent_id = accounts[1 - index]
         if mode == "ranked":
             won = winner == side
             bits, xp = (100, 60) if won else (25, 35)
@@ -458,6 +446,8 @@ def _reward_awards(
                 "kind": "bits",
                 "amount": bits,
                 "reason": f"battle.{mode}.{label}.bits",
+                "mode": mode,
+                "opponent_id": opponent_id,
             }
         )
         awards.append(
@@ -466,9 +456,43 @@ def _reward_awards(
                 "kind": "xp",
                 "amount": xp,
                 "reason": f"battle.{mode}.{label}.xp",
+                "mode": mode,
+                "opponent_id": opponent_id,
             }
         )
     return awards
+
+
+CAP_REASONS = (
+    "practice.daily_cap",
+    "practice.weekly_cap",
+    "pvp.daily_cap",
+    "pvp.opponent_daily_cap",
+)
+
+
+def _reward_status_for(
+    conn: sqlite3.Connection, match_id: str, account_id: str
+) -> dict[str, Any]:
+    row = conn.execute(
+        """
+        SELECT reason FROM ledger
+        WHERE source_event_id = ? AND reason IN (?, ?, ?, ?)
+        LIMIT 1
+        """,
+        (f"match:{match_id}:{account_id}:bits", *CAP_REASONS),
+    ).fetchone()
+    if row is None:
+        return {}
+    return {"reward_status": "capped", "reward_reason": row["reason"]}
+
+
+def _match_payload_for(
+    conn: sqlite3.Connection, row: sqlite3.Row, account_id: str
+) -> dict[str, Any]:
+    payload = _match_payload(row)
+    payload.update(_reward_status_for(conn, row["id"], account_id))
+    return payload
 
 
 def _update_ratings_if_present(
@@ -625,9 +649,11 @@ def resolve_pending_match(
         _update_ratings_if_present(conn, challenge, replay.winner)
         updated = _fetch_match(conn, match_id)
         awards = _reward_awards(conn, challenge, updated, replay.winner, now_iso)
-        reward_bridge.award_match_rewards(conn, match_id, awards, now_iso)
+        receipts = reward_bridge.award_match_rewards(conn, match_id, awards, now_iso)
 
-    return _fetch_match(conn, match_id), replay.to_dict()
+    replay_payload = replay.to_dict()
+    replay_payload["rewards"] = receipts
+    return _fetch_match(conn, match_id), replay_payload
 
 
 def submit_tactics(
@@ -659,7 +685,9 @@ def submit_tactics(
     if existing is not None:
         if canonical_json(json.loads(existing["card_json"])) == encoded:
             current, replay = resolve_pending_match(conn, match_id)
-            return _match_payload(current), replay
+            if isinstance(replay, dict):
+                replay.update(_reward_status_for(conn, match_id, account_id))
+            return _match_payload_for(conn, current, account_id), replay
         raise _error("tactics_locked", 409, "Tactics are already locked for this match.")
     if match["status"] != "pending":
         raise _error("match_resolved", 409, "This match is no longer accepting tactics.")
@@ -683,7 +711,9 @@ def submit_tactics(
                 )
 
     match, replay = resolve_pending_match(conn, match_id)
-    return _match_payload(match), replay
+    if isinstance(replay, dict):
+        replay.update(_reward_status_for(conn, match_id, account_id))
+    return _match_payload_for(conn, match, account_id), replay
 
 
 def get_match(
@@ -693,4 +723,7 @@ def get_match(
     challenge = _fetch_challenge(conn, match["challenge_id"])
     if account_id not in {challenge["challenger_id"], challenge["defender_id"]}:
         raise _error("not_participant", 403, "Only match participants may read this match.")
-    return _match_payload(match), _replay_payload(conn, match)
+    replay = _replay_payload(conn, match)
+    if isinstance(replay, dict):
+        replay.update(_reward_status_for(conn, match_id, account_id))
+    return _match_payload_for(conn, match, account_id), replay

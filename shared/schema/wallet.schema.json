@@ -11,6 +11,15 @@
     "account_id": {"type": "string", "format": "uuid"},
     "currency": {"const": "bits"},
     "balance": {"type": "integer", "minimum": 0},
-    "revision": {"type": "integer", "minimum": 0}
+    "revision": {"type": "integer", "minimum": 0},
+    "allowances": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "practice_daily_remaining": {"type": "integer", "minimum": 0},
+        "practice_weekly_bits_remaining": {"type": "integer", "minimum": 0},
+        "pvp_daily_remaining": {"type": "integer", "minimum": 0}
+      }
+    }
   }
 }

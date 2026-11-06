@@ -98,7 +98,15 @@ def test_practice_rewards_at_least_fifty_bits_and_caps_at_three(
 
     capped = _practice(client, auth_headers_a, pet_id)
     assert capped.status_code == 200
-    assert capped.json()["rewards"] == []
+    capped_body = capped.json()
+    capped_rewards = capped_body["rewards"]
+    assert {reward["kind"] for reward in capped_rewards} == {"bits", "xp"}
+    assert {reward["amount"] for reward in capped_rewards} == {0}
+    assert {reward["reward_reason"] for reward in capped_rewards} == {
+        "practice.daily_cap"
+    }
+    assert {reward["reward_status"] for reward in capped_rewards} == {"capped"}
+    assert capped_body["match"]["reward_reason"] == "practice.daily_cap"
 
 
 def test_migration_backfills_eligible_accounts_once(app, account_a):

@@ -12,6 +12,7 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from collections.abc import Iterator
+from datetime import datetime, timezone
 from typing import Any
 
 from .. import CONTRACTS_VERSION
@@ -25,6 +26,156 @@ from .errors import (
 
 MAX_REASON_LEN = 64
 MAX_SOURCE_EVENT_LEN = 128
+
+PRACTICE_BITS_REASON = "battle.practice.bits"
+PRACTICE_DAILY_REWARD_LIMIT = 3
+PRACTICE_WEEKLY_BITS_LIMIT = 750
+PVP_DAILY_REWARD_LIMIT = 10
+PVP_OPPONENT_DAILY_REWARD_LIMIT = 2
+
+_PVP_BITS_REASONS = (
+    "battle.casual.win.bits",
+    "battle.casual.loss.bits",
+    "battle.ranked.win.bits",
+    "battle.ranked.loss.bits",
+)
+
+
+def _as_utc(value: str | None) -> datetime:
+    if value:
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+    return datetime.now(timezone.utc)
+
+
+def _iso_week_key(value: str | None) -> tuple[int, int]:
+    parsed = _as_utc(value)
+    iso = parsed.isocalendar()
+    return iso.year, iso.week
+
+
+def _day_key(value: str | None) -> str:
+    return _as_utc(value).date().isoformat()
+
+
+def count_practice_rewards_today(
+    conn: sqlite3.Connection, account_id: str, at: str | None = None
+) -> int:
+    """Count practice Bits grants already paid on the UTC day containing ``at``."""
+    day = _day_key(at)
+    row = conn.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM ledger
+        WHERE account_id = ?
+          AND reason = ?
+          AND delta > 0
+          AND substr(created_at, 1, 10) = ?
+        """,
+        (account_id, PRACTICE_BITS_REASON, day),
+    ).fetchone()
+    return int(row["total"] if row is not None else 0)
+
+
+def practice_bits_this_week(
+    conn: sqlite3.Connection, account_id: str, at: str | None = None
+) -> int:
+    """Sum practice Bits already granted in the ISO week containing ``at``."""
+    week = _iso_week_key(at)
+    total = 0
+    rows = conn.execute(
+        """
+        SELECT delta, created_at
+        FROM ledger
+        WHERE account_id = ? AND reason = ? AND delta > 0
+        """,
+        (account_id, PRACTICE_BITS_REASON),
+    ).fetchall()
+    for row in rows:
+        if _iso_week_key(row["created_at"]) == week:
+            total += int(row["delta"])
+    return total
+
+
+def count_pvp_rewarded_today(
+    conn: sqlite3.Connection, account_id: str, at: str | None = None
+) -> int:
+    """Count distinct PvP matches that paid Bits on the UTC day containing ``at``."""
+    day = _day_key(at)
+    row = conn.execute(
+        """
+        SELECT COUNT(DISTINCT source_event_id) AS total
+        FROM ledger
+        WHERE account_id = ?
+          AND delta > 0
+          AND substr(created_at, 1, 10) = ?
+          AND reason IN (?, ?, ?, ?)
+        """,
+        (account_id, day, *_PVP_BITS_REASONS),
+    ).fetchone()
+    return int(row["total"] if row is not None else 0)
+
+
+def count_pvp_opponent_rewarded_today(
+    conn: sqlite3.Connection,
+    account_id: str,
+    opponent_id: str,
+    at: str | None = None,
+) -> int:
+    """Count paid PvP matches against one opponent on the UTC day containing ``at``."""
+    day = _day_key(at)
+    row = conn.execute(
+        """
+        SELECT COUNT(DISTINCT m.id) AS total
+        FROM ledger AS l
+        JOIN matches AS m
+          ON l.source_event_id = 'match:' || m.id || ':' || l.account_id || ':bits'
+        JOIN challenges AS c ON c.id = m.challenge_id
+        WHERE l.account_id = ?
+          AND l.delta > 0
+          AND substr(l.created_at, 1, 10) = ?
+          AND l.reason IN (?, ?, ?, ?)
+          AND (
+            (c.challenger_id = ? AND c.defender_id = ?)
+            OR (c.defender_id = ? AND c.challenger_id = ?)
+          )
+        """,
+        (
+            account_id,
+            day,
+            *_PVP_BITS_REASONS,
+            account_id,
+            opponent_id,
+            account_id,
+            opponent_id,
+        ),
+    ).fetchone()
+    return int(row["total"] if row is not None else 0)
+
+
+def wallet_allowances(
+    conn: sqlite3.Connection, account_id: str, at: str | None = None
+) -> dict[str, int]:
+    """Remaining daily/weekly reward allowances for an account."""
+    at = at or utc_now_iso()
+    practice_today = count_practice_rewards_today(conn, account_id, at)
+    practice_week = practice_bits_this_week(conn, account_id, at)
+    pvp_today = count_pvp_rewarded_today(conn, account_id, at)
+    return {
+        "practice_daily_remaining": max(
+            0, PRACTICE_DAILY_REWARD_LIMIT - practice_today
+        ),
+        "practice_weekly_bits_remaining": max(
+            0, PRACTICE_WEEKLY_BITS_LIMIT - practice_week
+        ),
+        "pvp_daily_remaining": max(0, PVP_DAILY_REWARD_LIMIT - pvp_today),
+    }
 
 
 @contextmanager
@@ -69,6 +220,7 @@ def wallet_payload(conn: sqlite3.Connection, account_id: str) -> dict[str, Any]:
         "currency": "bits",
         "balance": row["balance"],
         "revision": row["revision"],
+        "allowances": wallet_allowances(conn, account_id),
     }
 
 

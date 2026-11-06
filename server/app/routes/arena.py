@@ -287,34 +287,23 @@ def start_practice(
     commitment = hashlib.sha256(seed.encode("utf-8")).hexdigest()
     final_hp_json = canonical_json(replay.final_hp)
 
-    prior_rewarded = conn.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM matches AS m
-        JOIN challenges AS c ON c.id = m.challenge_id
-        WHERE m.status = 'resolved'
-          AND c.mode = 'practice'
-          AND c.challenger_id = ?
-          AND substr(m.resolved_at, 1, 10) = ?
-        """,
-        (account_id, now[:10]),
-    ).fetchone()["total"]
-    awards: list[dict[str, Any]] = []
-    if prior_rewarded < PRACTICE_DAILY_REWARD_LIMIT:
-        awards = [
-            {
-                "account_id": account_id,
-                "kind": "bits",
-                "amount": PRACTICE_REWARD_BITS,
-                "reason": "battle.practice.bits",
-            },
-            {
-                "account_id": account_id,
-                "kind": "xp",
-                "amount": PRACTICE_REWARD_XP,
-                "reason": "battle.practice.xp",
-            },
-        ]
+    # Daily and weekly caps are enforced atomically by the reward bridge.
+    awards: list[dict[str, Any]] = [
+        {
+            "account_id": account_id,
+            "kind": "bits",
+            "amount": PRACTICE_REWARD_BITS,
+            "reason": "battle.practice.bits",
+            "mode": "practice",
+        },
+        {
+            "account_id": account_id,
+            "kind": "xp",
+            "amount": PRACTICE_REWARD_XP,
+            "reason": "battle.practice.xp",
+            "mode": "practice",
+        },
+    ]
 
     with conn:
         conn.execute(
@@ -372,12 +361,17 @@ def start_practice(
                 """,
                 (match_id, seq, canonical_json(event)),
             )
-        receipts = (
-            reward_bridge.award_match_rewards(conn, match_id, awards, now)
-            if awards
-            else []
-        )
+        receipts = reward_bridge.award_match_rewards(conn, match_id, awards, now)
 
+    reward_reason = next(
+        (
+            receipt["reward_reason"]
+            for receipt in receipts
+            if receipt.get("reward_reason")
+        ),
+        None,
+    )
+    reward_status = "capped" if reward_reason else "paid"
     match_payload = {
         "contracts_version": CONTRACTS_VERSION,
         "id": match_id,
@@ -397,8 +391,14 @@ def start_practice(
         "final_hp": dict(replay.final_hp),
         "pet": participants["a"],
         "bot": participants["b"],
+        "reward_status": reward_status,
+        "reward_reason": reward_reason,
     }
     replay_payload = replay.to_dict()
+    replay_payload["rewards"] = receipts
+    replay_payload["reward_status"] = reward_status
+    if reward_reason:
+        replay_payload["reward_reason"] = reward_reason
 
     return {
         "contracts_version": CONTRACTS_VERSION,

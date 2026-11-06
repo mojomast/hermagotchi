@@ -1,4 +1,8 @@
-"""Authenticated wallet balance projection (contracts-v1 Wallet)."""
+"""Authenticated wallet projection (contracts-v1 Wallet).
+
+``ensure_wallet`` augments the balance with live practice/PvP allowance
+counters derived from the ledger.
+"""
 
 from __future__ import annotations
 

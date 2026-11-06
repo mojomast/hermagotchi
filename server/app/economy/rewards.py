@@ -7,7 +7,14 @@ import uuid
 from typing import Any
 
 from ..db import utc_now_iso
-from .ledger import credit, ledger_payload, write_transaction
+from .ledger import credit, ledger_payload, wallet_allowances, write_transaction
+
+
+def income_allowances(
+    conn: sqlite3.Connection, account_id: str, at: str | None = None
+) -> dict[str, int]:
+    """Remaining practice/PvP income allowances for the wallet projection."""
+    return wallet_allowances(conn, account_id, at)
 
 
 def _entitlement_source(match_id: str, account_id: str, kind: str) -> str:

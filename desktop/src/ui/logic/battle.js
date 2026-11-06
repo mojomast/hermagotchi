@@ -167,6 +167,52 @@ export function eventEffectiveness(event = {}) {
   };
 }
 
+export const REWARD_CAP_NOTICES = Object.freeze({
+  "practice.daily_cap": "Daily cap reached",
+  "practice.weekly_cap": "Weekly practice cap reached",
+  "pvp.daily_cap": "Daily cap reached",
+  "pvp.opponent_daily_cap": "Opponent daily cap reached",
+});
+
+function _rewardSources(source) {
+  if (!source || typeof source !== "object") return [];
+  const sources = [source];
+  if (Array.isArray(source.rewards)) sources.push(...source.rewards);
+  if (source.match && typeof source.match === "object") {
+    sources.push(source.match);
+    if (Array.isArray(source.match.rewards)) sources.push(...source.match.rewards);
+  }
+  if (source.replay && typeof source.replay === "object") {
+    sources.push(source.replay);
+    if (Array.isArray(source.replay.rewards)) {
+      sources.push(...source.replay.rewards);
+    }
+  }
+  return sources;
+}
+
+/** Return the machine reward-cap reason from a match/reward payload, if any. */
+export function rewardCapReason(source) {
+  if (Array.isArray(source)) source = { rewards: source };
+  for (const item of _rewardSources(source)) {
+    if (!item || typeof item !== "object") continue;
+    const reason = item.reward_reason;
+    if (typeof reason === "string" && reason) return reason;
+    const status = item.reward_status;
+    if (typeof status === "string" && status in REWARD_CAP_NOTICES) {
+      return status;
+    }
+  }
+  return null;
+}
+
+/** Plain-language cap notice for the battle result UI. */
+export function rewardCapNotice(source) {
+  const reason = rewardCapReason(source);
+  if (!reason) return "";
+  return REWARD_CAP_NOTICES[reason] || "Reward cap reached";
+}
+
 export function moveLabel(move) {
   return MOVE_LABELS[move] || String(move || "Move").replace(/_/g, " ");
 }

@@ -7,6 +7,8 @@ import { TurnLog } from "../components/TurnLog.js";
 import {
   battleParticipantsFromMatch,
   battleSummary,
+  rewardCapNotice,
+  rewardCapReason,
 } from "../logic/battle.js";
 
 export const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
@@ -292,6 +294,8 @@ export function BattleTab(props = {}) {
   const previewPet = props.pet || (practiceMatch && practiceMatch.pet) || null;
   const previewLoadout = props.loadout || {};
   const previewAnimState = battleAnimState(replay);
+  const capNotice = rewardCapNotice(practice);
+  const capReason = rewardCapReason(practice);
 
   return jsxs("section", {
     className: "hg-battle",
@@ -308,6 +312,14 @@ export function BattleTab(props = {}) {
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
       notice ? jsx("p", { className: "hg-muted", children: notice }) : null,
+      capNotice
+        ? jsx("p", {
+            className: "hg-muted",
+            role: "status",
+            "data-reward-cap": capReason || "",
+            children: capNotice,
+          })
+        : null,
       jsxs("div", {
         className: "hg-card",
         children: [

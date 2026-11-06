@@ -11,6 +11,8 @@ import {
   eventEffectiveness,
   formatTurnLog,
   replaySummary,
+  rewardCapNotice,
+  rewardCapReason,
   typeMultiplier,
 } from "../../desktop/src/ui/logic/battle.js";
 
@@ -196,4 +198,60 @@ test("battleSummary reads the match header first and falls back to replay", () =
   assert.equal(fallback.rounds, 4);
   assert.deepEqual(fallback.finalHp, { a: 22, b: 0 });
   assert.equal(fallback.replayHash, "c".repeat(64));
+});
+
+test("rewardCapNotice maps server cap reasons to plain notices", () => {
+  assert.equal(
+    rewardCapNotice({ rewards: [{ reward_reason: "practice.daily_cap" }] }),
+    "Daily cap reached"
+  );
+  assert.equal(
+    rewardCapNotice({ reward_reason: "practice.weekly_cap" }),
+    "Weekly practice cap reached"
+  );
+  assert.equal(
+    rewardCapReason({ rewards: [{ reward_status: "pvp.daily_cap" }] }),
+    "pvp.daily_cap"
+  );
+  assert.equal(
+    rewardCapNotice({ rewards: [{ reward_reason: "pvp.opponent_daily_cap" }] }),
+    "Opponent daily cap reached"
+  );
+  assert.equal(
+    rewardCapNotice({
+      reward_status: "capped",
+      rewards: [{ reward_status: "capped", reward_reason: "pvp.daily_cap" }],
+    }),
+    "Daily cap reached"
+  );
+});
+
+test("rewardCapNotice stays quiet for paid and missing rewards", () => {
+  assert.equal(rewardCapNotice(null), "");
+  assert.equal(rewardCapNotice({}), "");
+  assert.equal(
+    rewardCapNotice({ rewards: [{ reward_status: "paid", amount: 50 }] }),
+    ""
+  );
+  assert.equal(rewardCapReason({ match: { reward_reason: null } }), null);
+});
+
+test("rewardCapNotice reads cap fields from a practice response or match", () => {
+  assert.equal(
+    rewardCapNotice({
+      match: { reward_status: "capped", reward_reason: "practice.daily_cap" },
+      rewards: [{ kind: "bits", amount: 0, reward_reason: "practice.daily_cap" }],
+    }),
+    "Daily cap reached"
+  );
+  assert.equal(
+    rewardCapNotice({
+      replay: {
+        reward_status: "capped",
+        reward_reason: "pvp.opponent_daily_cap",
+        rewards: [],
+      },
+    }),
+    "Opponent daily cap reached"
+  );
 });
