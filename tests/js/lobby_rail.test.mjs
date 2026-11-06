@@ -17,7 +17,9 @@ import {
   lobbyRailAutoCollapsed,
   lobbyUnreadCount,
   lobbyUnreadLabel,
+  normalizeMessages,
   shouldStickLobbyScroll,
+  sortLobbyMessages,
 } from "../../desktop/src/ui/logic/chat.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -179,15 +181,161 @@ test("lobby collapse preference key is stable", () => {
 
 test("groupLobbyMessages skips repeated author headers", () => {
   const grouped = groupLobbyMessages([
-    { id: "1", account_id: "a", body: "one", author_name: "Ada · Bit" },
-    { id: "2", account_id: "a", body: "two", author_name: "Ada · Bit" },
-    { id: "3", account_id: "b", body: "three", author_name: "Bo · Fox" },
+    {
+      id: "1",
+      account_id: "a",
+      body: "one",
+      author_name: "Ada · Bit",
+      created_at: "2026-11-06T12:00:00.000Z",
+    },
+    {
+      id: "2",
+      account_id: "a",
+      body: "two",
+      author_name: "Ada · Bit",
+      created_at: "2026-11-06T12:00:30.000Z",
+    },
+    {
+      id: "3",
+      account_id: "b",
+      body: "three",
+      author_name: "Bo · Fox",
+      created_at: "2026-11-06T12:01:00.000Z",
+    },
   ]);
   assert.equal(grouped.length, 3);
   assert.equal(grouped[0].showHeader, true);
   assert.equal(grouped[1].showHeader, false);
   assert.equal(grouped[1].grouped, true);
   assert.equal(grouped[2].showHeader, true);
+});
+
+test("normalizeMessages sorts newest-first API payloads ascending", () => {
+  const rows = normalizeMessages({
+    ok: true,
+    data: {
+      messages: [
+        {
+          id: "c",
+          channel_id: "lobby",
+          account_id: "a",
+          body: "third",
+          created_at: "2026-11-06T12:00:03.000Z",
+        },
+        {
+          id: "a",
+          channel_id: "lobby",
+          account_id: "a",
+          body: "first",
+          created_at: "2026-11-06T12:00:01.000Z",
+        },
+        {
+          id: "b",
+          channel_id: "lobby",
+          account_id: "b",
+          body: "second",
+          created_at: "2026-11-06T12:00:02.000Z",
+        },
+      ],
+    },
+  });
+  assert.deepEqual(
+    rows.map((m) => m.body),
+    ["first", "second", "third"]
+  );
+});
+
+test("groupLobbyMessages keeps interleaved authors separate", () => {
+  const grouped = groupLobbyMessages([
+    {
+      id: "1",
+      account_id: "a",
+      body: "1",
+      created_at: "2026-11-06T12:00:01.000Z",
+    },
+    {
+      id: "2",
+      account_id: "b",
+      body: "2",
+      created_at: "2026-11-06T12:00:02.000Z",
+    },
+    {
+      id: "3",
+      account_id: "a",
+      body: "3",
+      created_at: "2026-11-06T12:00:03.000Z",
+    },
+    {
+      id: "4",
+      account_id: "b",
+      body: "4",
+      created_at: "2026-11-06T12:00:04.000Z",
+    },
+    {
+      id: "5",
+      account_id: "a",
+      body: "5",
+      created_at: "2026-11-06T12:00:05.000Z",
+    },
+  ]);
+  assert.deepEqual(
+    grouped.map((g) => [g.message.body, g.showHeader]),
+    [
+      ["1", true],
+      ["2", true],
+      ["3", true],
+      ["4", true],
+      ["5", true],
+    ]
+  );
+});
+
+test("groupLobbyMessages tie-breaks equal timestamps by id and breaks on taunts", () => {
+  const sorted = sortLobbyMessages([
+    {
+      id: "b",
+      account_id: "a",
+      body: "second",
+      created_at: "2026-11-06T12:00:00.000Z",
+    },
+    {
+      id: "a",
+      account_id: "a",
+      body: "first",
+      created_at: "2026-11-06T12:00:00.000Z",
+    },
+  ]);
+  assert.deepEqual(
+    sorted.map((m) => m.body),
+    ["first", "second"]
+  );
+
+  const withTaunt = groupLobbyMessages([
+    {
+      id: "1",
+      account_id: "a",
+      body: "hi",
+      created_at: "2026-11-06T12:00:00.000Z",
+    },
+    {
+      id: "2",
+      account_id: "a",
+      body: "taunt!",
+      kind: "taunt",
+      created_at: "2026-11-06T12:00:10.000Z",
+      match_context: { match_id: "m1", winner: "a" },
+    },
+    {
+      id: "3",
+      account_id: "a",
+      body: "after",
+      created_at: "2026-11-06T12:00:20.000Z",
+    },
+  ]);
+  assert.equal(withTaunt[0].grouped, false);
+  assert.equal(withTaunt[1].grouped, false);
+  assert.equal(withTaunt[1].showHeader, true);
+  assert.equal(withTaunt[2].grouped, false);
 });
 
 test("shouldStickLobbyScroll is true near the bottom", () => {

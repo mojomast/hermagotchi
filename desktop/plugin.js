@@ -303,7 +303,26 @@ function normalizeMessage(item) {
   };
 }
 
-/** Read the message list from either a bridge envelope or decoded data. */
+/** Ascending chat order: oldest first, newest last (above the composer). */
+function compareLobbyMessages(left, right) {
+  const a = left && left.created_at ? String(left.created_at) : "";
+  const b = right && right.created_at ? String(right.created_at) : "";
+  if (a !== b) return a < b ? -1 : 1;
+  const idA = left && left.id ? String(left.id) : "";
+  const idB = right && right.id ? String(right.id) : "";
+  if (idA === idB) return 0;
+  return idA < idB ? -1 : 1;
+}
+
+function sortLobbyMessages(messages) {
+  const rows = Array.isArray(messages) ? messages.slice() : [];
+  rows.sort(compareLobbyMessages);
+  return rows;
+}
+
+/** Read the message list from either a bridge envelope or decoded data.
+ *  Always returns ascending created_at/id order even when the API is newest-first.
+ */
 function normalizeMessages(envelopeOrData) {
   if (!envelopeOrData || typeof envelopeOrData !== "object") return [];
   const payload =
@@ -311,7 +330,7 @@ function normalizeMessages(envelopeOrData) {
       ? envelopeOrData.data
       : envelopeOrData;
   const rows = Array.isArray(payload.messages) ? payload.messages : [];
-  return rows.map(normalizeMessage).filter(Boolean);
+  return sortLobbyMessages(rows.map(normalizeMessage).filter(Boolean));
 }
 
 /** Read the message returned by a send envelope. */
@@ -327,12 +346,7 @@ function mergeMessages(existing, incoming) {
     const normalized = normalizeMessage(message);
     if (normalized) byId.set(normalized.id, normalized);
   }
-  return [...byId.values()].sort(function (left, right) {
-    if (left.created_at === right.created_at) {
-      return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
-    }
-    return left.created_at < right.created_at ? -1 : 1;
-  });
+  return [...byId.values()].sort(compareLobbyMessages);
 }
 
 /** Validate a composer draft before it is sent to the bridge. */
@@ -591,6 +605,8 @@ function clampLobbyRailWidth(width, viewportWidth) {
   return Math.max(LOBBY_RAIL_WIDTH_MIN, Math.min(max, Math.round(value)));
 }
 
+const LOBBY_GROUP_WINDOW_MS = 5 * 60 * 1000;
+
 function lobbyAuthorKey(message) {
   if (!message || typeof message !== "object") return "";
   if (message.account_id) return "id:" + String(message.account_id);
@@ -602,20 +618,55 @@ function lobbyAuthorKey(message) {
   return name ? "name:" + String(name) : "anon";
 }
 
-/** Mark consecutive same-author rows so the UI can skip repeated headers. */
+function lobbyGroupBreak(message) {
+  if (!message || typeof message !== "object") return true;
+  if (isTauntMessage(message) || isUpsetMessage(message)) return true;
+  if (message.kind === "system" || message.kind === "notice") return true;
+  return false;
+}
+
+function lobbyCreatedMs(message) {
+  if (!message || !message.created_at) return null;
+  const text = String(message.created_at).trim();
+  if (!text) return null;
+  const normalized = text.endsWith("Z") || /[+-]\d\d:\d\d$/.test(text)
+    ? text
+    : text + "Z";
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Consecutive same-author runs only (within 5m); taunt/system rows break groups.
+ *  Input should already be ascending by created_at/id.
+ */
 function groupLobbyMessages(messages) {
-  const rows = Array.isArray(messages) ? messages : [];
+  const rows = sortLobbyMessages(Array.isArray(messages) ? messages : []);
   return rows.map(function (message, index) {
     const prev = index > 0 ? rows[index - 1] : null;
-    const same =
+    let grouped = false;
+    if (
       prev &&
+      !lobbyGroupBreak(prev) &&
+      !lobbyGroupBreak(message) &&
       lobbyAuthorKey(prev) === lobbyAuthorKey(message) &&
       lobbyAuthorKey(message) !== "" &&
-      lobbyAuthorKey(message) !== "anon";
+      lobbyAuthorKey(message) !== "anon"
+    ) {
+      const prevMs = lobbyCreatedMs(prev);
+      const nextMs = lobbyCreatedMs(message);
+      if (
+        prevMs != null &&
+        nextMs != null &&
+        nextMs >= prevMs &&
+        nextMs - prevMs <= LOBBY_GROUP_WINDOW_MS
+      ) {
+        grouped = true;
+      }
+    }
     return {
       message,
-      showHeader: !same,
-      grouped: Boolean(same),
+      showHeader: !grouped,
+      grouped,
     };
   });
 }
@@ -914,7 +965,7 @@ function chatHost() {
   return npcHostLine("chat");
 }
 
-  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "LOBBY_RAIL_COLLAPSED_KEY": LOBBY_RAIL_COLLAPSED_KEY, "LOBBY_RAIL_WIDTH_KEY": LOBBY_RAIL_WIDTH_KEY, "LOBBY_RAIL_HOST_DISMISSED_KEY": LOBBY_RAIL_HOST_DISMISSED_KEY, "LOBBY_RAIL_WIDTH_MIN": LOBBY_RAIL_WIDTH_MIN, "LOBBY_RAIL_WIDTH_MAX": LOBBY_RAIL_WIDTH_MAX, "LOBBY_RAIL_WIDTH_DEFAULT": LOBBY_RAIL_WIDTH_DEFAULT, "LOBBY_RAIL_WIDTH_WIDE": LOBBY_RAIL_WIDTH_WIDE, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "formatPlayerLabel": formatPlayerLabel, "displayActorLabel": displayActorLabel, "formatRelativeTime": formatRelativeTime, "normalizeMessage": normalizeMessage, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "defaultLobbyRailWidth": defaultLobbyRailWidth, "clampLobbyRailWidth": clampLobbyRailWidth, "groupLobbyMessages": groupLobbyMessages, "shouldStickLobbyScroll": shouldStickLobbyScroll, "lobbyAuthorHue": lobbyAuthorHue, "isUpsetMessage": isUpsetMessage, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
+  return { "CHAT_CHANNEL_ID": CHAT_CHANNEL_ID, "CHAT_MESSAGES_PATH": CHAT_MESSAGES_PATH, "CHAT_BLOCKS_PATH": CHAT_BLOCKS_PATH, "CHAT_REPORT_PATH": CHAT_REPORT_PATH, "CHAT_INBOX_PATH": CHAT_INBOX_PATH, "CHAT_INBOX_READ_PATH": CHAT_INBOX_READ_PATH, "CHAT_TAUNTS_PATH": CHAT_TAUNTS_PATH, "CHAT_SETTINGS_PATH": CHAT_SETTINGS_PATH, "CHAT_POLICY_PATH": CHAT_POLICY_PATH, "CHAT_MESSAGE_MAX_CHARS": CHAT_MESSAGE_MAX_CHARS, "CHAT_TAUNT_MAX_CHARS": CHAT_TAUNT_MAX_CHARS, "CHAT_DM_TARGET_MAX_CHARS": CHAT_DM_TARGET_MAX_CHARS, "CHAT_REPORT_REASON": CHAT_REPORT_REASON, "LOBBY_RAIL_BREAKPOINT": LOBBY_RAIL_BREAKPOINT, "LOBBY_RAIL_COLLAPSED_KEY": LOBBY_RAIL_COLLAPSED_KEY, "LOBBY_RAIL_WIDTH_KEY": LOBBY_RAIL_WIDTH_KEY, "LOBBY_RAIL_HOST_DISMISSED_KEY": LOBBY_RAIL_HOST_DISMISSED_KEY, "LOBBY_RAIL_WIDTH_MIN": LOBBY_RAIL_WIDTH_MIN, "LOBBY_RAIL_WIDTH_MAX": LOBBY_RAIL_WIDTH_MAX, "LOBBY_RAIL_WIDTH_DEFAULT": LOBBY_RAIL_WIDTH_DEFAULT, "LOBBY_RAIL_WIDTH_WIDE": LOBBY_RAIL_WIDTH_WIDE, "isChatEnabled": isChatEnabled, "shouldShowChatStub": shouldShowChatStub, "formatPlayerLabel": formatPlayerLabel, "displayActorLabel": displayActorLabel, "formatRelativeTime": formatRelativeTime, "normalizeMessage": normalizeMessage, "compareLobbyMessages": compareLobbyMessages, "sortLobbyMessages": sortLobbyMessages, "normalizeMessages": normalizeMessages, "messageFromEnvelope": messageFromEnvelope, "mergeMessages": mergeMessages, "validateChatDraft": validateChatDraft, "validateDmTarget": validateDmTarget, "chatMessagePayload": chatMessagePayload, "validateTauntDraft": validateTauntDraft, "tauntSummary": tauntSummary, "isTauntMessage": isTauntMessage, "tauntMessagePayload": tauntMessagePayload, "normalizeInboxItem": normalizeInboxItem, "normalizeInbox": normalizeInbox, "lobbyRailAutoCollapsed": lobbyRailAutoCollapsed, "defaultLobbyRailWidth": defaultLobbyRailWidth, "clampLobbyRailWidth": clampLobbyRailWidth, "LOBBY_GROUP_WINDOW_MS": LOBBY_GROUP_WINDOW_MS, "groupLobbyMessages": groupLobbyMessages, "shouldStickLobbyScroll": shouldStickLobbyScroll, "lobbyAuthorHue": lobbyAuthorHue, "isUpsetMessage": isUpsetMessage, "lobbyUnreadCount": lobbyUnreadCount, "lobbyUnreadLabel": lobbyUnreadLabel, "markInboxRead": markInboxRead, "markInboxReadRequest": markInboxReadRequest, "chatSettingsPayload": chatSettingsPayload, "chatEnabledFromEnvelope": chatEnabledFromEnvelope, "updateChatSetting": updateChatSetting, "chatNoticeFromEnvelope": chatNoticeFromEnvelope, "chatActionNotice": chatActionNotice, "chatModerationHost": chatModerationHost, "chatHost": chatHost };
 })();
 
 // desktop/src/ui/logic/assets.js
