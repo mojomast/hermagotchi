@@ -61,4 +61,18 @@ There are 4 generations. Each used Kyle's own Clawpocalypse portrait as a refere
 | px3/npcs/don_piedro_portrait.png, don_piedro_idle_{0,1}.png | source/px3_npc_don_piedro_v1.jpg |
 | px3/npcs/nous_girl_* | source/px3_npc_nous_girl_v1.jpg |
 | px3/npcs/teknium_* | source/px3_npc_teknium_v1.jpg |
-| px3/npcs/turbofit_* | source/px3_npc_turbofit_v1.jpg |
+| px3/npcs/southpaw_* | source/px3_npc_southpaw_v1.jpg (Southpaw; visual reference: Clawpocalypse turbofit portrait) |
+
+### launch-003 extra species (7), 2026-11-05
+Kyle asked for 7 more base pets in the same style, for 10 in total. Each is one new generation with no reference image, using the same pipeline (green key, palette-first mode downscale, binary alpha, palette swaps with eyes locked). Anchors are derived automatically from each silhouette.
+
+| Output | Source |
+|---|---|
+| px3/species/kernelcrab_body.png | source/px3_kernelcrab_v1.jpg |
+| px3/species/cachebat_body.png | source/px3_cachebat_v1.jpg |
+| px3/species/stacktoise_body.png | source/px3_stacktoise_v1.jpg |
+| px3/species/daemowl_body.png | source/px3_daemowl_v1.jpg |
+| px3/species/shellsnail_body.png | source/px3_shellsnail_v1.jpg |
+| px3/species/regexopus_body.png | source/px3_regexopus_v1.jpg |
+| px3/species/firewyrm_body.png | source/px3_firewyrm_v1.jpg |
+| px3/palettes/{species}_*.png, px3/markings/{species}_*.png | procedural |

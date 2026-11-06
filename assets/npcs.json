@@ -117,13 +117,13 @@
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
-      "id": "npc.turbofit",
-      "name": "Turbofit",
+      "id": "npc.southpaw",
+      "name": "Southpaw",
       "role": "Arena announcer for the leaderboard and bounties. Carries an axe-shaped guitar.",
       "ui_surface": "leaderboard",
       "playable": false,
       "portrait": {
-        "path": "px3/npcs/turbofit_portrait.png",
+        "path": "px3/npcs/southpaw_portrait.png",
         "sha256": "2da4b3c1e1d7cd740fdc440acf2cf14cb297a043e14a9e9082cf437143232243",
         "native": [
           32,
@@ -134,11 +134,11 @@
       "idle": {
         "frames": [
           {
-            "path": "px3/npcs/turbofit_idle_0.png",
+            "path": "px3/npcs/southpaw_idle_0.png",
             "sha256": "ba643fd818a6d4951418283c68522b08d5c6b9119112b322163621e2ffef491c"
           },
           {
-            "path": "px3/npcs/turbofit_idle_1.png",
+            "path": "px3/npcs/southpaw_idle_1.png",
             "sha256": "8eb1e090c69e5b3cb72488da7225b1460ffabac6c7ea1799fa7b87d75cf85a35"
           }
         ],
@@ -151,7 +151,7 @@
         "Top of the board gets the loudest riff.",
         "Encore! Season standings updated."
       ],
-      "source": "source/px3_npc_turbofit_v1.jpg",
+      "source": "source/px3_npc_southpaw_v1.jpg",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     }
   ]

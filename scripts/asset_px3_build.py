@@ -15,7 +15,15 @@ SPECIES = {  # source, native height, bottom row (exclusive), colours, concept
   "byteblob": ("px3_byteblob_v1.jpg", 22, BASE_N, 8, "Boxy robot-slime with a black visor screen for a face, stubby legs, bent antenna with a yellow tip."),
   "patchfox": ("px3_patchfox_v1.jpg", 23, BASE_N, 10, "Standing fox critter with huge triangle ears, white-tipped bushy tail and a blue chest patch."),
   "nullgeist": ("px3_nullgeist_v1.jpg", 22, BASE_N - 1, 12, "Hooded sheet-ghost with a jagged hem, one glowing cyan eye and one magenta X eye."),
+  "kernelcrab": ("px3_kernelcrab_v1.jpg", 18, BASE_N, 8, "Wide low crab with raised claws, stalk eyes and a chip-shaped shell."),
+  "cachebat": ("px3_cachebat_v1.jpg", 16, BASE_N - 4, 8, "Hovering bat with huge jagged wings, pink ears, fangs and yellow eyes."),
+  "stacktoise": ("px3_stacktoise_v1.jpg", 23, BASE_N, 8, "Upright tortoise whose shell is a stack of three server racks with amber LEDs."),
+  "daemowl": ("px3_daemowl_v1.jpg", 22, BASE_N, 9, "Chubby horned owl with giant amber eyes and a lightning bolt on its chest."),
+  "shellsnail": ("px3_shellsnail_v1.jpg", 16, BASE_N, 9, "Snail carrying a retro terminal as its shell, with a prompt on the screen."),
+  "regexopus": ("px3_regexopus_v1.jpg", 21, BASE_N, 8, "Round-headed octopus with six curling tentacles and asterisk spots."),
+  "firewyrm": ("px3_firewyrm_v1.jpg", 23, BASE_N, 9, "Upright baby dragon with horns, stubby wings, a curled tail and a flame puff."),
 }
+MAX_W = 22
 # hand pixel cleanup at native res (sprite-local x, y) -> rgb: restores eyes lost at 32px
 FIX = {
   "patchfox": {(5, 10): OUTLINE, (9, 10): OUTLINE},
@@ -25,6 +33,13 @@ PALETTES = {
   "byteblob": {"teal": (0, 1, 1), "brick": (175, 1.0, 1.0), "grape": (80, 0.9, 1.0), "lime": (-75, 0.9, 1.05)},
   "patchfox": {"rust": (0, 1, 1), "arctic": (180, 0.6, 1.0), "dusk": (230, 0.7, 0.8), "moss": (60, 0.8, 0.85)},
   "nullgeist": {"violet": (0, 1, 1), "ember": (110, 1.0, 1.0), "abyss": (-50, 1.0, 0.8), "jade": (-110, 0.8, 0.9)},
+  "kernelcrab": {"scarlet": (0, 1, 1), "cobalt": (-140, 1, 0.9), "toxic": (90, 0.9, 1.0), "gold": (35, 1, 1.05)},
+  "cachebat": {"slate": (0, 1, 1), "plum": (60, 1.6, 1.0), "rust": (-170, 1.6, 1.0), "ice": (-20, 1.4, 1.2)},
+  "stacktoise": {"olive": (0, 1, 1), "teal": (110, 1, 1), "clay": (-40, 1.1, 1), "violet": (200, 0.9, 1)},
+  "daemowl": {"bark": (0, 1, 1), "snowy": (0, 0.3, 1.25), "ash": (180, 0.4, 0.9), "rose": (-30, 1, 1.05)},
+  "shellsnail": {"mauve": (0, 1, 1), "lime": (130, 1, 1), "sky": (-150, 1, 1), "peach": (30, 1, 1.05)},
+  "regexopus": {"coral": (0, 1, 1), "aqua": (180, 1, 1), "grape": (-70, 1, 0.95), "sunny": (50, 1, 1.05)},
+  "firewyrm": {"indigo": (0, 1, 1), "crimson": (110, 1, 1), "jade": (-110, 1, 0.95), "onyx": (0, 0.3, 0.7)},
 }
 def protect_for(sp):
     def f(c, h, s, v):
@@ -32,6 +47,10 @@ def protect_for(sp):
         if sp == "byteblob" and v > 0.9 and s < 0.6: return True  # cyan eye glints
         if sp == "byteblob" and 0.1 <= h <= 0.18: return True     # antenna tip
         if sp == "patchfox" and 0.55 <= h <= 0.7: return True     # blue chest patch
+        if sp in ("cachebat", "daemowl") and s > 0.75 and v > 0.85 and 0.07 <= h <= 0.17: return True  # amber/yellow eyes
+        if sp == "regexopus" and s < 0.45: return True              # cream eye whites / spots
+        if sp == "firewyrm" and 0.0 <= h <= 0.1 and s > 0.7: return True  # flame
+        if sp == "stacktoise" and 0.1 <= h <= 0.16 and s > 0.7: return True  # LEDs
         if sp == "nullgeist" and (0.45 <= h <= 0.56 or (0.84 <= h <= 0.95 and s > 0.7)): return True  # cyan eye + X eye
         return False
     return f
@@ -99,12 +118,16 @@ def main():
     ext = {"schema": "hermagotchi-art-ext-v2", "asset_pack_id": "launch-003", "pixel_factor": FACTOR, "native_size": N,
            "outline_rgb": list(OUTLINE), "markings": MARKINGS, "species": {}, "items": {}}
     for sp, (src, h, bot, ncol, concept) in SPECIES.items():
-        n = to_native_mode(key_green(SRC / src), ncol, height=h, min_area_frac=0.02)
+        k = key_green(SRC / src); n = to_native_mode(k, ncol, height=h, min_area_frac=0.02)
+        if n.width > MAX_W: n = to_native_mode(k, ncol, width=MAX_W, min_area_frac=0.02)
         arr = np.asarray(n).copy()
         for (x, y), c in FIX.get(sp, {}).items():
             if arr[y, x, 3]: arr[y, x, :3] = c
         body = place_native(Image.fromarray(arr, "RGBA"), (N - n.width) // 2, bot - n.height)
         base_rel, base_sha = save(body, f"species/{sp}_body.png")
+        if sp not in ANCHORS:  # auto anchors from silhouette (native grid)
+            ys, xs = np.nonzero(np.asarray(body)[..., 3]); t, b = int(ys.min()), int(ys.max()); cx = int(round((xs.min() + xs.max()) / 2)); hh = b - t
+            ANCHORS[sp] = {"head": [cx, t + 2], "face": [cx, t + round(hh * 0.35)], "back": [cx, t + round(hh * 0.5)], "front": [cx, t + round(hh * 0.62)], "ground": [16, 28]}
         pals, marks, ears = {}, {}, {}
         for pn, (hs, sm, vm) in PALETTES[sp].items():
             pimg = palette_swap(body, hs, sm, vm, protect_for(sp)); rel, s = save(pimg, f"palettes/{sp}_{pn}.png")
@@ -115,7 +138,7 @@ def main():
             rel, s = save(markings(body, mk), f"markings/{sp}_{mk}.png"); marks[mk] = {"path": rel, "z": 5, "sha256": s}
         man["species"][sp] = {"rig": "small_front_v1", "base": base_rel,
             "overrides": {k: [round(x / N, 4), round(y / N, 4)] for k, (x, y) in ANCHORS[sp].items()},
-            "features": {"marking": MARKINGS, **({"ear_type": ["giant"], "tail_type": ["brush"]} if sp == "patchfox" else {"hood": ["pointed"], "eye_style": ["mismatched"]} if sp == "nullgeist" else {"face": ["visor"], "antenna": ["bent"]})}}
+            "features": {"marking": MARKINGS, **({"ear_type": ["giant"], "tail_type": ["brush"]} if sp == "patchfox" else {"hood": ["pointed"], "eye_style": ["mismatched"]} if sp == "nullgeist" else {"face": ["visor"], "antenna": ["bent"]} if sp == "byteblob" else {"silhouette": [sp]})}}
         ext["species"][sp] = {"concept": concept, "source": f"source/{src}", "anchors_native": ANCHORS[sp], "item_scale": 1.0,
             "palettes": pals, "default_palette": next(iter(pals)), "markings": marks, "ear_overlays": ears, "base_sha256": base_sha}
     for iid, slot, z, anc, src, w, attach, overlap, ncol, scale, desc in ITEMS:

@@ -294,6 +294,601 @@
       },
       "ear_overlays": {},
       "base_sha256": "b82c56af23dc964cf20870fac83a81821e0ba48bfe6461212292e56d52e420b8"
+    },
+    "kernelcrab": {
+      "concept": "Wide low crab with raised claws, stalk eyes and a chip-shaped shell.",
+      "source": "source/px3_kernelcrab_v1.jpg",
+      "anchors_native": {
+        "head": [
+          16,
+          13
+        ],
+        "face": [
+          16,
+          17
+        ],
+        "back": [
+          16,
+          19
+        ],
+        "front": [
+          16,
+          21
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "scarlet": {
+          "path": "px3/palettes/kernelcrab_scarlet.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "88435bcb81b3c7bd13ee0f36fad7575a014f125017cf4b25821df335e2c2e566"
+        },
+        "cobalt": {
+          "path": "px3/palettes/kernelcrab_cobalt.png",
+          "hsv_shift": [
+            -140,
+            1,
+            0.9
+          ],
+          "sha256": "e1afa5215affb0511e5563ae9283801d74d2522c64826fbb02610c6ffd2305a4"
+        },
+        "toxic": {
+          "path": "px3/palettes/kernelcrab_toxic.png",
+          "hsv_shift": [
+            90,
+            0.9,
+            1.0
+          ],
+          "sha256": "c318fd115d342d7cb28c0c294f9c7d815b24d3a284e0cbcd9beda6854fd66f53"
+        },
+        "gold": {
+          "path": "px3/palettes/kernelcrab_gold.png",
+          "hsv_shift": [
+            35,
+            1,
+            1.05
+          ],
+          "sha256": "fb2e569305f5513c1ada914b1d2c38f57b8794964d48895ea0b401bb64a420da"
+        }
+      },
+      "default_palette": "scarlet",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/kernelcrab_freckles.png",
+          "z": 5,
+          "sha256": "125f592cb409535b7a133fbe7ee3f33688c136cce44387b227ae58bd40592200"
+        },
+        "stripes": {
+          "path": "px3/markings/kernelcrab_stripes.png",
+          "z": 5,
+          "sha256": "ffd227af20f0ad860ca91ae62902dce764ebc149ca573dc7a8ed7453a084deea"
+        },
+        "spot": {
+          "path": "px3/markings/kernelcrab_spot.png",
+          "z": 5,
+          "sha256": "3205ca3f233e44a595ba61190141f37e298ba32e541603e6427688fd26422fbc"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "88435bcb81b3c7bd13ee0f36fad7575a014f125017cf4b25821df335e2c2e566"
+    },
+    "cachebat": {
+      "concept": "Hovering bat with huge jagged wings, pink ears, fangs and yellow eyes.",
+      "source": "source/px3_cachebat_v1.jpg",
+      "anchors_native": {
+        "head": [
+          16,
+          12
+        ],
+        "face": [
+          16,
+          15
+        ],
+        "back": [
+          16,
+          16
+        ],
+        "front": [
+          16,
+          18
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "slate": {
+          "path": "px3/palettes/cachebat_slate.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "4d8d18c1d9a711b7db118556f9bc399e34185bb5507115ced30342206bbb90d9"
+        },
+        "plum": {
+          "path": "px3/palettes/cachebat_plum.png",
+          "hsv_shift": [
+            60,
+            1.6,
+            1.0
+          ],
+          "sha256": "2b1f8dddfec22f1a6b14af88a53e54b5147bf0bf61f19464d75d05b1e0d4da5b"
+        },
+        "rust": {
+          "path": "px3/palettes/cachebat_rust.png",
+          "hsv_shift": [
+            -170,
+            1.6,
+            1.0
+          ],
+          "sha256": "e5898344ec403c3a2ea06cd92cc491ba0ccf77caab8194e4addbde2eb1b2d804"
+        },
+        "ice": {
+          "path": "px3/palettes/cachebat_ice.png",
+          "hsv_shift": [
+            -20,
+            1.4,
+            1.2
+          ],
+          "sha256": "26caf7b7df2f791a6eca1485dcba2d4c3bc9a6e4a92a84d4843aab1eb841df03"
+        }
+      },
+      "default_palette": "slate",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/cachebat_freckles.png",
+          "z": 5,
+          "sha256": "ff6be898a5fdbe3740e8357a6311a6928a552771cdb212b06849be620cfd31bf"
+        },
+        "stripes": {
+          "path": "px3/markings/cachebat_stripes.png",
+          "z": 5,
+          "sha256": "fe48bc213f1762adfb2cdbebadb350a877cb2b1c8d6e1fda252bfa2836dcc786"
+        },
+        "spot": {
+          "path": "px3/markings/cachebat_spot.png",
+          "z": 5,
+          "sha256": "9b04f10d403456a5dc17495d1e558b3c412862e34be805faae06e263a2668920"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "4d8d18c1d9a711b7db118556f9bc399e34185bb5507115ced30342206bbb90d9"
+    },
+    "stacktoise": {
+      "concept": "Upright tortoise whose shell is a stack of three server racks with amber LEDs.",
+      "source": "source/px3_stacktoise_v1.jpg",
+      "anchors_native": {
+        "head": [
+          16,
+          7
+        ],
+        "face": [
+          16,
+          13
+        ],
+        "back": [
+          16,
+          16
+        ],
+        "front": [
+          16,
+          19
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "olive": {
+          "path": "px3/palettes/stacktoise_olive.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "399ef23d1cf45087c816e70a5a1a3cd66cfc8ab92cd816fb23404b79779986c3"
+        },
+        "teal": {
+          "path": "px3/palettes/stacktoise_teal.png",
+          "hsv_shift": [
+            110,
+            1,
+            1
+          ],
+          "sha256": "6d2f192a42d7a9e02cc842d6a79a1737aee8edcc49ff3f80c2085b533d51b594"
+        },
+        "clay": {
+          "path": "px3/palettes/stacktoise_clay.png",
+          "hsv_shift": [
+            -40,
+            1.1,
+            1
+          ],
+          "sha256": "18a101f2f295549b782448a6d43f6f74b0d72db56f9fde22a2566c165885e7c3"
+        },
+        "violet": {
+          "path": "px3/palettes/stacktoise_violet.png",
+          "hsv_shift": [
+            200,
+            0.9,
+            1
+          ],
+          "sha256": "0eee1e5acf277a9ae13f27be39196c3686bbfbf38b86d1161e9238ee4a310d0f"
+        }
+      },
+      "default_palette": "olive",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/stacktoise_freckles.png",
+          "z": 5,
+          "sha256": "46e3144248694c8838df00bdb1db31c0b581f12cc24a4e01e818cdf92d3960dd"
+        },
+        "stripes": {
+          "path": "px3/markings/stacktoise_stripes.png",
+          "z": 5,
+          "sha256": "2445fce90876a520f8670f83042e6362d7e8199e7e1dcfdc7d93ad71eade5b4c"
+        },
+        "spot": {
+          "path": "px3/markings/stacktoise_spot.png",
+          "z": 5,
+          "sha256": "b9a8b9b0694f8b1efd0543e878e5eb4c292d934ea755f9171d58f831c89a155b"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "399ef23d1cf45087c816e70a5a1a3cd66cfc8ab92cd816fb23404b79779986c3"
+    },
+    "daemowl": {
+      "concept": "Chubby horned owl with giant amber eyes and a lightning bolt on its chest.",
+      "source": "source/px3_daemowl_v1.jpg",
+      "anchors_native": {
+        "head": [
+          15,
+          8
+        ],
+        "face": [
+          15,
+          13
+        ],
+        "back": [
+          15,
+          16
+        ],
+        "front": [
+          15,
+          19
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "bark": {
+          "path": "px3/palettes/daemowl_bark.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "b1a63e978231d6c7d8da8f8ad70651c3ba56b81306bde810df67ebcd06f613d8"
+        },
+        "snowy": {
+          "path": "px3/palettes/daemowl_snowy.png",
+          "hsv_shift": [
+            0,
+            0.3,
+            1.25
+          ],
+          "sha256": "a24239610a10d986adb4b9d5389434f95239aaf8006838005c886feb690b5dac"
+        },
+        "ash": {
+          "path": "px3/palettes/daemowl_ash.png",
+          "hsv_shift": [
+            180,
+            0.4,
+            0.9
+          ],
+          "sha256": "70a7e388e917884fd3a3a04d01f3552a62c1e8a24efa755c7c171b8d354541b7"
+        },
+        "rose": {
+          "path": "px3/palettes/daemowl_rose.png",
+          "hsv_shift": [
+            -30,
+            1,
+            1.05
+          ],
+          "sha256": "3b84b85763fde15095bfe1e135b8797ff6c87cfa0fe6819e65ecd677b757e5c0"
+        }
+      },
+      "default_palette": "bark",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/daemowl_freckles.png",
+          "z": 5,
+          "sha256": "125f592cb409535b7a133fbe7ee3f33688c136cce44387b227ae58bd40592200"
+        },
+        "stripes": {
+          "path": "px3/markings/daemowl_stripes.png",
+          "z": 5,
+          "sha256": "b4f163e7a135815fde16773a8c27a7bcb5d6432cf9dc78a2699428ddf439a0d1"
+        },
+        "spot": {
+          "path": "px3/markings/daemowl_spot.png",
+          "z": 5,
+          "sha256": "0b1b3c4f70a48c7257a6c3fd9a7de7522bf127cfb94531e2cd98ba474aa641ad"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "b1a63e978231d6c7d8da8f8ad70651c3ba56b81306bde810df67ebcd06f613d8"
+    },
+    "shellsnail": {
+      "concept": "Snail carrying a retro terminal as its shell, with a prompt on the screen.",
+      "source": "source/px3_shellsnail_v1.jpg",
+      "anchors_native": {
+        "head": [
+          16,
+          15
+        ],
+        "face": [
+          16,
+          18
+        ],
+        "back": [
+          16,
+          20
+        ],
+        "front": [
+          16,
+          22
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "mauve": {
+          "path": "px3/palettes/shellsnail_mauve.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "c0c096d14a5985ad57cf915bd55e9b30d0f9f0c33ab925df78adf712b3990507"
+        },
+        "lime": {
+          "path": "px3/palettes/shellsnail_lime.png",
+          "hsv_shift": [
+            130,
+            1,
+            1
+          ],
+          "sha256": "5637f7f04660edc4d06d12361cdca90b71b27b1ef3aab7efa6071a71f64020df"
+        },
+        "sky": {
+          "path": "px3/palettes/shellsnail_sky.png",
+          "hsv_shift": [
+            -150,
+            1,
+            1
+          ],
+          "sha256": "1755cb65e24745378f97ebe03e90845e3602cba68f651496fd1e6b17f4502743"
+        },
+        "peach": {
+          "path": "px3/palettes/shellsnail_peach.png",
+          "hsv_shift": [
+            30,
+            1,
+            1.05
+          ],
+          "sha256": "a4717baf3e2f697b8b5b0bd69411cf39811c4fbab376cabb8d25701b6f13ca4b"
+        }
+      },
+      "default_palette": "mauve",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/shellsnail_freckles.png",
+          "z": 5,
+          "sha256": "2738b27a94206c99742ee674d23ebf1bbc7e0801c19ecae8c20b119c1a99eff0"
+        },
+        "stripes": {
+          "path": "px3/markings/shellsnail_stripes.png",
+          "z": 5,
+          "sha256": "18ce3364661e160e64f64e6200fd628d0608e1686143757406b897f9b3487f03"
+        },
+        "spot": {
+          "path": "px3/markings/shellsnail_spot.png",
+          "z": 5,
+          "sha256": "60c70453208e55dfb1c063d528762990bc7924dd585fa9fd3325d608bd23c453"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "c0c096d14a5985ad57cf915bd55e9b30d0f9f0c33ab925df78adf712b3990507"
+    },
+    "regexopus": {
+      "concept": "Round-headed octopus with six curling tentacles and asterisk spots.",
+      "source": "source/px3_regexopus_v1.jpg",
+      "anchors_native": {
+        "head": [
+          15,
+          9
+        ],
+        "face": [
+          15,
+          14
+        ],
+        "back": [
+          15,
+          17
+        ],
+        "front": [
+          15,
+          19
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "coral": {
+          "path": "px3/palettes/regexopus_coral.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "b1f50b9ec544bc55a70580e28e9ac439e487231b763599d68c3157e165459845"
+        },
+        "aqua": {
+          "path": "px3/palettes/regexopus_aqua.png",
+          "hsv_shift": [
+            180,
+            1,
+            1
+          ],
+          "sha256": "b764606177cbcd212d884e1e2221620b885570cfa71b5eb983c0da88a2ed73bd"
+        },
+        "grape": {
+          "path": "px3/palettes/regexopus_grape.png",
+          "hsv_shift": [
+            -70,
+            1,
+            0.95
+          ],
+          "sha256": "655765a1e9aa2fdfc45a3bf8cb4e24aefd48f47539ca5b325e65afa2f81351d1"
+        },
+        "sunny": {
+          "path": "px3/palettes/regexopus_sunny.png",
+          "hsv_shift": [
+            50,
+            1,
+            1.05
+          ],
+          "sha256": "b555a204dcfe56b645aae9a17923718940172413a5b14b568a8dd9e2efbb3a8e"
+        }
+      },
+      "default_palette": "coral",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/regexopus_freckles.png",
+          "z": 5,
+          "sha256": "954f1fb39a4645447bb36879c201647ce0d3252ba212d80e839186c60d6f1861"
+        },
+        "stripes": {
+          "path": "px3/markings/regexopus_stripes.png",
+          "z": 5,
+          "sha256": "62b426c2670da668dbd642e15e1214371941c3dd0de8ba766aa571da62508002"
+        },
+        "spot": {
+          "path": "px3/markings/regexopus_spot.png",
+          "z": 5,
+          "sha256": "0b1b3c4f70a48c7257a6c3fd9a7de7522bf127cfb94531e2cd98ba474aa641ad"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "b1f50b9ec544bc55a70580e28e9ac439e487231b763599d68c3157e165459845"
+    },
+    "firewyrm": {
+      "concept": "Upright baby dragon with horns, stubby wings, a curled tail and a flame puff.",
+      "source": "source/px3_firewyrm_v1.jpg",
+      "anchors_native": {
+        "head": [
+          15,
+          7
+        ],
+        "face": [
+          15,
+          13
+        ],
+        "back": [
+          15,
+          16
+        ],
+        "front": [
+          15,
+          19
+        ],
+        "ground": [
+          16,
+          28
+        ]
+      },
+      "item_scale": 1.0,
+      "palettes": {
+        "indigo": {
+          "path": "px3/palettes/firewyrm_indigo.png",
+          "hsv_shift": [
+            0,
+            1,
+            1
+          ],
+          "sha256": "2712a484cb7f423ebc0034ef573d7f67da287dc4712230c8577acdd9543f09b4"
+        },
+        "crimson": {
+          "path": "px3/palettes/firewyrm_crimson.png",
+          "hsv_shift": [
+            110,
+            1,
+            1
+          ],
+          "sha256": "9d67d8e8a4b4286d0cd7996128d2070d058f2b0ce355f4359eda1097fb32878b"
+        },
+        "jade": {
+          "path": "px3/palettes/firewyrm_jade.png",
+          "hsv_shift": [
+            -110,
+            1,
+            0.95
+          ],
+          "sha256": "8a87c4700140de1357a89a136792997623512183bbd8347e5d2d801f7f7f37a4"
+        },
+        "onyx": {
+          "path": "px3/palettes/firewyrm_onyx.png",
+          "hsv_shift": [
+            0,
+            0.3,
+            0.7
+          ],
+          "sha256": "c57f19a2f0e98327936721526f823d7c8556b501ae4955237269b9c451e98e79"
+        }
+      },
+      "default_palette": "indigo",
+      "markings": {
+        "freckles": {
+          "path": "px3/markings/firewyrm_freckles.png",
+          "z": 5,
+          "sha256": "727e6b450a8f22ca4ba785bfce6f49d7c0f01f5d6e29ccc786ff2c1dfe882fd1"
+        },
+        "stripes": {
+          "path": "px3/markings/firewyrm_stripes.png",
+          "z": 5,
+          "sha256": "7fbd11297f9ec2dd75d8299540b4233356ccf5a4953675bd05557bf7ed40a5c9"
+        },
+        "spot": {
+          "path": "px3/markings/firewyrm_spot.png",
+          "z": 5,
+          "sha256": "68971dc641a2975c82a2a5562283be5021af3b4763243e583b692043e9143d14"
+        }
+      },
+      "ear_overlays": {},
+      "base_sha256": "2712a484cb7f423ebc0034ef573d7f67da287dc4712230c8577acdd9543f09b4"
     }
   },
   "items": {
@@ -319,6 +914,62 @@
           ]
         },
         "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
           "compatible": true,
           "transform_native": [
             0,
@@ -356,6 +1007,62 @@
             0,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -381,6 +1088,62 @@
           ]
         },
         "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
           "compatible": true,
           "transform_native": [
             0,
@@ -418,6 +1181,62 @@
             0,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -443,6 +1262,62 @@
           ]
         },
         "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
           "compatible": true,
           "transform_native": [
             0,
@@ -480,6 +1355,62 @@
             0,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -511,6 +1442,62 @@
             2,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -536,6 +1523,62 @@
           ]
         },
         "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
           "compatible": true,
           "transform_native": [
             0,
@@ -573,6 +1616,62 @@
             0,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -604,6 +1703,62 @@
             -1,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -629,6 +1784,62 @@
           ]
         },
         "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
           "compatible": true,
           "transform_native": [
             0,
@@ -666,6 +1877,62 @@
             0,
             1.0
           ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
         }
       }
     },
@@ -691,6 +1958,62 @@
           ]
         },
         "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
           "compatible": true,
           "transform_native": [
             0,
