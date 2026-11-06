@@ -10,7 +10,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/don_piedro_portrait.png",
-        "sha256": "d0f38fe155a742af3a6daee2bc4d83ce4c4f17c79010d08cf130f0a03ba2aebf",
+        "sha256": "f6b98cbec468a11f187a9c93839274fee6ef80a1517fb76d8dee17764b3cc2db",
         "native": [
           128,
           128
@@ -19,7 +19,7 @@
       },
       "dialog": {
         "path": "px3/npcs/don_piedro_dialog.png",
-        "sha256": "d0f38fe155a742af3a6daee2bc4d83ce4c4f17c79010d08cf130f0a03ba2aebf",
+        "sha256": "f6b98cbec468a11f187a9c93839274fee6ef80a1517fb76d8dee17764b3cc2db",
         "native": [
           128,
           128
@@ -31,11 +31,11 @@
         "frames": [
           {
             "path": "px3/npcs/don_piedro_idle_0.png",
-            "sha256": "5bd4e64fcf2dc938668a30ff71606b4799649ebd5514f21d20a9fd866ca1fb72"
+            "sha256": "eb8416974d97f7d1b207e8adb6e9f0ee4820648cc06995685cc3865a4c7a0ffa"
           },
           {
             "path": "px3/npcs/don_piedro_idle_1.png",
-            "sha256": "1573e6b6182944d02a0c7eb0bf073f4e41c1a7ff0ecc9fab789483eae5043b09"
+            "sha256": "9660c429b2f5d946c84d491b706adbcad3628f5be1c256d9f6cb461ee0150371"
           }
         ],
         "frame_ms": 500
@@ -59,7 +59,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/nous_girl_portrait.png",
-        "sha256": "56fada7f1c89e2aceb6ac1e8b6c343437fe17a058f1b86e8ffb31ee103a19367",
+        "sha256": "e1dbc4511e3fc5cd869322a3ad39fb7ebd6e59c87d6fe2a7c26e4fd27b57698b",
         "native": [
           128,
           128
@@ -68,7 +68,7 @@
       },
       "dialog": {
         "path": "px3/npcs/nous_girl_dialog.png",
-        "sha256": "fca7766032b7ded096b34d63369768034068dbae8280cdb54d9663c9177088bf",
+        "sha256": "b965dbf84d83a4f3618e8982dec123e7c6a08f71d09369744141f483fa26a04c",
         "native": [
           128,
           128
@@ -80,11 +80,11 @@
         "frames": [
           {
             "path": "px3/npcs/nous_girl_idle_0.png",
-            "sha256": "26e85b380c8676b9dbe7854ee71c2094e6333e79dac37efb8bf5ffb818467bcf"
+            "sha256": "e4ce1400ac7a5b9974a8834d856333099f9c3428cdfe7e39f30b7ecb5ab6fe54"
           },
           {
             "path": "px3/npcs/nous_girl_idle_1.png",
-            "sha256": "dd0168e3e11f90dd2341e24792c7bda572ad7162f99f8f868078b7acc0079eb1"
+            "sha256": "bba406bb7882b46450fa01abd7111a844f71eb82fa113a3847308edeb341c647"
           }
         ],
         "frame_ms": 500
@@ -108,7 +108,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/teknium_portrait.png",
-        "sha256": "1d29e8ab744644810361d6d07a3f942e7661721139a65a31a8562945e7657857",
+        "sha256": "4649e25f8c13715fc6d8eeed7def5b313285a13065811dfa043ea59a4ee5001c",
         "native": [
           128,
           128
@@ -117,7 +117,7 @@
       },
       "dialog": {
         "path": "px3/npcs/teknium_dialog.png",
-        "sha256": "fbadfff0267607fe2a77d41eb65574f3c99d4bc2f3e21f2331aeee794ec16a43",
+        "sha256": "03875cd5df94916ea7380a2e3728206859c4eba700416bcad40a30ad6a329f47",
         "native": [
           128,
           128
@@ -129,11 +129,11 @@
         "frames": [
           {
             "path": "px3/npcs/teknium_idle_0.png",
-            "sha256": "c357ec0c43e3bb68ce481298969f60541719502caf7eeec35e22e9d60b554276"
+            "sha256": "dfd50bf6635275dc4697e3170565ee5d02a8f425dbc4dc63d9c05a6436b47c95"
           },
           {
             "path": "px3/npcs/teknium_idle_1.png",
-            "sha256": "aea937ab97183d00583122626a184ecb41bbab827737ff4fd79d3df7b1e4dacd"
+            "sha256": "eb604654b5d82e4761ef3618c1ea069b4ca44d776a66636d67666e74ea2e9b73"
           }
         ],
         "frame_ms": 500
@@ -157,7 +157,7 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/southpaw_portrait.png",
-        "sha256": "18bd97a00d42d3587bf092a3b2216f1939fa57c6ee7d9b38654fb6ea3c71ea27",
+        "sha256": "4e927f927219814fe6369cf8fc861ba7d9befa254ab0778cacb4a347ca1fea9c",
         "native": [
           128,
           128
@@ -166,7 +166,7 @@
       },
       "dialog": {
         "path": "px3/npcs/southpaw_dialog.png",
-        "sha256": "36c13a914d60efe59e5260924172cf92ca6879dc31fca3edf1ca53641c0fb327",
+        "sha256": "1add32f897fea24ae330c544a11b3ee31ac5016865ac796f692636e2136bdda5",
         "native": [
           128,
           128
@@ -178,11 +178,11 @@
         "frames": [
           {
             "path": "px3/npcs/southpaw_idle_0.png",
-            "sha256": "290bdc2067a0b72e7152ecacff09d5d18434d88cd245afddb82a2d7b5d2cf188"
+            "sha256": "bf9fb371c7427b558a103f1db61197559cbdd3d77677cef2b40af59e84dd4b73"
           },
           {
             "path": "px3/npcs/southpaw_idle_1.png",
-            "sha256": "b5e47aae1990fe1279901f80d7156e73f0b057aa051d40a1c7352e065cfcacd6"
+            "sha256": "c8624ef6dbdf204fef369a53a6b202c947f5fc97411d780103dfd664b0619afb"
           }
         ],
         "frame_ms": 500

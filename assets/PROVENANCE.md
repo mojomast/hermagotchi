@@ -73,6 +73,9 @@ Kyle: prior painterly-then-downscale/remap results looked garbage; create brand-
 | px3/npcs/teknium_* | source/px3_npc_teknium_v7.jpg | cine/v3/portraits/teknium.png |
 | px3/npcs/southpaw_* | source/px3_npc_southpaw_v7.jpg | cine/v3/portraits/turbofit.png |
 
+### NPCs (launch-003) — Kyle pixel cleanup, 2026-11-05
+No new gens. Native-128 pixel edits on top of hand-pixel v7: thicker Don spoon + metallic highlight; Nous/Southpaw hair-edge fringe scrub (zero orphan tips); Teknium 2–3px smirk with shade; Southpaw solid near-black vest + clear studs; shared eye highlights, silhouette smooth, re-outline. Applied to portrait, dialog, idle_0/1. `npc_lines.json` untouched.
+
 
 ### launch-003 extra species (7), 2026-11-05
 Kyle asked for 7 more base pets in the same style, for 10 in total. Each is one new generation with no reference image, using the same pipeline (green key, palette-first mode downscale, binary alpha, palette swaps with eyes locked). Anchors are derived automatically from each silhouette.

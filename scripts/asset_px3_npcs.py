@@ -44,7 +44,7 @@ PALETTES = {
     (30, 30, 30), (60, 60, 60),
   ],
   "southpaw": [
-    OUTLINE, (23, 23, 26), (41, 40, 44), (64, 60, 63), (90, 88, 95), (120, 120, 130),
+    OUTLINE, (8, 8, 10), (23, 23, 26), (41, 40, 44), (64, 60, 63), (90, 88, 95), (120, 120, 130),
     (40, 8, 7), (65, 14, 13), (89, 23, 22), (112, 26, 22), (135, 45, 29),
     (165, 48, 27), (188, 61, 28), (193, 106, 58), (236, 152, 89),
     (226, 212, 198), (240, 190, 150), (200, 140, 100), (255, 255, 255), (180, 180, 190),
@@ -367,6 +367,324 @@ def drop_loose_pixels(native: Image.Image) -> Image.Image:
     a[drop2 & near_t, 3] = 0
     return Image.fromarray(a, "RGBA")
 
+
+def smooth_silhouette(native: Image.Image) -> Image.Image:
+    """Remove 1px bumps / fill 1px notches on the silhouette; keep props."""
+    a = np.asarray(native).copy()
+    m = a[..., 3] > 0
+    # opening then closing with cross (gentle)
+    struct = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], bool)
+    opened = ndimage.binary_opening(m, structure=struct, iterations=1)
+    # don't delete large chunks — only drop pixels that opening removed AND have <=2 nbrs
+    ker = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]], int)
+    nbrs = ndimage.convolve(m.astype(int), ker, mode="constant", cval=0)
+    drop = m & ~opened & (nbrs <= 3)
+    a[drop, 3] = 0
+    m = a[..., 3] > 0
+    closed = ndimage.binary_closing(m, structure=struct, iterations=1)
+    add = closed & ~m
+    if add.any():
+        ys, xs = np.where(m)
+        for y, x in zip(*np.where(add)):
+            j = int(np.argmin((ys - y) ** 2 + (xs - x) ** 2))
+            a[y, x, :3] = a[ys[j], xs[j], :3]
+            a[y, x, 3] = 255
+    return Image.fromarray(a, "RGBA")
+
+def scrub_fringe_hard(native: Image.Image) -> Image.Image:
+    """Kill orphan / isolated fringe flecks on hair edges (Kyle cleanup)."""
+    a = np.asarray(native).copy()
+    for _ in range(3):
+        m = a[..., 3] > 0
+        ker = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]], int)
+        nbrs = ndimage.convolve(m.astype(int), ker, mode="constant", cval=0)
+        # drop isolated and single-bridge tip pixels
+        drop = m & (nbrs <= 2)
+        a[drop, 3] = 0
+        # drop tiny components
+        m = a[..., 3] > 0
+        lab, n = ndimage.label(m)
+        if n:
+            sizes = ndimage.sum(np.ones_like(lab), lab, range(1, n + 1))
+            main = int(np.argmax(sizes)) + 1
+            near = ndimage.binary_dilation(lab == main, iterations=1)
+            keep = lab == main
+            for i, s in enumerate(sizes, 1):
+                if i == main:
+                    continue
+                # only keep substantial pieces touching main (headphones cups etc.)
+                if s >= 20 and ((lab == i) & near).any():
+                    keep |= lab == i
+            a[..., 3] = np.where(keep, 255, 0).astype(np.uint8)
+    return Image.fromarray(a, "RGBA")
+
+def eye_highlights(native: Image.Image, key: str) -> Image.Image:
+    """Ensure readable eyes with a clear highlight pixel (upper-left light)."""
+    a = np.asarray(native).copy()
+    h, w = a.shape[:2]
+    m = a[..., 3] > 0
+    rgb = a[..., :3].astype(np.int16)
+    lum = rgb.mean(-1)
+    ys, xs = np.where(m)
+    if not len(ys):
+        return native
+    y0, y1, x0, x1 = int(ys.min()), int(ys.max()), int(xs.min()), int(xs.max())
+    fy0 = y0 + int(0.10 * (y1 - y0))
+    fy1 = y0 + int(0.48 * (y1 - y0))
+    fx0 = x0 + int(0.15 * (x1 - x0))
+    fx1 = x0 + int(0.85 * (x1 - x0))
+    face = m.copy(); face[:fy0] = False; face[fy1:] = False; face[:, :fx0] = False; face[:, fx1:] = False
+
+    def setp(y, x, col):
+        if 0 <= y < h and 0 <= x < w and a[y, x, 3] > 0:
+            a[y, x, :3] = col
+
+    if key == "teknium":
+        return Image.fromarray(a, "RGBA")  # visor covers eyes
+
+    if key == "don_piedro":
+        # monocle already red; ensure glint + open-eye pupil highlight
+        red = face & (rgb[..., 0] > 140) & (rgb[..., 0] > rgb[..., 1] + 40)
+        if red.any():
+            cy, cx = int(np.where(red)[0].mean()), int(np.where(red)[1].mean())
+            setp(cy - 1, cx - 1, (255, 255, 255))
+        dark = face & (lum < 55) & (rgb[..., 0] < 90)
+        if dark.any():
+            lab, n = ndimage.label(dark)
+            best = None
+            for i in range(1, n + 1):
+                yy, xx = np.where(lab == i)
+                if 2 <= len(yy) <= 30:
+                    if best is None or len(yy) > best[2]:
+                        best = (int(yy.mean()), int(xx.mean()), len(yy))
+            if best:
+                cy, cx, _ = best
+                setp(cy, cx, OUTLINE)
+                setp(cy - 1, cx + 1, (255, 255, 255))
+        return Image.fromarray(a, "RGBA")
+
+    # nous / southpaw: dark eye clusters
+    dark = face & (lum < 70)
+    lab, n = ndimage.label(dark)
+    eyes = []
+    for i in range(1, n + 1):
+        yy, xx = np.where(lab == i)
+        if 3 <= len(yy) <= 50:
+            eyes.append((int(yy.mean()), int(xx.mean()), len(yy)))
+    for cy, cx, _ in sorted(eyes, key=lambda e: -e[2])[:2]:
+        setp(cy, cx, OUTLINE)
+        setp(cy, cx + 1, (22, 19, 20) if key == "nous_girl" else (23, 23, 26))
+        setp(cy - 1, cx + 1, (255, 255, 255))  # upper-right-of-pupil = light from upper-left on sphere
+    return Image.fromarray(a, "RGBA")
+
+def fix_don_spoon(native: Image.Image) -> Image.Image:
+    """Thicker clearer spoon with metallic highlight (upper-left light)."""
+    a = np.asarray(native).copy()
+    h, w = a.shape[:2]
+    m = a[..., 3] > 0
+    rgb = a[..., :3].astype(np.int16)
+    ys, xs = np.where(m)
+    if not len(ys):
+        return native
+    y0, y1, x0, x1 = int(ys.min()), int(ys.max()), int(xs.min()), int(xs.max())
+    # spoon lives on the RIGHT half, mid-upper: diagonal silver not part of bulky armour mass
+    # armour = large white block; spoon = elongated thin silver
+    cand = m & (rgb[..., 0] > 145) & (rgb[..., 1] > 145) & (rgb[..., 2] > 140)
+    cand &= (np.abs(rgb[..., 0].astype(int) - rgb[..., 1]) < 45)
+    cand &= (np.arange(w)[None, :] > (x0 + x1) // 2 - 5)  # rightish
+    # exclude very bottom (chest armour)
+    cand &= (np.arange(h)[:, None] < y0 + int(0.72 * (y1 - y0)))
+    if cand.sum() < 8:
+        # fallback: any mid-grey thin structure on right of face
+        cand = m & (rgb.mean(-1) > 150) & (rgb.mean(-1) < 230)
+        cand &= (np.arange(w)[None, :] > (x0 + x1) // 2)
+        cand &= (np.arange(h)[:, None] < y0 + int(0.65 * (y1 - y0)))
+        cand &= (np.arange(h)[:, None] > y0 + int(0.15 * (y1 - y0)))
+    if not cand.any():
+        return native
+    # keep largest elongated component
+    lab, n = ndimage.label(cand)
+    best_i, best_score = None, -1
+    for i in range(1, n + 1):
+        yy, xx = np.where(lab == i)
+        if len(yy) < 6:
+            continue
+        hh = yy.max() - yy.min() + 1
+        ww = xx.max() - xx.min() + 1
+        score = len(yy) * (max(hh, ww) / max(1, min(hh, ww)))  # prefer elongated
+        if score > best_score:
+            best_score, best_i = score, i
+    if best_i is None:
+        return native
+    spoon = lab == best_i
+    sy, sx = np.where(spoon)
+    # fit diagonal axis (rightward-up typical)
+    # thicken heavily along normal to the spoon axis
+    thick = ndimage.binary_dilation(spoon, structure=np.ones((3, 3)), iterations=3)
+    # extend tip toward upper-right
+    tip_y, tip_x = int(sy[np.argmax(sx)]), int(sx.max())
+    for t in range(1, 5):
+        yy, xx = tip_y - t // 2, tip_x + t
+        if 0 <= yy < h and 0 <= xx < w:
+            for dy in range(-2, 3):
+                for dx in range(-1, 2):
+                    y2, x2 = yy + dy, xx + dx
+                    if 0 <= y2 < h and 0 <= x2 < w:
+                        thick[y2, x2] = True
+    metal = (161, 156, 156)
+    hi = (255, 255, 255)
+    mid = (200, 200, 205)
+    shade = (103, 101, 102)
+    a[thick, :3] = metal
+    a[thick, 3] = 255
+    # continuous highlight ridge along top of spoon
+    for y, x in zip(*np.where(thick)):
+        up_clear = (y == 0) or (not thick[y - 1, x])
+        dn_clear = (y == h - 1) or (not thick[y + 1, x])
+        if up_clear:
+            a[y, x, :3] = hi
+        elif dn_clear:
+            a[y, x, :3] = shade
+        elif y > 0 and thick[y - 1, x] and a[y - 1, x, 0] == 255:
+            a[y, x, :3] = mid
+    # bowl near mouth (left end): round blob
+    left_x = int(sx.min())
+    bowl_cy = int(np.median(sy[sx <= left_x + 4]))
+    bowl_cx = left_x + 2
+    for dy in range(-4, 5):
+        for dx in range(-4, 6):
+            if dy * dy + dx * dx <= 18:
+                yy, xx = bowl_cy + dy, bowl_cx + dx
+                if 0 <= yy < h and 0 <= xx < w:
+                    a[yy, xx, :3] = mid if dy * dy + dx * dx > 6 else hi
+                    a[yy, xx, 3] = 255
+                    if dy * dy + dx * dx >= 14:
+                        a[yy, xx, :3] = shade
+    # bright glint
+    a[bowl_cy - 1, bowl_cx, :3] = hi
+    a[bowl_cy - 2, bowl_cx + 1, :3] = hi
+    return Image.fromarray(a, "RGBA")
+
+def fix_teknium_smirk(native: Image.Image) -> Image.Image:
+    """Readable 2–3px smirk with shading under the visor."""
+    a = np.asarray(native).copy()
+    h, w = a.shape[:2]
+    m = a[..., 3] > 0
+    rgb = a[..., :3].astype(np.int16)
+    ys, xs = np.where(m)
+    if not len(ys):
+        return native
+    y0, y1, x0, x1 = int(ys.min()), int(ys.max()), int(xs.min()), int(xs.max())
+    # find visor (red/white band) bottom
+    visor = m & (((rgb[..., 0] > 180) & (rgb[..., 1] < 80)) | ((rgb.min(-1) > 220) & (np.arange(h)[:, None] < y0 + int(0.45 * (y1 - y0)))))
+    if visor.any():
+        my = int(np.where(visor)[0].max()) + 4
+    else:
+        my = y0 + int(0.42 * (y1 - y0))
+    mx = (x0 + x1) // 2 + 4
+    skin = (247, 190, 138)
+    shadow = (179, 118, 79)
+
+    def setp(y, x, col):
+        if 0 <= y < h and 0 <= x < w and a[y, x, 3] > 0:
+            a[y, x, :3] = col
+
+    # clear a small mouth pad to skin first
+    for dy in range(-1, 3):
+        for dx in range(-6, 8):
+            setp(my + dy, mx + dx, skin)
+    # smirk curve: flat then lifts on right (asymmetric grin)
+    # row 0: outline lip
+    coords = [
+        (0, -5), (0, -4), (0, -3), (0, -2), (0, -1), (0, 0), (0, 1), (0, 2),
+        (1, 3), (1, 4), (1, 5), (0, 6),
+    ]
+    for dy, dx in coords:
+        setp(my + dy, mx + dx, OUTLINE)
+    # upper lip shade
+    for dx in range(-4, 4):
+        setp(my - 1, mx + dx, shadow)
+    # corner crease
+    setp(my + 1, mx + 5, shadow)
+    setp(my + 2, mx + 4, shadow)
+    return Image.fromarray(a, "RGBA")
+
+def fix_southpaw_vest(native: Image.Image) -> Image.Image:
+    """Solid near-black vest with clear silver studs."""
+    a = np.asarray(native).copy()
+    h, w = a.shape[:2]
+    m = a[..., 3] > 0
+    rgb = a[..., :3].astype(np.int16)
+    ys, xs = np.where(m)
+    if not len(ys):
+        return native
+    y0, y1, x0, x1 = int(ys.min()), int(ys.max()), int(xs.min()), int(xs.max())
+    # torso band below face (~52% down)
+    ty0 = y0 + int(0.52 * (y1 - y0))
+    torso = m.copy(); torso[:ty0] = False
+    # hair = warm auburn — protect
+    hair = (rgb[..., 0] > 100) & (rgb[..., 0] > rgb[..., 2] + 30) & (rgb[..., 1] < rgb[..., 0] + 10)
+    # skin = peach
+    skin = (rgb[..., 0] > 180) & (rgb[..., 1] > 140) & (rgb[..., 2] > 100) & (rgb[..., 0] - rgb[..., 2] < 80)
+    # guitar frets/wood — warm brown mid, protect right side prop
+    # vest candidates: currently grey / dark / mid-neutral in torso, not hair/skin
+    vest = torso & ~hair & ~skin
+    # also include mid greys that should be vest
+    greyish = (np.abs(rgb[..., 0].astype(int) - rgb[..., 1]) < 25) & (np.abs(rgb[..., 1].astype(int) - rgb[..., 2]) < 25)
+    vest |= torso & greyish & (rgb.mean(-1) < 160) & ~hair
+    # teeth white in face — already above ty0
+    BLACK = (8, 8, 10)
+    DARK = (23, 23, 26)
+    STUD = (180, 180, 190)
+    STUD_HI = (255, 255, 255)
+    # paint vest body dark
+    for y, x in zip(*np.where(vest)):
+        # keep existing bright studs
+        if rgb[y, x].min() > 170:
+            continue
+        a[y, x, :3] = BLACK if rgb[y, x].mean() < 100 else DARK
+    # place clear studs along shoulder straps (left and right of chest)
+    # find vest columns
+    vys, vxs = np.where(vest)
+    if len(vys):
+        # left strap: leftmost vest column cluster near ty0
+        top = vest & (np.arange(h)[:, None] < ty0 + 12)
+        if top.any():
+            ty, tx = np.where(top)
+            left_x = int(np.percentile(tx, 15))
+            right_x = int(np.percentile(tx, 85))
+            mid_y = int(np.percentile(ty, 40))
+            for cx in (left_x, left_x + 3, right_x - 3, right_x):
+                for i, yy in enumerate(range(mid_y, min(h - 2, mid_y + 18), 4)):
+                    if a[yy, cx, 3] > 0 and not hair[yy, cx]:
+                        a[yy, cx, :3] = STUD_HI
+                        if a[yy + 1, cx, 3] > 0:
+                            a[yy + 1, cx, :3] = STUD
+                        if cx + 1 < w and a[yy, cx + 1, 3] > 0:
+                            a[yy, cx + 1, :3] = STUD
+    return Image.fromarray(a, "RGBA")
+
+def kyle_cleanup_pass(native: Image.Image, key: str, pal: list) -> Image.Image:
+    """Pixel-level cleanup on native 128 grid (no new gens)."""
+    n = scrub_fringe_hard(native)
+    n = smooth_silhouette(n)
+    if key == "don_piedro":
+        n = fix_don_spoon(n)
+    if key == "teknium":
+        n = fix_teknium_smirk(n)
+    if key == "southpaw":
+        n = fix_southpaw_vest(n)
+    n = eye_highlights(n, key)
+    n = scrub_fringe_hard(n)
+    n = snap_palette(n, pal)
+    n = fill_internal_holes(n)
+    n = outline_silhouette(n)
+    # final fringe after outline (outline can leave 1px tips)
+    n = scrub_fringe_hard(n)
+    n = outline_silhouette(n)
+    return n
+
+
 def place(native, x, y):
 
     cv = Image.new("RGBA", (NPC_N, NPC_N))
@@ -390,6 +708,7 @@ def finish(n: Image.Image, key: str, pal: list) -> Image.Image:
     n = drop_loose_pixels(n)
     n = scrub_thin_artifacts(n, key)
     n = outline_silhouette(n)
+    n = kyle_cleanup_pass(n, key, pal)
     return n
 
 def build_one(key: str):
