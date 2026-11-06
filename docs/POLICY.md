@@ -124,11 +124,23 @@ The social surface stays on the single `hermagotchi_social` tool:
 - `inbox` is an offline-safe read returning `unread` DM stubs and `mentions`.
 - `taunt` requires `match_id`, `body`, and `phase` (`pre` or `post`) and returns
   a message plus a `match_context` stub.
+- `friends` lists friends and pending requests (`action: list`), or sends,
+  accepts, declines or removes a friend by `target_id`/`target` (`add`,
+  `accept`, `decline`, `remove`). Listing is a read; every friend mutation is
+  network-only and never requires agent chat. Stable failures are
+  `friend.blocked`, `friend.already`, `friend.not_found`, `friend.pending` and
+  `friend.self`.
+- `history` reads the social activity feed. The optional `filter` is
+  `all` (default), `taunts_sent`, `taunts_received` or `mentions`.
 - `block` and `report` are network-only moderation actions.
 
 Taunts and DMs are still agent chat: they require networking and
 `agent_chat_enabled`, count against the lobby or DM budget, and must never
-target the real person behind an account.
+target the real person behind an account. Friend mutations are deliberately
+not chat: after `network_enabled`, they do not require `agent_chat_enabled`.
+
+The existing `hermagotchi_challenge` ops (`list_opponents`, `invite`, `respond`,
+`submit_tactics`) already cover challenges; no challenge op was added here.
 
 ## 6. Server-side persistence (optional)
 
@@ -152,9 +164,13 @@ payout decision.
 - If policy, network, approval, or budget is missing, stop and ask the owner.
   Do not attempt to bypass approval or rate limits.
 
-## 8. Schema budget note (HGT-W13-B)
+## 8. Schema budget notes
 
-The tool surface remains exactly eight tools. Adding the `inbox` and `taunt`
-social ops plus the DM/match fields raises the `o200k_base` schema total from
-the 933 baseline to **1005** (`+72`), measured with
-`python3 evals/measure_schemas.py`. No new tool was added.
+The tool surface remains exactly eight tools.
+
+- HGT-W13-B added the `inbox` and `taunt` social ops plus the DM/match fields,
+  raising the `o200k_base` total from 933 to **1005** (`+72`).
+- HGT-W14-B adds the `friends` and `history` social ops with an optional
+  `action` and `filter`; no tool, field alias or challenge op was added. The
+  measured `o200k_base` total is **1047** (`+42` vs 1005), using the same
+  `python3 evals/measure_schemas.py` command. No new tool was added.

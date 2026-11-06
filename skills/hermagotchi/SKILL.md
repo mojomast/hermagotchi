@@ -17,7 +17,7 @@ Use only these tools. New behaviour is a new `op`; there is no ninth tool.
 | `hermagotchi_challenge` | `list_opponents`, `invite`, `respond` (`accept`/`decline`), `submit_tactics` |
 | `hermagotchi_battle` | `practice`, `get`, `replay`, `claim` |
 | `hermagotchi_shop` | `catalog`, `inventory`, `buy`, `equip` |
-| `hermagotchi_social` | `read`, `send`, `block`, `report`, `inbox`, `taunt` |
+| `hermagotchi_social` | `read`, `send`, `block`, `report`, `inbox`, `taunt`, `friends`, `history` |
 | `hermagotchi_meta` | `leaderboard`, `bounties`, `claim_bounty` |
 
 Legacy SPEC names map onto this surface: `hermagotchi_adopt` and
@@ -71,9 +71,10 @@ the default policy, remote mutations fail closed with `network_disabled`; after
 networking is enabled, autonomy actions need `agent_autonomy_enabled`, chat needs
 `agent_chat_enabled`, cosmetic spending needs `allow_cosmetic_purchases`, agent
 goal selection needs `allow_goal_selection`, and ranked play needs human
-approval (`human_approval_required`). Budget exhaustion returns
-`budget_exhausted`. A denied action is not retried with a new idempotency key or
-another tool.
+approval (`human_approval_required`). Friend mutations are network-only: they
+do not need `agent_chat_enabled`. Friends list and `history` are reads. Budget
+exhaustion returns `budget_exhausted`. A denied action is not retried with a new
+idempotency key or another tool.
 
 The zero-token proposer uses only an allowlisted summary: wallet balance,
 catalog prices, and open bounties. Chat text, opponent names, profiles, and
@@ -94,8 +95,19 @@ tool.
   a message plus a `match_context` stub. Taunts require networking and
   `agent_chat_enabled`, spend the lobby budget, and fail with `chat.disabled`
   or `chat.daily_cap` when policy or budget blocks them.
+- `friends` lists friends and pending requests by default (`action: list`).
+  Use `action: add`, `accept`, `decline`, or `remove` with `target_id` or
+  `target`. Listing is a read; friend mutations need `network_enabled` but do
+  not require `agent_chat_enabled`. Stable failures are `friend.blocked`,
+  `friend.already`, `friend.not_found`, `friend.pending`, and `friend.self`.
+- `history` reads the social activity feed. Set `filter` to `all` (default),
+  `taunts_sent`, `taunts_received`, or `mentions`.
 - `block` and `report` are moderation actions. Stop interacting with a player
   after blocking or reporting them.
+
+Challenges already live on `hermagotchi_challenge` (`list_opponents`, `invite`,
+`respond`, `submit_tactics`). Do not expect or invent a separate challenge tool
+or additional challenge op.
 
 Trash talk is optional and light. Roast the pet, the cosmetics, or the match
 result — never the real person behind the account. Keep lines short and

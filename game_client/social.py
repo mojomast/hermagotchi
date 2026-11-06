@@ -67,6 +67,94 @@ class SocialAPI:
             return method()
         return self.client._request("GET", "/chat/inbox")
 
+    def friends(
+        self,
+        action: str = "list",
+        *,
+        target_id: str | None = None,
+        target: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        method = getattr(self.client, "friends", None)
+        if callable(method):
+            kwargs: dict[str, Any] = {"idempotency_key": idempotency_key}
+            if target_id is not None:
+                kwargs["target_id"] = target_id
+            if target is not None:
+                kwargs["target"] = target
+            return method(action, **kwargs)
+        choice = str(action or "list").strip().lower()
+        if choice == "list":
+            return self.client._request("GET", "/friends")
+        value = target_id if isinstance(target_id, str) and target_id.strip() else target
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("target_id is required for friend mutations")
+        value = value.strip()
+        if choice == "add":
+            return self.client._request(
+                "POST",
+                "/friends",
+                json_body={"target_id": value},
+                action="social.friends.add",
+                idempotency_key=idempotency_key,
+            )
+        if choice in {"accept", "decline"}:
+            return self.client._request(
+                "POST",
+                f"/friends/{value}/{choice}",
+                json_body={},
+                action=f"social.friends.{choice}",
+                idempotency_key=idempotency_key,
+            )
+        if choice == "remove":
+            return self.client._request(
+                "DELETE",
+                f"/friends/{value}",
+                action="social.friends.remove",
+                idempotency_key=idempotency_key,
+            )
+        raise ValueError(f"unknown friend action: {action}")
+
+    def list_friends(self) -> dict[str, Any]:
+        return self.friends("list")
+
+    def add_friend(
+        self, target_id: str, *, idempotency_key: str | None = None
+    ) -> dict[str, Any]:
+        return self.friends(
+            "add", target_id=target_id, idempotency_key=idempotency_key
+        )
+
+    def accept_friend(
+        self, target_id: str, *, idempotency_key: str | None = None
+    ) -> dict[str, Any]:
+        return self.friends(
+            "accept", target_id=target_id, idempotency_key=idempotency_key
+        )
+
+    def decline_friend(
+        self, target_id: str, *, idempotency_key: str | None = None
+    ) -> dict[str, Any]:
+        return self.friends(
+            "decline", target_id=target_id, idempotency_key=idempotency_key
+        )
+
+    def remove_friend(
+        self, target_id: str, *, idempotency_key: str | None = None
+    ) -> dict[str, Any]:
+        return self.friends(
+            "remove", target_id=target_id, idempotency_key=idempotency_key
+        )
+
+    def history(self, *, filter: str = "all") -> dict[str, Any]:
+        method = getattr(self.client, "social_history", None)
+        if callable(method):
+            return method(filter=filter)
+        choice = str(filter or "all").strip().lower()
+        return self.client._request(
+            "GET", "/social/history", params={"filter": choice}
+        )
+
     def taunt(
         self,
         match_id: str,
@@ -174,6 +262,62 @@ def inbox(client: Any) -> dict[str, Any]:
     return SocialAPI(client).inbox()
 
 
+def friends(
+    client: Any,
+    action: str = "list",
+    *,
+    target_id: str | None = None,
+    target: str | None = None,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    return SocialAPI(client).friends(
+        action,
+        target_id=target_id,
+        target=target,
+        idempotency_key=idempotency_key,
+    )
+
+
+def list_friends(client: Any) -> dict[str, Any]:
+    return SocialAPI(client).list_friends()
+
+
+def add_friend(
+    client: Any, target_id: str, *, idempotency_key: str | None = None
+) -> dict[str, Any]:
+    return SocialAPI(client).add_friend(
+        target_id, idempotency_key=idempotency_key
+    )
+
+
+def accept_friend(
+    client: Any, target_id: str, *, idempotency_key: str | None = None
+) -> dict[str, Any]:
+    return SocialAPI(client).accept_friend(
+        target_id, idempotency_key=idempotency_key
+    )
+
+
+def decline_friend(
+    client: Any, target_id: str, *, idempotency_key: str | None = None
+) -> dict[str, Any]:
+    return SocialAPI(client).decline_friend(
+        target_id, idempotency_key=idempotency_key
+    )
+
+
+def remove_friend(
+    client: Any, target_id: str, *, idempotency_key: str | None = None
+) -> dict[str, Any]:
+    return SocialAPI(client).remove_friend(
+        target_id, idempotency_key=idempotency_key
+    )
+
+
+def social_history(client: Any, *, filter: str = "all") -> dict[str, Any]:
+    return SocialAPI(client).history(filter=filter)
+
+
 def taunt(
     client: Any,
     match_id: str,
@@ -220,11 +364,18 @@ def unblock_account(
 
 __all__ = [
     "SocialAPI",
+    "accept_friend",
+    "add_friend",
     "block_account",
+    "decline_friend",
+    "friends",
     "inbox",
+    "list_friends",
     "read_messages",
+    "remove_friend",
     "report_abuse",
     "send_message",
+    "social_history",
     "taunt",
     "unblock_account",
 ]

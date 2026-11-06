@@ -42,6 +42,14 @@ _GATE_DEFAULTS: dict[str, Any] = {
 CHAT_MUTATIONS = frozenset(
     {"social.send", "chat.send", "social.taunt", "chat.taunt"}
 )
+FRIEND_MUTATIONS = frozenset(
+    {
+        "social.friends.add",
+        "social.friends.accept",
+        "social.friends.decline",
+        "social.friends.remove",
+    }
+)
 AUTONOMY_MUTATIONS = frozenset(
     {
         "autonomy.battle",
@@ -161,6 +169,7 @@ __all__ = [
     "AUTONOMY_MUTATIONS",
     "CHAT_MUTATIONS",
     "DEFAULT_POLICY",
+    "FRIEND_MUTATIONS",
     "Policy",
     "PolicyGate",
     "check_budget",

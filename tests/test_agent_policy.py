@@ -246,3 +246,23 @@ def test_heuristic_proposer_respects_goal_selection_permission_and_falls_back_to
     assert goal["type"] == "rank"
     assert goal["target_id"].startswith("rank.")
     assert goal["spending_limit_bits"] == 0
+
+
+def test_friend_and_history_reads_and_network_only_mutations() -> None:
+    assert check_mutation(DEFAULT_POLICY, "social.friends.list") == "ok"
+    assert check_mutation(DEFAULT_POLICY, "social.friends") == "ok"
+    assert check_mutation(DEFAULT_POLICY, "social.history") == "ok"
+    assert check_mutation(DEFAULT_POLICY, "history") == "ok"
+
+    for action in (
+        "social.friends.add",
+        "social.friends.accept",
+        "social.friends.decline",
+        "social.friends.remove",
+    ):
+        assert check_mutation(DEFAULT_POLICY, action) == "network_disabled"
+        assert check_mutation(Policy(network_enabled=True), action) == "ok"
+
+    offline_chat = Policy(network_enabled=True)
+    assert check_mutation(offline_chat, "social.friends.add") == "ok"
+    assert check_mutation(offline_chat, "social.send") == "chat_disabled"

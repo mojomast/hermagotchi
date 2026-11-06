@@ -69,6 +69,8 @@ def test_catalog_stays_at_eight_tools_with_extended_social_ops() -> None:
         "report",
         "inbox",
         "taunt",
+        "friends",
+        "history",
     ]
 
     properties = TOOL_SCHEMAS["hermagotchi_social"]["properties"]
