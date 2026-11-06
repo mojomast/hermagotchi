@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { LobbyRail } from "./components/LobbyRail.js";
 import { deriveConnectionStatus, resolveConnectionUiState } from "./logic/connection.js";
@@ -189,6 +189,34 @@ export function HermagotchiPane(props = {}) {
     persistRailWidth(clamped);
   }
 
+  const paneRef = useRef(null);
+
+  useEffect(
+    function syncLobbyRailHeight() {
+      const pane = paneRef.current;
+      if (!pane || typeof ResizeObserver !== "function") {
+        return undefined;
+      }
+      function apply() {
+        const layout = pane.querySelector(".hg-pane__layout");
+        if (!layout) return;
+        const height = Math.max(0, Math.floor(layout.clientHeight));
+        if (height > 0) {
+          pane.style.setProperty("--hg-lobby-rail-height", height + "px");
+        }
+      }
+      apply();
+      const observer = new ResizeObserver(apply);
+      observer.observe(pane);
+      const layout = pane.querySelector(".hg-pane__layout");
+      if (layout) observer.observe(layout);
+      return function () {
+        observer.disconnect();
+      };
+    },
+    [railCollapsed, activeTab, railWidth]
+  );
+
   useEffect(
     function pollConnection() {
       if (!hasApi) {
@@ -295,6 +323,9 @@ export function HermagotchiPane(props = {}) {
   return jsxs("div", {
     className: "hg-pane",
     "data-plugin": "hermagotchi",
+    ref: function (node) {
+      paneRef.current = node;
+    },
     children: [
       jsxs("header", {
         className: "hg-pane__header",

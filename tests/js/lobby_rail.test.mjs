@@ -124,6 +124,9 @@ test("pane mounts the lobby rail beside every tab and collapses it", () => {
   assert.ok(PANE.includes("LOBBY_RAIL_WIDTH_KEY"));
   assert.ok(PANE.includes("changeRailWidth"));
   assert.ok(PANE.includes("--hg-lobby-rail-width"));
+  assert.ok(PANE.includes("ResizeObserver"));
+  assert.ok(PANE.includes("--hg-lobby-rail-height"));
+  assert.ok(PANE.includes("syncLobbyRailHeight"));
 });
 
 test("stylesheet lays out the rail, badge and narrow toggle breakpoint", () => {
@@ -142,10 +145,18 @@ test("stylesheet lays out the rail, badge and narrow toggle breakpoint", () => {
   assert.match(STYLES, /@media \(max-width: 839px\)/);
   assert.ok(STYLES.includes("writing-mode"), "collapsed LOBBY label stays visible");
   assert.ok(STYLES.includes("hg-lobby-rail__toggle--collapsed"));
-  assert.ok(STYLES.includes("100vh"), "rail uses viewport height");
+  assert.ok(
+    !/\.hg-lobby-rail\s*\{[^}]*100vh/s.test(STYLES),
+    "rail must not size from 100vh inside an embedded pane"
+  );
+  assert.ok(STYLES.includes("--hg-lobby-rail-height"));
   assert.ok(STYLES.includes("--hg-lobby-rail-width"));
   assert.ok(STYLES.includes("hg-lobby-rail__menu"));
   assert.ok(STYLES.includes("hg-lobby-rail__host"));
+  assert.match(STYLES, /\.hg-pane\s*\{[^}]*height:\s*100%/s);
+  assert.match(STYLES, /\.hg-pane__layout\s*\{[^}]*align-items:\s*stretch/s);
+  assert.match(STYLES, /\.hg-pane__layout\s*\{[^}]*flex:\s*1\s+1\s+auto/s);
+  assert.match(STYLES, /\.hg-lobby-rail__message\s*\{[^}]*width:\s*100%/s);
 });
 
 test("lobby collapse preference key is stable", () => {
