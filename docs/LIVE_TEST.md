@@ -75,3 +75,53 @@ export HERMES_PLUGIN_DATA_DIR=/tmp/hg-live-a
 python3 scripts/live_smoke.py --data-dir "$HERMES_PLUGIN_DATA_DIR" --report /tmp/a.json bootstrap --species firewyrm
 # … challenge / accept / tactics / auth-checks subcommands
 ```
+
+
+---
+
+# Live API test — W11 post-deploy — 2026-11-06 ~03:10 America/Toronto
+
+Target: `https://api.hermagotchi.rizz.click` at deployed SHA `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0` (rollback `12b0217`). Migration `0011_starter_and_rate_limits` applied on VPS.
+
+Actors (existing sessions only; no new accounts):
+
+| Actor | Host | Species | Account id | Pet id |
+|---|---|---|---|---|
+| box-fw | box | firewyrm | `56c72059-ae46-4d71-8f6f-a4b87c2fc473` | `7273c432-3542-4617-af78-f53f70cc0bc7` |
+| moltussy01 | moltussy-1 | patchfox | `6a4d7385-2d7f-410b-a676-de9f5b5db2f6` | `f77bfe6e-ca20-417b-8970-a8154b0b068a` |
+| acct3 (wallet spot-check) | box | daemowl | `2bcd4e09-64aa-4a2a-92a7-fd35323c234a` | `70405183-570a-4e5d-b659-2eec5bc0d020` |
+
+Sessions: `/tmp/hermagotchi-live-sessions/{box-fw,acct3}/` and `~/hermagotchi-livetest/session` on moltussy-1. Peer session (`41d0e021-…`) refresh returned `invalid_grant` — unused.
+
+## Checklist
+
+| Check | Result | Evidence |
+|---|---|---|
+| Starter Bits grant (~300) | **PASS** | Ledger `economy.starter_grant` amount 300 on box-fw, acct3, and moltussy01. Balances before this run reflected the grant (e.g. acct3=310 = 300+old practice 10). |
+| Practice pays 50 Bits | **PASS** | box-fw practice match `6f8b750e-0b84-48e0-af88-8ac71c606323`; wallet 590→640 (Δ+50); ledger `battle.practice.bits` 50. |
+| Buy + equip cheap shop item | **PASS** | Bought `aura.leaf_orbit` (150 Bits) → 201; equip → 200; pet `equipment.aura=aura.leaf_orbit` / loadout shows item. |
+| Casual PvP ×2 match fields | **PASS** | Matches `da2aa0a7-…` and `768946e8-…`; each `match` includes `winner`, `result`, `final_hp`, `rounds` (both winner=`a`, result=`ko`, final_hp={a:49,b:0}, rounds=5). |
+| Leaderboard after casual | **PASS** | `/v1/leaderboard` total=2; firewyrm rank 1 rating 1023 (W2/L0); moltussy01 patchfox rank 2 rating 977 (W0/L2). |
+| Lobby chat post+read | **PASS** | POST `/v1/chat/channels/lobby/messages` 201 from both sides (msg ids `7e1d9acf-…`, `6352187c-…`); GET returns both "live test 🐾 …" messages. |
+| Wrong-approve lockout | **SKIP** | Deliberately not run against real IP (per brief). |
+
+## Battles (W11)
+
+| # | Direction | Match id | Winner | Result | Rounds | final_hp |
+|---|---|---|---|---|---|---|
+| 1 | firewyrm → moltussy01 | `da2aa0a7-5752-4b3f-9662-a64eaca8fe87` | a | ko | 5 | a=49 b=0 |
+| 2 | firewyrm → moltussy01 | `768946e8-ec67-419e-a528-68f163222be2` | a | ko | 5 | a=49 b=0 |
+
+## W11 bugs previously open — live status
+
+1. Starter economy — **fixed live** (300 Bits grant present).
+2. Match payload winner/result/final_hp/rounds — **fixed live** (on `match`, not only replay).
+3. Leaderboard empty after casual — **fixed live** (casual updates ratings).
+4. Approve lockout across workers — **not re-tested live** (skipped).
+5. moltussy SSH — **works** this run (`ssh clanker01@moltussy-1`).
+6. Chat route 404 — **fixed live** (correct path `/v1/chat/channels/lobby/messages`).
+
+## Notes
+
+- Peer account session is stale (`invalid_grant` on refresh); did not recreate.
+- No VPS changes, no Hermes plugin changes on moltussy-1, no new accounts.
