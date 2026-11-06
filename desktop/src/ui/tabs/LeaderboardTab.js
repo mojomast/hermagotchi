@@ -1,5 +1,6 @@
 import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
+import { NpcHostBanner } from "../components/NpcHostBanner.js";
 
 export function LeaderboardTab(props = {}) {
   const uiState = props.uiState || UI_STATES.READY;
@@ -9,6 +10,7 @@ export function LeaderboardTab(props = {}) {
     "data-tab": "leaderboard",
     children: [
       jsx(StateNotice, { state: uiState }),
+      jsx(NpcHostBanner, { surface: "leaderboard" }),
       jsxs("div", {
         className: "hg-card",
         children: [

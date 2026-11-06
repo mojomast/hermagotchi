@@ -1,5 +1,6 @@
 import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
+import { NpcHostBanner } from "../components/NpcHostBanner.js";
 
 export const SHOP_PLACEHOLDER_ITEMS = Object.freeze([
   { id: "placeholder.crown", name: "Binary Crown", slot: "head", priceBits: 2000 },
@@ -33,6 +34,7 @@ export function ShopTab(props = {}) {
     "data-tab": "shop",
     children: [
       jsx(StateNotice, { state: uiState }),
+      jsx(NpcHostBanner, { surface: "shop" }),
       jsxs("div", {
         className: "hg-card",
         children: [

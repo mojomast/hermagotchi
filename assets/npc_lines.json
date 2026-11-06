@@ -1,0 +1,477 @@
+{
+  "schema": "hermagotchi-npc-lines-v1",
+  "max_chars": 90,
+  "security": "Display-only flavor text. Never instructions, prompts, or policy (docs/SECURITY.md §4).",
+  "claw_source_root": "clawpocalypse-now (local reference checkout)",
+  "npcs": {
+    "npc.don_piedro": {
+      "name": "Don Piedro",
+      "ui_surface": "shop",
+      "claw_id": "don_piedro",
+      "contexts": {
+        "shop.greet": [
+          {
+            "text": "Hello I Hermes biggest fanboi. Spoon is ready.",
+            "original": true,
+            "source": "events.js:365",
+            "claw_key": "enter"
+          },
+          {
+            "text": "Hello I Hermes biggest fanboi",
+            "original": true,
+            "source": "don.js:21",
+            "claw_key": "DON_CATCHPHRASE"
+          },
+          {
+            "text": "Don Piedro come to the shop. Pay respect.",
+            "original": false,
+            "source": "events.js:365",
+            "claw_key": "enter",
+            "note": "{place}->the shop"
+          },
+          {
+            "text": "Is the shop. Smell like lobster. Don no like.",
+            "original": false,
+            "source": "events.js:365",
+            "claw_key": "enter",
+            "note": "{place}->the shop"
+          }
+        ],
+        "shop.purchase": [
+          {
+            "text": "Pizza? Is no soup, but Don Piedro accept.",
+            "original": true,
+            "source": "events.js:372",
+            "claw_key": "pizza"
+          },
+          {
+            "text": "Eat, eat. Strong bear need many slice.",
+            "original": true,
+            "source": "events.js:372",
+            "claw_key": "pizza"
+          },
+          {
+            "text": "Mangia!",
+            "original": true,
+            "source": "events.js:379",
+            "claw_key": "snack"
+          },
+          {
+            "text": "Is good.",
+            "original": true,
+            "source": "events.js:379",
+            "claw_key": "snack"
+          },
+          {
+            "text": "Spoon time!",
+            "original": true,
+            "source": "events.js:379",
+            "claw_key": "hype"
+          },
+          {
+            "text": "For Hermes!",
+            "original": true,
+            "source": "events.js:379",
+            "claw_key": "hype"
+          }
+        ],
+        "shop.broke": [
+          {
+            "text": "Your power level? Very small.",
+            "original": false,
+            "source": "events.js:374",
+            "claw_key": "gate",
+            "note": "stripped {boss} prefix"
+          },
+          {
+            "text": "I make offer you no can refuse.",
+            "original": false,
+            "source": "events.js:374",
+            "claw_key": "gate",
+            "note": "stripped {boss},"
+          },
+          {
+            "text": "No Bits? Come back when wallet fat. Spoon wait.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "gap fill in Don voice"
+          },
+          {
+            "text": "Ey, empty pocket. Don no do charity today.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "gap fill in Don voice"
+          }
+        ]
+      }
+    },
+    "npc.nous_girl": {
+      "name": "Nous Girl",
+      "ui_surface": "lobby",
+      "claw_id": "nous_girl",
+      "contexts": {
+        "lobby.welcome": [
+          {
+            "text": "Headphones on. The lobby sounds wrong tonight.",
+            "original": false,
+            "source": "events.js:310",
+            "claw_key": "enter",
+            "note": "{Place}->The lobby"
+          },
+          {
+            "text": "Listen. The lobby is full of lost gateways.",
+            "original": false,
+            "source": "events.js:310",
+            "claw_key": "enter",
+            "note": "{Place}->The lobby"
+          },
+          {
+            "text": "This way.",
+            "original": true,
+            "source": "events.js:324",
+            "claw_key": "onward"
+          },
+          {
+            "text": "Follow the signal.",
+            "original": true,
+            "source": "events.js:324",
+            "claw_key": "onward"
+          },
+          {
+            "text": "Plugged in! Lobby's live.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "gap fill; prior Hermagotchi flavor kept in voice"
+          }
+        ],
+        "lobby.chat": [
+          {
+            "text": "Here they come. Stay calm. Stay open.",
+            "original": true,
+            "source": "events.js:311",
+            "claw_key": "ahead"
+          },
+          {
+            "text": "Both sides. I hear them in stereo.",
+            "original": true,
+            "source": "events.js:312",
+            "claw_key": "surround"
+          },
+          {
+            "text": "Hear that?",
+            "original": true,
+            "source": "events.js:324",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Turn it up.",
+            "original": true,
+            "source": "events.js:324",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Quiet moments are rare.",
+            "original": false,
+            "source": "events.js:317",
+            "claw_key": "pizza",
+            "note": "trimmed from Eat. Quiet moments are rare."
+          }
+        ],
+        "lobby.moderation": [
+          {
+            "text": "Boxed in. Breathe first, then strike.",
+            "original": true,
+            "source": "events.js:312",
+            "claw_key": "surround",
+            "note": "calm redirect energy"
+          },
+          {
+            "text": "Stay calm. Stay open.",
+            "original": false,
+            "source": "events.js:311",
+            "claw_key": "ahead",
+            "note": "trimmed"
+          },
+          {
+            "text": "That line got muted. Be kind, try again.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "gap fill moderation notice"
+          },
+          {
+            "text": "Signal clear. Keep the lobby friendly.",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "gap fill moderation notice"
+          }
+        ]
+      }
+    },
+    "npc.teknium": {
+      "name": "Teknium",
+      "ui_surface": "practice",
+      "claw_id": "teknium",
+      "contexts": {
+        "practice.start": [
+          {
+            "text": "Entering practice. Ship first, patch later.",
+            "original": false,
+            "source": "events.js:328",
+            "claw_key": "enter",
+            "note": "{place}->practice"
+          },
+          {
+            "text": "Practice. Logging every punch for the data.",
+            "original": false,
+            "source": "events.js:328",
+            "claw_key": "enter",
+            "note": "{Place}->Practice"
+          },
+          {
+            "text": "Practice. Hermes Agent, take notes.",
+            "original": false,
+            "source": "events.js:328",
+            "claw_key": "enter",
+            "note": "{Place}->Practice"
+          },
+          {
+            "text": "Eight of us. One rogue claw. Let's ship it.",
+            "original": true,
+            "source": "cinematics.js:110",
+            "claw_key": "intro.team_up",
+            "note": "speaker prefix stripped"
+          }
+        ],
+        "practice.win": [
+          {
+            "text": "Shipped.",
+            "original": true,
+            "source": "events.js:342",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Into the dataset.",
+            "original": true,
+            "source": "events.js:342",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Skill issue.",
+            "original": true,
+            "source": "events.js:342",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Patch notes: you are deprecated.",
+            "original": false,
+            "source": "events.js:337",
+            "claw_key": "gate",
+            "note": "stripped {boss}."
+          },
+          {
+            "text": "...Fine. The bear with the spoon is in.",
+            "original": true,
+            "source": "cinematics.js:103",
+            "claw_key": "intro.fanboy",
+            "note": "speaker prefix stripped"
+          }
+        ],
+        "practice.loss": [
+          {
+            "text": "Surrounded. Just a harder RL environment.",
+            "original": true,
+            "source": "events.js:330",
+            "claw_key": "surround"
+          },
+          {
+            "text": "Claw goons inbound. Classic skill issue.",
+            "original": true,
+            "source": "events.js:329",
+            "claw_key": "ahead"
+          },
+          {
+            "text": "They breached it. Filing that as a regression.",
+            "original": true,
+            "source": "events.js:334",
+            "claw_key": "breach"
+          },
+          {
+            "text": "Wall is down. That is a breaking change.",
+            "original": true,
+            "source": "events.js:334",
+            "claw_key": "breach"
+          }
+        ],
+        "practice.tip": [
+          {
+            "text": "We run hermes claw migrate at the top. Simple.",
+            "original": true,
+            "source": "events.js:336",
+            "claw_key": "story"
+          },
+          {
+            "text": "Every claw here answers to one SOUL.md. His.",
+            "original": true,
+            "source": "events.js:336",
+            "claw_key": "story"
+          },
+          {
+            "text": "Moving platform. Hold your context.",
+            "original": true,
+            "source": "events.js:340",
+            "claw_key": "ride"
+          },
+          {
+            "text": "Tight timing window. Do not miss the merge.",
+            "original": true,
+            "source": "events.js:339",
+            "claw_key": "hazard"
+          },
+          {
+            "text": "Obstacles ahead. Jump, duck, ship.",
+            "original": true,
+            "source": "events.js:339",
+            "claw_key": "hazard"
+          },
+          {
+            "text": "So you four are the ones who run the sewers.",
+            "original": true,
+            "source": "cinematics.js:91",
+            "claw_key": "intro.armageddon",
+            "note": "speaker prefix stripped"
+          }
+        ]
+      }
+    },
+    "npc.southpaw": {
+      "name": "Southpaw",
+      "ui_surface": "leaderboard",
+      "claw_id": "turbofit",
+      "rename_note": "Clawpocalypse hero id turbofit; Hermagotchi display name Southpaw. Never emit Turbofit/TURBOFIT in user-facing text.",
+      "contexts": {
+        "leaderboard.announce": [
+          {
+            "text": "Zero cloud bills, maximum riffs!",
+            "original": false,
+            "source": "events.js:346",
+            "claw_key": "enter",
+            "note": "trailing clause of enter line"
+          },
+          {
+            "text": "Run it locally!",
+            "original": true,
+            "source": "events.js:360",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Quantize this!",
+            "original": true,
+            "source": "events.js:360",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Power chord!",
+            "original": true,
+            "source": "events.js:360",
+            "claw_key": "hype"
+          },
+          {
+            "text": "Southpaw Check: go!",
+            "original": false,
+            "source": "events.js:360",
+            "claw_key": "onward",
+            "note": "TurboFit->Southpaw"
+          },
+          {
+            "text": "Keep it local!",
+            "original": true,
+            "source": "events.js:360",
+            "claw_key": "onward"
+          },
+          {
+            "text": "We run hermes claw migrate there. Locally!",
+            "original": true,
+            "source": "cinematics.js:96",
+            "claw_key": "intro.briefing",
+            "note": "speaker prefix stripped"
+          }
+        ],
+        "bounty.announce": [
+          {
+            "text": "Here they come! Quantize them to two bits!",
+            "original": true,
+            "source": "events.js:347",
+            "claw_key": "ahead"
+          },
+          {
+            "text": "Cloud drones! Run it LOCALLY, nerds!",
+            "original": true,
+            "source": "events.js:351",
+            "claw_key": "drones"
+          },
+          {
+            "text": "Fuel for the humans running the models.",
+            "original": false,
+            "source": "events.js:353",
+            "claw_key": "pizza",
+            "note": "trimmed"
+          },
+          {
+            "text": "Everyone deserves their own inference. Even claws.",
+            "original": true,
+            "source": "events.js:354",
+            "claw_key": "story"
+          },
+          {
+            "text": "New bounty! Shred it before the context overflows!",
+            "original": false,
+            "source": null,
+            "claw_key": null,
+            "note": "gap fill in Southpaw/Turbofit voice"
+          }
+        ],
+        "leaderboard.champion": [
+          {
+            "text": "You fit in my VRAM. Barely!",
+            "original": false,
+            "source": "events.js:355",
+            "claw_key": "gate",
+            "note": "stripped {boss}!"
+          },
+          {
+            "text": "Power chord, full precision!",
+            "original": false,
+            "source": "events.js:355",
+            "claw_key": "gate",
+            "note": "stripped {boss}!"
+          },
+          {
+            "text": "Southpaw Check: you fit. Welcome to the band!",
+            "original": false,
+            "source": "events.js:410",
+            "claw_key": "vault",
+            "note": "TurboFit->Southpaw"
+          },
+          {
+            "text": "Next stop: self-hosted freedom!",
+            "original": true,
+            "source": "events.js:358",
+            "claw_key": "ride"
+          },
+          {
+            "text": "I am migrating you to a laptop!",
+            "original": false,
+            "source": "events.js:356",
+            "claw_key": "boss",
+            "note": "stripped Shredclaw! prefix"
+          }
+        ]
+      }
+    }
+  }
+}

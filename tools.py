@@ -27,6 +27,11 @@ except ImportError:  # Imported from a checkout with the plugin root on sys.path
         check_mutation as _check_mutation,
     )
 
+try:  # Imported as part of a plugin package.
+    from .npc_lines import host_payload as _npc_host_payload
+except ImportError:  # Imported from a checkout with the plugin root on sys.path.
+    from npc_lines import host_payload as _npc_host_payload
+
 ENVELOPE_KEYS = ("ok", "data", "error_code", "correlation_id")
 
 DEFAULT_POLICY: dict[str, Any] = dict(_AGENT_DEFAULT_POLICY.as_dict())
@@ -461,7 +466,13 @@ class FakeGameClient:
             "claimed": False,
         }
         self.matches[match_id] = match
-        return _ok({"match": match}, cid)
+        host_ctx = "practice.win" if match.get("winner") == "self" else "practice.loss"
+        data = {"match": match}
+        data.update(_npc_host_payload(host_ctx, seed=match_id))
+        tip = _npc_host_payload("practice.tip", seed=f"{match_id}:tip")
+        if tip:
+            data["npc_tip"] = tip["npc_host"]
+        return _ok(data, cid)
 
     def _battle_get(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         match_id = args.get("match_id")
@@ -516,7 +527,9 @@ class FakeGameClient:
 
     # -- shop -------------------------------------------------------------
     def _shop_catalog(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
-        return _ok({"catalog_version": "fake-1", "items": list(CATALOG)}, cid)
+        data = {"catalog_version": "fake-1", "items": list(CATALOG)}
+        data.update(_npc_host_payload("shop.greet", seed="shop.catalog"))
+        return _ok(data, cid)
 
     def _shop_inventory(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         return _ok(
@@ -551,10 +564,9 @@ class FakeGameClient:
                 "created_at": _now(),
             }
         )
-        return _ok(
-            {"item": self.inventory[item_id], "balance": self.wallet_bits},
-            cid,
-        )
+        data = {"item": self.inventory[item_id], "balance": self.wallet_bits}
+        data.update(_npc_host_payload("shop.purchase", seed=str(item_id)))
+        return _ok(data, cid)
 
     def _shop_equip(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         item_id = args.get("item_id")
@@ -577,7 +589,9 @@ class FakeGameClient:
         blocked = self._require_network(cid)
         if blocked:
             return blocked
-        return _ok({"messages": []}, cid)
+        data = {"messages": []}
+        data.update(_npc_host_payload("lobby.welcome", seed="social.read"))
+        return _ok(data, cid)
 
     def _social_send(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         blocked = self._require_network(cid)
@@ -618,44 +632,41 @@ class FakeGameClient:
         reason = args.get("reason")
         if not isinstance(target_id, str) or not isinstance(reason, str):
             return _error("invalid_arguments", cid)
-        return _ok(
-            {
-                "report": {
-                    "report_id": self._next_id("report"),
-                    "target_id": target_id,
-                    "reason": reason,
-                    "status": "received",
-                }
-            },
-            cid,
-        )
+        data = {
+            "report": {
+                "report_id": self._next_id("report"),
+                "target_id": target_id,
+                "reason": reason,
+                "status": "received",
+            }
+        }
+        data.update(_npc_host_payload("lobby.moderation", seed=str(target_id)))
+        return _ok(data, cid)
 
     # -- meta -------------------------------------------------------------
     def _meta_leaderboard(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         blocked = self._require_network(cid)
         if blocked:
             return blocked
-        return _ok(
-            {
-                "season_id": args.get("season_id", "season-1"),
-                "entries": [],
-            },
-            cid,
-        )
+        data = {
+            "season_id": args.get("season_id", "season-1"),
+            "entries": [],
+        }
+        data.update(_npc_host_payload("leaderboard.announce", seed=str(data["season_id"])))
+        return _ok(data, cid)
 
     def _meta_bounties(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         blocked = self._require_network(cid)
         if blocked:
             return blocked
-        return _ok(
-            {
-                "bounties": [
-                    {**bounty, "claimed": bounty["bounty_id"] in self.claimed_bounties}
-                    for bounty in BOUNTIES
-                ]
-            },
-            cid,
-        )
+        data = {
+            "bounties": [
+                {**bounty, "claimed": bounty["bounty_id"] in self.claimed_bounties}
+                for bounty in BOUNTIES
+            ]
+        }
+        data.update(_npc_host_payload("bounty.announce", seed="meta.bounties"))
+        return _ok(data, cid)
 
     def _meta_claim_bounty(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         blocked = self._require_network(cid)

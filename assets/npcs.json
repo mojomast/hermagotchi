@@ -198,5 +198,6 @@
       "reference": "Clawpocalypse cinematic portrait assets/cine/v3/portraits/turbofit.png (primary); title cutout secondary; magenta key + cine Lab palette remap",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     }
-  ]
+  ],
+  "lines_ref": "npc_lines.json"
 }

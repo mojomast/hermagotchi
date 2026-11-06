@@ -1,5 +1,6 @@
 import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
+import { NpcHostBanner } from "../components/NpcHostBanner.js";
 
 export function ChatTab(props = {}) {
   const uiState = props.uiState || UI_STATES.NETWORK_OFF;
@@ -9,6 +10,7 @@ export function ChatTab(props = {}) {
     "data-tab": "chat",
     children: [
       jsx(StateNotice, { state: uiState }),
+      jsx(NpcHostBanner, { surface: "chat" }),
       jsxs("div", {
         className: "hg-card",
         children: [

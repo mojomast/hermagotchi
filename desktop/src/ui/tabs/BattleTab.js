@@ -1,5 +1,6 @@
 import { jsx, jsxs } from "react/jsx-runtime";
 import { StateNotice, UI_STATES } from "../states.js";
+import { NpcHostBanner } from "../components/NpcHostBanner.js";
 
 export const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 
@@ -11,6 +12,7 @@ export function BattleTab(props = {}) {
     "data-tab": "battle",
     children: [
       jsx(StateNotice, { state: uiState }),
+      jsx(NpcHostBanner, { surface: "battle" }),
       jsxs("div", {
         className: "hg-card",
         children: [

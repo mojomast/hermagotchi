@@ -27,3 +27,6 @@ export { LeaderboardTab } from "./tabs/LeaderboardTab.js";
 export { ChatTab } from "./tabs/ChatTab.js";
 export { SettingsTab, SETTINGS_PLACEHOLDER } from "./tabs/SettingsTab.js";
 export { CareMeter } from "./components/CareMeter.js";
+
+export { NpcHostBanner } from "./components/NpcHostBanner.js";
+export { NPC_HOST_DEFAULTS, NPC_NAMES, npcHostLine } from "./npcLines.js";
