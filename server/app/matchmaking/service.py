@@ -81,6 +81,9 @@ def _challenge_payload(row: sqlite3.Row) -> dict[str, Any]:
 
 def _match_payload(row: sqlite3.Row) -> dict[str, Any]:
     resolved = row["status"] == "resolved"
+    final_hp = None
+    if resolved and row["final_hp_json"]:
+        final_hp = json.loads(row["final_hp_json"])
     return {
         "contracts_version": CONTRACTS_VERSION,
         "id": row["id"],
@@ -91,6 +94,10 @@ def _match_payload(row: sqlite3.Row) -> dict[str, Any]:
         "seed": row["seed"] if resolved else None,
         "status": row["status"],
         "replay_hash": row["replay_hash"] if resolved else None,
+        "winner": row["winner"] if resolved else None,
+        "result": row["result"] if resolved else None,
+        "rounds": (row["rounds"] or 0) if resolved else None,
+        "final_hp": final_hp,
         "created_at": row["created_at"],
         "resolved_at": row["resolved_at"] if resolved else None,
     }
@@ -467,7 +474,7 @@ def _reward_awards(
 def _update_ratings_if_present(
     conn: sqlite3.Connection, challenge: sqlite3.Row, winner: str | None
 ) -> None:
-    if challenge["mode"] != "ranked" or winner not in {"a", "b"}:
+    if challenge["mode"] not in {"casual", "ranked"}:
         return
     table = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ratings'"
@@ -479,8 +486,13 @@ def _update_ratings_if_present(
         return
 
     season = "season-1"
-    winner_id = challenge["challenger_id"] if winner == "a" else challenge["defender_id"]
-    loser_id = challenge["defender_id"] if winner == "a" else challenge["challenger_id"]
+    accounts = (challenge["challenger_id"], challenge["defender_id"])
+    if winner == "a":
+        scores = (1.0, 0.0)
+    elif winner == "b":
+        scores = (0.0, 1.0)
+    else:
+        scores = (0.5, 0.5)
 
     def extract(account_id: str) -> tuple[int, int, int]:
         row = conn.execute(
@@ -493,15 +505,6 @@ def _update_ratings_if_present(
         if row is None:
             return 1000, 0, 0
         return row["rating"], row["wins"], row["losses"]
-
-    winner_rating, winner_wins, winner_losses = extract(winner_id)
-    loser_rating, loser_wins, loser_losses = extract(loser_id)
-    winner_k = 24 if winner_wins + winner_losses < 10 else 16
-    loser_k = 24 if loser_wins + loser_losses < 10 else 16
-    expected_winner = 1 / (1 + 10 ** ((loser_rating - winner_rating) / 400))
-    expected_loser = 1 - expected_winner
-    new_winner = max(0, round(winner_rating + winner_k * (1 - expected_winner)))
-    new_loser = max(0, round(loser_rating + loser_k * (0 - expected_loser)))
 
     def store(account_id: str, rating: int, wins: int, losses: int) -> None:
         exists = conn.execute(
@@ -527,8 +530,24 @@ def _update_ratings_if_present(
                 (rating, wins, losses, account_id, season),
             )
 
-    store(winner_id, new_winner, winner_wins + 1, winner_losses)
-    store(loser_id, new_loser, loser_wins, loser_losses + 1)
+    ratings: list[tuple[int, int, int]] = []
+    for account_id in accounts:
+        ratings.append(extract(account_id))
+
+    for index, account_id in enumerate(accounts):
+        opponent_index = 1 - index
+        rating, wins, losses = ratings[index]
+        opponent_rating = ratings[opponent_index][0]
+        games = wins + losses
+        k = 24 if games < 10 else 16
+        expected = 1 / (1 + 10 ** ((opponent_rating - rating) / 400))
+        score = scores[index]
+        new_rating = max(0, round(rating + k * (score - expected)))
+        if score >= 1.0:
+            wins += 1
+        elif score <= 0.0:
+            losses += 1
+        store(account_id, new_rating, wins, losses)
 
 
 def resolve_pending_match(

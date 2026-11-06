@@ -90,6 +90,10 @@ def test_two_accounts_complete_one_match_with_identical_replay(
     assert match["status"] == "pending"
     assert match["seed"] is None
     assert match["replay_hash"] is None
+    assert match["winner"] is None
+    assert match["result"] is None
+    assert match["rounds"] is None
+    assert match["final_hp"] is None
     match_id = match["id"]
 
     first = _submit(client, auth_headers_a, match_id, _load("tactic_aggressive.json"))
@@ -110,6 +114,10 @@ def test_two_accounts_complete_one_match_with_identical_replay(
     replay = resolved_body["replay"]
     assert replay["replay_hash"] == resolved_body["match"]["replay_hash"]
     assert replay["events"]
+    assert resolved_body["match"]["winner"] == replay["winner"]
+    assert resolved_body["match"]["result"] == replay["result"]
+    assert resolved_body["match"]["rounds"] == replay["rounds"]
+    assert resolved_body["match"]["final_hp"] == replay["final_hp"]
 
     seen_a = client.get(f"/v1/matches/{match_id}", headers=auth_headers_a)
     seen_b = client.get(f"/v1/matches/{match_id}", headers=auth_headers_b)
@@ -118,6 +126,10 @@ def test_two_accounts_complete_one_match_with_identical_replay(
     assert seen_a.json()["replay"]["replay_hash"] == seen_b.json()["replay"]["replay_hash"]
     assert seen_a.json()["match"]["replay_hash"] == seen_b.json()["match"]["replay_hash"]
     assert seen_a.json()["replay"]["events"] == seen_b.json()["replay"]["events"]
+    assert seen_a.json()["match"]["winner"] == replay["winner"]
+    assert seen_a.json()["match"]["final_hp"] == replay["final_hp"]
+    assert seen_b.json()["match"]["result"] == replay["result"]
+    assert seen_b.json()["match"]["rounds"] == replay["rounds"]
 
     assert len(_db_rows(app, "SELECT * FROM tactics WHERE match_id = ?", (match_id,))) == 2
     events = _db_rows(app, "SELECT * FROM match_events WHERE match_id = ?", (match_id,))

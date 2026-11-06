@@ -8,6 +8,18 @@
 
 export const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
 export const PROXY_PREFIX = "/proxy/v1";
+export const DEFAULT_CHAT_CHANNEL = "lobby";
+
+export function chatMessagesPath(channelId) {
+  const candidate = typeof channelId === "string" ? channelId.trim() : "";
+  const channel = candidate || DEFAULT_CHAT_CHANNEL;
+  const bridgeSafe =
+    /^[A-Za-z0-9_.:~-]+$/.test(channel) && channel !== "." && channel !== "..";
+  const segment = bridgeSafe
+    ? channel
+    : encodeURIComponent(channel).replace(/[.]/g, "%2E");
+  return "/chat/channels/" + segment + "/messages";
+}
 
 const UI_STATE_VALUES = Object.freeze({
   READY: "ready",
@@ -236,6 +248,40 @@ export function createApiClient(options) {
       },
       url: function url(relativePath) {
         return assetsUrl(relativePath);
+      },
+    },
+    chat: {
+      messages: function messages(channelId) {
+        return request("GET", proxyUrl(chatMessagesPath(channelId)), {});
+      },
+      send: function send(channelId, body, sendOptions) {
+        let channel = DEFAULT_CHAT_CHANNEL;
+        let text = channelId;
+        let opts = sendOptions || {};
+        if (typeof channelId !== "string") {
+          text = channelId;
+          opts = body || {};
+        } else if (
+          body &&
+          typeof body === "object" &&
+          body.body === undefined
+        ) {
+          text = channelId;
+          opts = body;
+        } else if (arguments.length >= 2) {
+          channel = channelId;
+          text = body;
+        }
+        const payload =
+          typeof text === "string"
+            ? { body: text, actor_mode: "human" }
+            : Object.assign({}, text || {});
+        return request("POST", proxyUrl(chatMessagesPath(channel)), {
+          hasBody: true,
+          body: payload,
+          idempotencyKey:
+            opts.idempotencyKey || opts.idempotency_key || randomKey(),
+        });
       },
     },
     basePath: basePath,

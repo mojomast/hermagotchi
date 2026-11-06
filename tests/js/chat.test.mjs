@@ -20,6 +20,11 @@ import {
   shouldShowChatStub,
   validateChatDraft,
 } from "../../desktop/src/ui/logic/chat.js";
+import {
+  DEFAULT_CHAT_CHANNEL,
+  chatMessagesPath,
+  createApiClient,
+} from "../../desktop/src/ui/api.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const INJECTION =
@@ -128,6 +133,56 @@ test("drafts are trimmed, bounded, and sent with a human actor mode", () => {
   assert.equal(CHAT_REPORT_PATH, "/moderation/report");
 });
 
+test("api chat helpers use the channel-scoped lobby route", async () => {
+  const calls = [];
+  const client = createApiClient({
+    basePath: "/bridge",
+    fetchImpl: async function (url, init) {
+      calls.push({ url: url, init: init });
+      return {
+        ok: true,
+        status: 201,
+        async json() {
+          return { ok: true, status: "ok", data: { message: { id: "m-1", body: "hi" } } };
+        },
+      };
+    },
+  });
+
+  assert.equal(DEFAULT_CHAT_CHANNEL, "lobby");
+  assert.equal(chatMessagesPath(), "/chat/channels/lobby/messages");
+  assert.equal(chatMessagesPath(" lobby "), "/chat/channels/lobby/messages");
+  assert.equal(chatMessagesPath("challenge:42"), "/chat/channels/challenge:42/messages");
+  assert.equal(chatMessagesPath(".."), "/chat/channels/%2E%2E/messages");
+
+  await client.chat.messages();
+  await client.chat.send("lobby", "hello");
+  await client.chat.send("hello");
+  await client.chat.send("lobby", { body: "object body" });
+
+  assert.deepEqual(
+    calls.map((call) => call.url),
+    [
+      "/bridge/proxy/v1/chat/channels/lobby/messages",
+      "/bridge/proxy/v1/chat/channels/lobby/messages",
+      "/bridge/proxy/v1/chat/channels/lobby/messages",
+      "/bridge/proxy/v1/chat/channels/lobby/messages",
+    ]
+  );
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[1].init.method, "POST");
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    body: "hello",
+    actor_mode: "human",
+  });
+  assert.deepEqual(JSON.parse(calls[2].init.body), {
+    body: "hello",
+    actor_mode: "human",
+  });
+  assert.deepEqual(JSON.parse(calls[3].init.body), { body: "object body" });
+  assert.equal(typeof calls[1].init.headers["Idempotency-Key"], "string");
+});
+
 test("failed envelopes become display-only moderation notices", () => {
   assert.equal(chatNoticeFromEnvelope({ ok: true, status: "ok" }), null);
 
@@ -185,7 +240,8 @@ test("ChatTab renders message bodies as text and never injects HTML", () => {
   assert.doesNotMatch(source, /innerHTML/);
   assert.match(source, /children:\s*message\.body/);
   assert.match(source, /\.get\(CHAT_MESSAGES_PATH\)/);
-  assert.match(source, /api\.post\(/);
+  assert.match(source, /api\.post\(\s*CHAT_MESSAGES_PATH/);
+  assert.doesNotMatch(source, /["'`]\/chat\/messages["'`]/);
   assert.match(source, /NpcHostBanner/);
   assert.match(source, /Chat is off by default/);
 });

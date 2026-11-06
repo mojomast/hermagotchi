@@ -243,8 +243,36 @@ export function formatTurnLog(events, options = {}) {
   });
 }
 
-export function replaySummary(replay = {}, participants = {}) {
-  const winner = replay.winner || null;
+export function battleSummary(match = {}, replay = {}, participants = {}) {
+  const matchSource = match && typeof match === "object" ? match : {};
+  const replaySource = replay && typeof replay === "object" ? replay : {};
+
+  const winner =
+    matchSource.winner !== undefined && matchSource.winner !== null
+      ? matchSource.winner
+      : replaySource.winner || null;
+  const result =
+    matchSource.result !== undefined && matchSource.result !== null
+      ? matchSource.result
+      : replaySource.result || "unknown";
+  const rounds =
+    matchSource.rounds !== undefined && matchSource.rounds !== null
+      ? matchSource.rounds
+      : replaySource.rounds || 0;
+  const finalHp =
+    matchSource.final_hp !== undefined && matchSource.final_hp !== null
+      ? matchSource.final_hp
+      : replaySource.final_hp || null;
+  const replayHash =
+    matchSource.replay_hash !== undefined && matchSource.replay_hash !== null
+      ? matchSource.replay_hash
+      : replaySource.replay_hash || null;
+  const rulesetVersion =
+    matchSource.ruleset_version !== undefined &&
+    matchSource.ruleset_version !== null
+      ? matchSource.ruleset_version
+      : replaySource.ruleset_version || null;
+
   const winnerName =
     winner && participants[winner] && participants[winner].name
       ? participants[winner].name
@@ -254,10 +282,17 @@ export function replaySummary(replay = {}, participants = {}) {
   return {
     winner,
     winnerName,
-    result: replay.result || "unknown",
-    rounds: Number(replay.rounds || 0),
-    replayHash: replay.replay_hash || null,
-    rulesetVersion: replay.ruleset_version || null,
-    eventCount: Array.isArray(replay.events) ? replay.events.length : 0,
+    result,
+    rounds: Number(rounds || 0),
+    finalHp,
+    replayHash,
+    rulesetVersion,
+    eventCount: Array.isArray(replaySource.events)
+      ? replaySource.events.length
+      : 0,
   };
+}
+
+export function replaySummary(replay = {}, participants = {}) {
+  return battleSummary({}, replay, participants);
 }

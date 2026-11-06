@@ -6,7 +6,7 @@ import { PetPreview } from "../components/PetPreview.js";
 import { TurnLog } from "../components/TurnLog.js";
 import {
   battleParticipantsFromMatch,
-  replaySummary,
+  battleSummary,
 } from "../logic/battle.js";
 
 export const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
@@ -285,7 +285,10 @@ export function BattleTab(props = {}) {
     ? battleParticipantsFromMatch(practiceMatch)
     : {};
   const summary =
-    replay && practiceMatch ? replaySummary(replay, participants) : null;
+    practiceMatch &&
+    (practiceMatch.status === "resolved" || replay)
+      ? battleSummary(practiceMatch, replay || {}, participants)
+      : null;
   const previewPet = props.pet || (practiceMatch && practiceMatch.pet) || null;
   const previewLoadout = props.loadout || {};
   const previewAnimState = battleAnimState(replay);

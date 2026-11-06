@@ -28,6 +28,17 @@
     "seed": {"type": ["string", "null"], "maxLength": 128},
     "status": {"enum": ["pending", "resolved", "expired"]},
     "replay_hash": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "winner": {"type": ["string", "null"], "enum": ["a", "b", null]},
+    "result": {"type": ["string", "null"], "maxLength": 32},
+    "rounds": {"type": ["integer", "null"], "minimum": 0},
+    "final_hp": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "a": {"type": "integer", "minimum": 0},
+        "b": {"type": "integer", "minimum": 0}
+      }
+    },
     "created_at": {"type": "string", "format": "date-time"},
     "resolved_at": {"type": ["string", "null"], "format": "date-time"}
   }

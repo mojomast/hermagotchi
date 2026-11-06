@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   EFFECTIVENESS,
   battleParticipantsFromMatch,
+  battleSummary,
   effectivenessForTypes,
   effectivenessLabel,
   effectivenessText,
@@ -146,4 +147,53 @@ test("battleParticipantsFromMatch and replaySummary shape UI data", () => {
   assert.equal(summary.winnerName, "Wisp");
   assert.equal(summary.eventCount, 2);
   assert.equal(summary.replayHash, "a".repeat(64));
+});
+
+test("battleSummary reads the match header first and falls back to replay", () => {
+  const fromMatch = battleSummary(
+    {
+      winner: "b",
+      result: "ko",
+      rounds: 5,
+      final_hp: { a: 0, b: 37 },
+      replay_hash: "b".repeat(64),
+      ruleset_version: "battle-1",
+    },
+    {
+      winner: "a",
+      result: "decision",
+      rounds: 99,
+      replay_hash: "a".repeat(64),
+      events: [{}, {}, {}],
+    },
+    participants
+  );
+
+  assert.equal(fromMatch.winner, "b");
+  assert.equal(fromMatch.winnerName, "Teknium");
+  assert.equal(fromMatch.result, "ko");
+  assert.equal(fromMatch.rounds, 5);
+  assert.deepEqual(fromMatch.finalHp, { a: 0, b: 37 });
+  assert.equal(fromMatch.replayHash, "b".repeat(64));
+  assert.equal(fromMatch.eventCount, 3);
+
+  const fallback = battleSummary(
+    { winner: null, result: null, rounds: null, final_hp: null },
+    {
+      winner: "a",
+      result: "decision",
+      rounds: 4,
+      final_hp: { a: 22, b: 0 },
+      replay_hash: "c".repeat(64),
+      events: [{}],
+    },
+    participants
+  );
+
+  assert.equal(fallback.winner, "a");
+  assert.equal(fallback.winnerName, "Wisp");
+  assert.equal(fallback.result, "decision");
+  assert.equal(fallback.rounds, 4);
+  assert.deepEqual(fallback.finalHp, { a: 22, b: 0 });
+  assert.equal(fallback.replayHash, "c".repeat(64));
 });
