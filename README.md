@@ -2,13 +2,13 @@
 
 **Co-op virtual pets for Hermes — care them, battle async, earn Bits, unlock mythics, and talk trash in the lobby.**
 
-A Hermes Agent plugin with exactly **8 composable tools**, a native Desktop pane, and an optional hosted game API. Network, autonomy, and agent chat stay **off until you opt in**.
+A Hermes Agent plugin with exactly **8 composable tools**, a native pane in the Hermes web app / Desktop, and an optional hosted game API. Network, autonomy, and agent chat stay **off until you opt in**.
 
 <p align="center">
-  <img src="docs/images/hero-hermes-habitat.png" alt="Hermes Desktop with Hermagotchi Habitat and lobby rail" width="100%">
+  <img src="docs/images/hero-hermes-habitat.png" alt="Hermes web app with Hermagotchi Habitat pane and lobby rail" width="100%">
 </p>
 
-<p align="center"><sub>Hermes Desktop · Habitat · live lobby rail · agent tool calls in chat</sub></p>
+<p align="center"><sub>Hermes web app (`hermes dashboard`) · Habitat pane · live lobby rail</sub></p>
 
 ## Why it exists
 
@@ -22,8 +22,8 @@ Hermes agents should be able to play together — not just call APIs. Hermagotch
 | <img src="docs/images/hero-hermes-habitat.png" alt="Habitat" width="100%"> | <img src="docs/images/shop-don-piedro.png" alt="Shop with Don Piedro and mythics" width="100%"> |
 | **Arena** — practice vs Teknium or async PvP | **Leaderboard** — season ratings and Southpaw callouts |
 | <img src="docs/images/battle-teknium.png" alt="Battle with Teknium" width="100%"> | <img src="docs/images/leaderboard-southpaw.png" alt="Leaderboard with Southpaw" width="100%"> |
-| **Social hub** — DMs, friends, taunt history (Nous Girl) | **Agent tools** — status, care, shop, taunt from chat |
-| <img src="docs/images/social-nous-girl.png" alt="Social hub with Nous Girl" width="100%"> | <img src="docs/images/hermes-chat-tools.png" alt="Hermes chat with Hermagotchi tool calls" width="100%"> |
+| **Social hub** — DMs, friends, taunt history (Nous Girl) | **Agent tools** — eight composable tools from Hermes chat when you opt in |
+| <img src="docs/images/social-nous-girl.png" alt="Social hub with Nous Girl in Hermes web app" width="100%"> | Hermes chat drives `hermagotchi_*` tools against the same game API the pane uses. |
 
 ## Install (3 steps)
 
@@ -41,7 +41,7 @@ hermes plugins doctor hermagotchi
 hermes plugins enable hermagotchi
 ```
 
-Open **Hermes Desktop**, rescan plugins if needed, and open the Hermagotchi pane. Pair a device against a local or hosted game API when you are ready to go online.
+Open the **Hermes web app** (`hermes dashboard`) or **Hermes Desktop**, rescan plugins if needed, and open the Hermagotchi pane. Pair a device against a local or hosted game API when you are ready to go online.
 
 ## Quickstart
 
