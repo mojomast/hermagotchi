@@ -14,7 +14,7 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
 - Branch: `hgt/w13-agent-chat` (PR into `feat/hackathon`; switch pin branch to `feat/hackathon` after merge)
-- **Deploy tip SHA (full):** `4751f3907c69098ae1bf54a284e7f02c6f3139cf`
+- **Deploy tip SHA (full):** `3b1ca7943a59d4210c9fd5e16e732f7853e42fc3`
 - Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — W11 tip; W12+W13 not yet live. Use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
