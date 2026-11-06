@@ -33,3 +33,4 @@ Short notes on the practices this pipeline uses and why.
 - **Hand cleanup.** A tiny per-species fixup table restores eye pixels lost at 32px: Patchfox's eye dots and Nullgeist's magenta X eye. Hand-fixing pixels like this is normal pixel-art practice.
 - **Markings.** These are drawn sparsely (2–8 native px) so they don't turn into noise.
 - **NPCs.** Clawpocalypse `cine/v3/portraits` used directly (Lanczos fit to 512). No gen / no pixel redraw. Native **128×128** factor 4. Pets stay 32.
+- Cosmetics: hand-authored via `scripts/draw_cosmetics.py` at 32px; compose via `asset_px3_compose.py` with per-species transforms.

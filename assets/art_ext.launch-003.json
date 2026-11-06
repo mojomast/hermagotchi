@@ -38,6 +38,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          19,
+          23
         ]
       },
       "item_scale": 1.0,
@@ -123,6 +127,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          18,
+          18
         ]
       },
       "item_scale": 1.0,
@@ -233,6 +241,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          19,
+          19
         ]
       },
       "item_scale": 1.0,
@@ -318,6 +330,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          24,
+          18
         ]
       },
       "item_scale": 1.0,
@@ -403,6 +419,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          22,
+          17
         ]
       },
       "item_scale": 1.0,
@@ -488,6 +508,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          19,
+          19
         ]
       },
       "item_scale": 1.0,
@@ -573,6 +597,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          18,
+          19
         ]
       },
       "item_scale": 1.0,
@@ -658,6 +686,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          10,
+          22
         ]
       },
       "item_scale": 1.0,
@@ -743,6 +775,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          18,
+          19
         ]
       },
       "item_scale": 1.0,
@@ -828,6 +864,10 @@
         "ground": [
           16,
           28
+        ],
+        "hand": [
+          20,
+          18
         ]
       },
       "item_scale": 1.0,
@@ -894,8 +934,8 @@
   "items": {
     "hat.binary_crown": {
       "source": "source/px3_item_crown_v1.jpg",
-      "attach": "bottom",
-      "colors": 4,
+      "attach": "cy",
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -981,8 +1021,8 @@
     },
     "hat.propeller_beanie": {
       "source": "source/px3_item_beanie_v1.jpg",
-      "attach": "bottom",
-      "colors": 5,
+      "attach": "cy",
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1068,8 +1108,8 @@
     },
     "hat.syntax_wizard": {
       "source": "source/px3_item_wizard_v1.jpg",
-      "attach": "bottom",
-      "colors": 4,
+      "attach": "cy",
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1156,7 +1196,7 @@
     "face.pixel_shades": {
       "source": "source/px3_item_shades_v1.jpg",
       "attach": "cy",
-      "colors": 3,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1243,7 +1283,7 @@
     "face.gold_monocle": {
       "source": "source/px3_item_monocle_v1.jpg",
       "attach": "cy",
-      "colors": 4,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1330,7 +1370,7 @@
     "back.circuit_wings": {
       "source": "source/px3_item_wings_v1.jpg",
       "attach": "cy",
-      "colors": 4,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1417,7 +1457,7 @@
     "back.tiny_jetpack": {
       "source": "source/px3_item_jetpack_v1.jpg",
       "attach": "cy",
-      "colors": 5,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1504,7 +1544,7 @@
     "aura.ember_halo": {
       "source": "source/px3_item_aura_flame_v1.jpg",
       "attach": "cy",
-      "colors": 3,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1591,7 +1631,7 @@
     "aura.data_orbit": {
       "source": "source/px3_item_aura_orbit_v1.jpg",
       "attach": "cy",
-      "colors": 3,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1677,8 +1717,8 @@
     },
     "front.cozy_scarf": {
       "source": "source/px3_item_scarf_v1.jpg",
-      "attach": "top",
-      "colors": 4,
+      "attach": "cy",
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1765,7 +1805,7 @@
     "emote.heart_bubble": {
       "source": "source/px3_item_emote_v1.jpg",
       "attach": "cy",
-      "colors": 3,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1852,7 +1892,7 @@
     "habitat.plush_cushion": {
       "source": "source/px3_item_cushion_v1.jpg",
       "attach": "cy",
-      "colors": 4,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -1939,7 +1979,7 @@
     "title.royal_ribbon": {
       "source": "source/px3_item_ribbon_v1.jpg",
       "attach": "cy",
-      "colors": 4,
+      "colors": 8,
       "per_species": {
         "byteblob": {
           "compatible": true,
@@ -2022,6 +2062,5326 @@
           ]
         }
       }
+    },
+    "hat.topo_beanie": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.packet_cap": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.nginx_visor": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.kernel_helm": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.git_bandana": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.rss_antenna": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -2,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.debug_bowler": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.lambda_tiara": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.cron_crown": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.clippy_hat": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.sudo_cap": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "hat.bloom_filter": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.regex_rims": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.hex_specs": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.privacy_mask": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.bug_eye": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.noir_shades": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.telemetry_lens": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.happy_path": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.stack_trace": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.oauth_eyepatch": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.pixel_mustache": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.three_lens": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "face.laser_focus": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.payload_pack": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.caped_crusader": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            -1,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            -1,
+            1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            -1,
+            1,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.webhook_wings": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -2,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            0.9
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.docker_whale": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.scroll_quiver": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.battery_pack": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.glider_cloak": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            -1,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            -1,
+            1,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            -1,
+            1,
+            1.0
+          ]
+        }
+      }
+    },
+    "back.antenna_array": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            -1,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.cache_scarf": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.silk_tie": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.bow_tie": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.medal_ribbon": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.rubber_duck": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.coffee_mug": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.pointer_wand": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.usb_sword": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.bug_net": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.scroll": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.keyboard": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.banana_phone": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.flag": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.toast": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.magnifier": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "front.pixel_blade": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            1,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            1,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "aura.ping_pulse": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/ping_pulse.png",
+          "sha256": "d85ce2d01a4e5963bdddd3b84772ebc5900401708c845c5657f226db551d2f51"
+        },
+        {
+          "path": "px3/items/ping_pulse_f1.png",
+          "sha256": "4575a54f76a381938ad3c2647fb42d80f0ebb2dd5049e496df341c7d7a157196"
+        }
+      ]
+    },
+    "aura.spark_trail": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/spark_trail.png",
+          "sha256": "181a3f0fc9b8a9622b299fe0eb7276f2e22731767cfa31420f5c40a69fa7b9e5"
+        },
+        {
+          "path": "px3/items/spark_trail_f1.png",
+          "sha256": "4ef71664f7e4c930c4c5d82390aed323cc900cb3ee1ea0fbcd9cc29faf2a17a9"
+        }
+      ]
+    },
+    "aura.ghost_cache": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/ghost_cache.png",
+          "sha256": "3a391bfd70e37046e5e2dcc40ab82af664a6d9ca731b4c77ec654e908de988ae"
+        },
+        {
+          "path": "px3/items/ghost_cache_f1.png",
+          "sha256": "42e4951bcade0fa803ee030bf8d7612e1ba0377b3db4214bf3c8d572ce4958ac"
+        }
+      ]
+    },
+    "aura.flame_wall": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/flame_wall.png",
+          "sha256": "1ad326d6691e0a5b1c24617280e3f7fa22252f457731f2622b2c933d974f0f52"
+        },
+        {
+          "path": "px3/items/flame_wall_f1.png",
+          "sha256": "7906594a1616510a3033c7fccf3a76beb9860b5f2176eaba30fbb98d5c80ae11"
+        }
+      ]
+    },
+    "aura.leaf_orbit": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/leaf_orbit.png",
+          "sha256": "002e48947add614e844d4707cb533769542dfb2a1526b7a1bbd3a69d68c0e345"
+        },
+        {
+          "path": "px3/items/leaf_orbit_f1.png",
+          "sha256": "eb39e75ad661845b0a331e94d8265a61d9113a0036de5358d21ee397431a1cb4"
+        }
+      ]
+    },
+    "aura.hex_shield": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "aura.snow_globe": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/snow_globe.png",
+          "sha256": "fce7d988ce4050d04448bf1b4b99eb96060ac87687bf320652907911c071fa5d"
+        },
+        {
+          "path": "px3/items/snow_globe_f1.png",
+          "sha256": "e7ae1a3c6c590b9a5e82ce07792bb1456d68028a0b1b90c729e2e202be977719"
+        }
+      ]
+    },
+    "aura.virus_scan": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/virus_scan.png",
+          "sha256": "737c8fd0e0e54ef3129744278ab3540df9d3947c190905427bba01354554490f"
+        },
+        {
+          "path": "px3/items/virus_scan_f1.png",
+          "sha256": "6084e871ef29a51a57c27fe1ae315b4818da355b9ecb7dc70769f3239c1d667a"
+        }
+      ]
+    },
+    "aura.starfield": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/starfield.png",
+          "sha256": "d250470c5e35a44d633b3e4c94d5cc96035b2e542461a9f8b253f45387be869d"
+        },
+        {
+          "path": "px3/items/starfield_f1.png",
+          "sha256": "09275c73df252f6d73fe6f8d77172c9abc815d39b93e0befd3bb72b955c9357c"
+        }
+      ]
+    },
+    "aura.rainbow_arc": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      }
+    },
+    "aura.static_haze": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/static_haze.png",
+          "sha256": "73fb0fea1879e5f05a665ecfd2827bb37e118d6151635ed4a1b59bc993d20e92"
+        },
+        {
+          "path": "px3/items/static_haze_f1.png",
+          "sha256": "285b54da81643431ee1cbd82d119e6813498f89ce5e653a2c235e4a7a3aa7ac9"
+        }
+      ]
+    },
+    "aura.heart_beat": {
+      "source": "scripts/draw_cosmetics.py",
+      "attach": "cy",
+      "colors": 8,
+      "per_species": {
+        "byteblob": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "patchfox": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "nullgeist": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "kernelcrab": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "cachebat": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "stacktoise": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "daemowl": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "shellsnail": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            2,
+            1.0
+          ]
+        },
+        "regexopus": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        },
+        "firewyrm": {
+          "compatible": true,
+          "transform_native": [
+            0,
+            0,
+            1.0
+          ]
+        }
+      },
+      "frames": [
+        {
+          "path": "px3/items/heart_beat.png",
+          "sha256": "2ad8caebf826551100977223dc95a5b4a6a46239295e7d2659916c0a96bc2202"
+        },
+        {
+          "path": "px3/items/heart_beat_f1.png",
+          "sha256": "0f4e654e02a1393df0f21fdcf7c0ac9a72ebe2f7d42af5e0e2132f9eb6820394"
+        }
+      ]
     }
   }
 }

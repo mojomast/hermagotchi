@@ -114,3 +114,6 @@ Kyle: "can you give daemowl three eyes please". Hand-pixel edit on native 32 gri
 
 Follow-up: filled brow notch and facial-disc pad so the third eye is embedded in feather colours with no surrounding transparent gaps (body + palettes; build script updated).
 
+### Cosmetics pack (~60), 2026-11-05
+Kyle: ~60 NEW cosmetics, hand-authored in `scripts/draw_cosmetics.py` (no GenerateImage). Categories: hats, face, neck/back, held props, auras (many 2-frame). Per-species transforms for all 10 pets; `hand` anchor for held props; daemowl face offsets clear the third eye. Shop migration `0008_cosmetics_pack.sql`. Existing 13 px3 items kept and given full per_species maps.
+

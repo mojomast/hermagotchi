@@ -21,3 +21,4 @@
 - Palette variants are colour-index swaps. Eyes, the visor, Patchfox's patch and Nullgeist's cyan and X eyes are locked.
 - Files: `assets/px3/**`, `assets/manifest.launch-003.json`, `assets/art_ext.launch-003.json`, `assets/npcs.json`, `scripts/asset_px3*.py`.
 - NPCs (cameos only): native **128×128**, factor 4 (512 display). Clawpocalypse cine v3 portraits fitted directly. Pets stay on the 32 grid.
+- Cosmetics: hand-authored via `scripts/draw_cosmetics.py` at 32px; compose via `asset_px3_compose.py` with per-species transforms.

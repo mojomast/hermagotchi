@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "asset_pack_id": "launch-003",
-  "notes": "launch-003: low-res handheld pixel art (native 32x32 grid, x16 nearest upscale, binary alpha, 8-12 colours/species, 3-5/item). All fresh Grok Bot built-in generations 2026-11-05; see assets/PROVENANCE.md and assets/art_ext.launch-003.json.",
+  "notes": "launch-003: low-res handheld pixel art (native 32x32 grid, x16 nearest upscale, binary alpha, 8-12 colours/species, 3-5/item). Cosmetics pack hand-authored via scripts/draw_cosmetics.py (2026-11-05); see assets/PROVENANCE.md and art_ext.launch-003.json. hand anchor added for held props.",
   "canvas": {
     "width": 512,
     "height": 512,
@@ -29,6 +29,10 @@
         "ground": [
           0.5,
           0.88
+        ],
+        "hand": [
+          0.58,
+          0.66
         ]
       }
     }
@@ -57,6 +61,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.5938,
+          0.7188
         ]
       },
       "features": {
@@ -97,6 +105,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.5625,
+          0.5625
         ]
       },
       "features": {
@@ -137,6 +149,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.5938,
+          0.5938
         ]
       },
       "features": {
@@ -177,6 +193,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.75,
+          0.5625
         ]
       },
       "features": {
@@ -214,6 +234,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.6875,
+          0.5312
         ]
       },
       "features": {
@@ -251,6 +275,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.5938,
+          0.5938
         ]
       },
       "features": {
@@ -288,6 +316,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.5625,
+          0.5938
         ]
       },
       "features": {
@@ -325,6 +357,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.3125,
+          0.6875
         ]
       },
       "features": {
@@ -362,6 +398,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.5625,
+          0.5938
         ]
       },
       "features": {
@@ -399,6 +439,10 @@
         "ground": [
           0.5,
           0.875
+        ],
+        "hand": [
+          0.625,
+          0.5625
         ]
       },
       "features": {
@@ -429,11 +473,11 @@
         0
       ],
       "scale": 1.0,
+      "notes": "Chunky gold crown with a red gem. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "05c557a503702c9e3b020a3e23625e13ec47125ba9efda9f7e9b8efc120cf9f1",
       "occludes": [
         "ear_base"
-      ],
-      "notes": "Chunky gold crown with a red gem. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "05c557a503702c9e3b020a3e23625e13ec47125ba9efda9f7e9b8efc120cf9f1"
+      ]
     },
     {
       "id": "hat.propeller_beanie",
@@ -449,11 +493,11 @@
         0
       ],
       "scale": 1.0,
+      "notes": "Red/yellow propeller cap. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "7e297ad722a3b2aef2d1f2f9bbf9fd7aa8d4205d59b4e1bce2796690d17a8e9c",
       "occludes": [
         "ear_base"
-      ],
-      "notes": "Red/yellow propeller cap. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "7e297ad722a3b2aef2d1f2f9bbf9fd7aa8d4205d59b4e1bce2796690d17a8e9c"
+      ]
     },
     {
       "id": "hat.syntax_wizard",
@@ -469,11 +513,11 @@
         0
       ],
       "scale": 1.0,
+      "notes": "Blue wizard hat with star dots. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "b7331b5a510eb6af8331f08775842b201c59e50fbc987240488f833a37582b86",
       "occludes": [
         "ear_base"
-      ],
-      "notes": "Blue wizard hat with star dots. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
-      "sha256": "b7331b5a510eb6af8331f08775842b201c59e50fbc987240488f833a37582b86"
+      ]
     },
     {
       "id": "face.pixel_shades",
@@ -644,6 +688,1062 @@
       "scale": 1.0,
       "notes": "Blank purple ribbon (client draws text). 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
       "sha256": "4b7acf2ccb85a7acf25a983b22abae022c89a64f047414e9d6bef6a4fdca75fe"
+    },
+    {
+      "id": "aura.flame_wall",
+      "slot": "aura",
+      "path": "px3/items/flame_wall.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Flame Wall. Hand-authored 32-grid cosmetic.",
+      "sha256": "1ad326d6691e0a5b1c24617280e3f7fa22252f457731f2622b2c933d974f0f52"
+    },
+    {
+      "id": "aura.ghost_cache",
+      "slot": "aura",
+      "path": "px3/items/ghost_cache.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Ghost Cache. Hand-authored 32-grid cosmetic.",
+      "sha256": "3a391bfd70e37046e5e2dcc40ab82af664a6d9ca731b4c77ec654e908de988ae"
+    },
+    {
+      "id": "aura.heart_beat",
+      "slot": "aura",
+      "path": "px3/items/heart_beat.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Heart Beat. Hand-authored 32-grid cosmetic.",
+      "sha256": "2ad8caebf826551100977223dc95a5b4a6a46239295e7d2659916c0a96bc2202"
+    },
+    {
+      "id": "aura.hex_shield",
+      "slot": "aura",
+      "path": "px3/items/hex_shield.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Hex Shield. Hand-authored 32-grid cosmetic.",
+      "sha256": "85301ea390485ca852e9e6539ca756bbac15e413e66a6814ee7d2d8c18e9fad5"
+    },
+    {
+      "id": "aura.leaf_orbit",
+      "slot": "aura",
+      "path": "px3/items/leaf_orbit.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Leaf Orbit. Hand-authored 32-grid cosmetic.",
+      "sha256": "002e48947add614e844d4707cb533769542dfb2a1526b7a1bbd3a69d68c0e345"
+    },
+    {
+      "id": "aura.ping_pulse",
+      "slot": "aura",
+      "path": "px3/items/ping_pulse.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Ping Pulse. Hand-authored 32-grid cosmetic.",
+      "sha256": "d85ce2d01a4e5963bdddd3b84772ebc5900401708c845c5657f226db551d2f51"
+    },
+    {
+      "id": "aura.rainbow_arc",
+      "slot": "aura",
+      "path": "px3/items/rainbow_arc.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Rainbow Arc. Hand-authored 32-grid cosmetic.",
+      "sha256": "27971d163c77ee9b1a3d4c4f788c6b154288333c224f70474e1a3638ec46387d"
+    },
+    {
+      "id": "aura.snow_globe",
+      "slot": "aura",
+      "path": "px3/items/snow_globe.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Snow Globe. Hand-authored 32-grid cosmetic.",
+      "sha256": "fce7d988ce4050d04448bf1b4b99eb96060ac87687bf320652907911c071fa5d"
+    },
+    {
+      "id": "aura.spark_trail",
+      "slot": "aura",
+      "path": "px3/items/spark_trail.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Spark Trail. Hand-authored 32-grid cosmetic.",
+      "sha256": "181a3f0fc9b8a9622b299fe0eb7276f2e22731767cfa31420f5c40a69fa7b9e5"
+    },
+    {
+      "id": "aura.starfield",
+      "slot": "aura",
+      "path": "px3/items/starfield.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Starfield. Hand-authored 32-grid cosmetic.",
+      "sha256": "d250470c5e35a44d633b3e4c94d5cc96035b2e542461a9f8b253f45387be869d"
+    },
+    {
+      "id": "aura.static_haze",
+      "slot": "aura",
+      "path": "px3/items/static_haze.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Static Haze. Hand-authored 32-grid cosmetic.",
+      "sha256": "73fb0fea1879e5f05a665ecfd2827bb37e118d6151635ed4a1b59bc993d20e92"
+    },
+    {
+      "id": "aura.virus_scan",
+      "slot": "aura",
+      "path": "px3/items/virus_scan.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Virus Scan. Hand-authored 32-grid cosmetic.",
+      "sha256": "737c8fd0e0e54ef3129744278ab3540df9d3947c190905427bba01354554490f"
+    },
+    {
+      "id": "back.antenna_array",
+      "slot": "back",
+      "path": "px3/items/antenna_array.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Antenna Array. Hand-authored 32-grid cosmetic.",
+      "sha256": "e3fb85fd8b8838761c6289bd74b459109012ffafee59014c29f3776d7ae8d98a"
+    },
+    {
+      "id": "back.battery_pack",
+      "slot": "back",
+      "path": "px3/items/battery_pack.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Battery Pack. Hand-authored 32-grid cosmetic.",
+      "sha256": "33810ca24728f1d07db91a4f44304d6aee8e3e86ecd2358117380cdbb60e5b75"
+    },
+    {
+      "id": "back.caped_crusader",
+      "slot": "back",
+      "path": "px3/items/caped_crusader.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Caped Crusader. Hand-authored 32-grid cosmetic.",
+      "sha256": "63b9cbafbab1f491991da7cb56ec69ba82cbcb91ac7445c8b79188f1d24300aa"
+    },
+    {
+      "id": "back.docker_whale",
+      "slot": "back",
+      "path": "px3/items/docker_whale.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Docker Whale Fin. Hand-authored 32-grid cosmetic.",
+      "sha256": "39f146f201aefd6decf77a24c25f88f47db1d89c9a2b28c3035cbe7bed2202a4"
+    },
+    {
+      "id": "back.glider_cloak",
+      "slot": "back",
+      "path": "px3/items/glider_cloak.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Glider Cloak. Hand-authored 32-grid cosmetic.",
+      "sha256": "fcbe8f3713e56caa39601bc58c7c09620b5faf2bf9e4cf4dde63fbf72dd96ca1"
+    },
+    {
+      "id": "back.payload_pack",
+      "slot": "back",
+      "path": "px3/items/payload_pack.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Payload Pack. Hand-authored 32-grid cosmetic.",
+      "sha256": "ad57b00faffaaba14a5385d873ead81052573d9f1c20fdfa36bd911d2b7a3c83"
+    },
+    {
+      "id": "back.scroll_quiver",
+      "slot": "back",
+      "path": "px3/items/scroll_quiver.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Scroll Quiver. Hand-authored 32-grid cosmetic.",
+      "sha256": "7c509201183d8ab002bb7e08e1e42af235936eb106806c8f5773bb74f432ec96"
+    },
+    {
+      "id": "back.webhook_wings",
+      "slot": "back",
+      "path": "px3/items/webhook_wings.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Webhook Wings. Hand-authored 32-grid cosmetic.",
+      "sha256": "4b4533517902fc298c24dc123ad9ebf2b535e7afc4b053e115c1d92a655c7ca3"
+    },
+    {
+      "id": "face.bug_eye",
+      "slot": "face",
+      "path": "px3/items/bug_eye.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Bug-Eye Goggles. Hand-authored 32-grid cosmetic.",
+      "sha256": "beebb5294cad9a25112092354a3fe1a591c0c174a99b1a94663bb68312f50bcf"
+    },
+    {
+      "id": "face.happy_path",
+      "slot": "face",
+      "path": "px3/items/happy_path.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Happy-Path Smile. Hand-authored 32-grid cosmetic.",
+      "sha256": "d516b3925df46f039da55136b2b1949c0a5ffe057fe51fcc90d85a3330e8cb91"
+    },
+    {
+      "id": "face.hex_specs",
+      "slot": "face",
+      "path": "px3/items/hex_specs.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Hex Specs. Hand-authored 32-grid cosmetic.",
+      "sha256": "9eceaa84e079f5ce7cd1ba2da5c126dce0577cdd3f0ecd30b0692322dcf2a7de"
+    },
+    {
+      "id": "face.laser_focus",
+      "slot": "face",
+      "path": "px3/items/laser_focus.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Laser Focus. Hand-authored 32-grid cosmetic.",
+      "sha256": "b28218326d74d01019f9a7f2cf294b97a7be041e03d04a4425a5ea138979bc3d"
+    },
+    {
+      "id": "face.noir_shades",
+      "slot": "face",
+      "path": "px3/items/noir_shades.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Noir Shades. Hand-authored 32-grid cosmetic.",
+      "sha256": "598feb621ff4b5db2f84b0a0b127065c5db4252af18a1bd79c90cdd6c1d267fb"
+    },
+    {
+      "id": "face.oauth_eyepatch",
+      "slot": "face",
+      "path": "px3/items/oauth_eyepatch.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "OAuth Eyepatch. Hand-authored 32-grid cosmetic.",
+      "sha256": "9fd2e9d669fd628ad98a82c9b5cbe21519f37571337e05e1fe48b8af9eb79197"
+    },
+    {
+      "id": "face.pixel_mustache",
+      "slot": "face",
+      "path": "px3/items/pixel_mustache.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Pixel Mustache. Hand-authored 32-grid cosmetic.",
+      "sha256": "b7f9f82e3abdecd8d04d740df7a45c3d2a29ec01afcc3530009730dd8ed2eecb"
+    },
+    {
+      "id": "face.privacy_mask",
+      "slot": "face",
+      "path": "px3/items/privacy_mask.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Privacy Mask. Hand-authored 32-grid cosmetic.",
+      "sha256": "c81410e6b69fb06ad42d55c3c6967901be1ef14ab6036683ececc91ef2c868a9"
+    },
+    {
+      "id": "face.regex_rims",
+      "slot": "face",
+      "path": "px3/items/regex_rims.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Regex Rims. Hand-authored 32-grid cosmetic.",
+      "sha256": "ef8ac1ffa16d5949360f83d73bb388017f1f7a77518d325de737e0b7d57aff5d"
+    },
+    {
+      "id": "face.stack_trace",
+      "slot": "face",
+      "path": "px3/items/stack_trace.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Stack-Trace Specs. Hand-authored 32-grid cosmetic.",
+      "sha256": "af0a44d42f1c3a8526c68652f244ff804aa2762f70dc0d0647b89c7b41bf373f"
+    },
+    {
+      "id": "face.telemetry_lens",
+      "slot": "face",
+      "path": "px3/items/telemetry_lens.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Telemetry Lens. Hand-authored 32-grid cosmetic.",
+      "sha256": "488abf808ae4d2154fd1f839561e14c0bd905134611aa4e9eeddc99202964540"
+    },
+    {
+      "id": "face.three_lens",
+      "slot": "face",
+      "path": "px3/items/three_lens.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Triclops Frame. Hand-authored 32-grid cosmetic.",
+      "sha256": "64e158aced94f31ce577137ac4990abf37a32610d4200f85b4e3850b332a3887"
+    },
+    {
+      "id": "front.banana_phone",
+      "slot": "front",
+      "path": "px3/items/banana_phone.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Banana Phone. Hand-authored 32-grid cosmetic.",
+      "sha256": "6267254e925b43b307dfa5d9a3197436da6f8fca7bb5ad9d07f04e86cf42106d"
+    },
+    {
+      "id": "front.bow_tie",
+      "slot": "front",
+      "path": "px3/items/bow_tie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Boolean Bowtie. Hand-authored 32-grid cosmetic.",
+      "sha256": "bcd6a670eea242777673451879856fc47d594f19ba5d4b17f07d8cd8c4244057"
+    },
+    {
+      "id": "front.bug_net",
+      "slot": "front",
+      "path": "px3/items/bug_net.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Bug Net. Hand-authored 32-grid cosmetic.",
+      "sha256": "7ec8fb16529280415caaa5a109ead170027891418d9c753e6600431da960eeaf"
+    },
+    {
+      "id": "front.cache_scarf",
+      "slot": "front",
+      "path": "px3/items/cache_scarf.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Cache Scarf. Hand-authored 32-grid cosmetic.",
+      "sha256": "9ee22dca3470788c48d5665304aae91b4ce2c78b1d1d689807cc2f92093fa8a8"
+    },
+    {
+      "id": "front.coffee_mug",
+      "slot": "front",
+      "path": "px3/items/coffee_mug.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Coffee Mug. Hand-authored 32-grid cosmetic.",
+      "sha256": "6609009615c24a893391a5a59c1a0ad3cd2d16deeefa4d940bc9bf5c90a78a34"
+    },
+    {
+      "id": "front.flag",
+      "slot": "front",
+      "path": "px3/items/flag.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Ship-It Flag. Hand-authored 32-grid cosmetic.",
+      "sha256": "1abdccaae7e2280d50025deb00375e899a5547ec4e113b8a8c3070d9e017b380"
+    },
+    {
+      "id": "front.keyboard",
+      "slot": "front",
+      "path": "px3/items/keyboard.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Mini Keyboard. Hand-authored 32-grid cosmetic.",
+      "sha256": "06f90a15dbec00cefe881cb1862614f5ac3b4911c168a6ef49c0f10e90bfb51a"
+    },
+    {
+      "id": "front.magnifier",
+      "slot": "front",
+      "path": "px3/items/magnifier.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Log Magnifier. Hand-authored 32-grid cosmetic.",
+      "sha256": "cd308578b3fba92054fc3a61f5298faf50a92b31fe743f4850dd178f4f50b805"
+    },
+    {
+      "id": "front.medal_ribbon",
+      "slot": "front",
+      "path": "px3/items/medal_ribbon.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Uptime Medal. Hand-authored 32-grid cosmetic.",
+      "sha256": "5edc1940955375f20397c4280f0b765f10f462dd0a4211f08cb7dc72e401ccd3"
+    },
+    {
+      "id": "front.pixel_blade",
+      "slot": "front",
+      "path": "px3/items/pixel_blade.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Pixel Blade. Hand-authored 32-grid cosmetic.",
+      "sha256": "543a0781f4b0d640cb42078ea4f2b1997f7f0fd5eac68ee4d53dc7db8ab4d88a"
+    },
+    {
+      "id": "front.pointer_wand",
+      "slot": "front",
+      "path": "px3/items/pointer_wand.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Null Pointer Wand. Hand-authored 32-grid cosmetic.",
+      "sha256": "ce69f4b8a40976fe29e4f3c2de405fe6b3ba42b054354dea395fe5e47e7b17c7"
+    },
+    {
+      "id": "front.rubber_duck",
+      "slot": "front",
+      "path": "px3/items/rubber_duck.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Rubber Duck. Hand-authored 32-grid cosmetic.",
+      "sha256": "45a0a26278bda5c0b02506d8e768984f9a029a024cc569098eae20a879b95314"
+    },
+    {
+      "id": "front.scroll",
+      "slot": "front",
+      "path": "px3/items/scroll.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "RFC Scroll. Hand-authored 32-grid cosmetic.",
+      "sha256": "2371fcd81c9216d5575a97e7783a97b40054b106dd414b4beba5373cd0c033cd"
+    },
+    {
+      "id": "front.silk_tie",
+      "slot": "front",
+      "path": "px3/items/silk_tie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Silk Commit Tie. Hand-authored 32-grid cosmetic.",
+      "sha256": "d205f2b1c092ec85b65cd56c26a8f16011da511662872e82c51e060c541d294d"
+    },
+    {
+      "id": "front.toast",
+      "slot": "front",
+      "path": "px3/items/toast.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Deploy Toast. Hand-authored 32-grid cosmetic.",
+      "sha256": "e525578beec9e131272346d8a287b62afa233d540f51ec3a678381f6fc17916b"
+    },
+    {
+      "id": "front.usb_sword",
+      "slot": "front",
+      "path": "px3/items/usb_sword.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "hand",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "USB Sword. Hand-authored 32-grid cosmetic.",
+      "sha256": "e31a15f7511503351c8ff1acd3339f8d98c3f72b7aceed6a9a942b019998d551"
+    },
+    {
+      "id": "hat.bloom_filter",
+      "slot": "head",
+      "path": "px3/items/bloom_filter.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Bloom Filter Beret. Hand-authored 32-grid cosmetic.",
+      "sha256": "ee789c74095c86f91d0f3678e70a762e20197aa185d9a78c30bb8a6d84a1e8a4",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.clippy_hat",
+      "slot": "head",
+      "path": "px3/items/clippy_hat.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Clippy Hat. Hand-authored 32-grid cosmetic.",
+      "sha256": "f7511cd2722618946d70d6fd1bb4ce434e4a17761e8d063a3669fe8b521a1bc9",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.cron_crown",
+      "slot": "head",
+      "path": "px3/items/cron_crown.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Cron Crown. Hand-authored 32-grid cosmetic.",
+      "sha256": "0a1bc7a4a422410fa8496213e67ca5bf270556c375372f0fe32b65b5f150388b",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.debug_bowler",
+      "slot": "head",
+      "path": "px3/items/debug_bowler.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Debug Bowler. Hand-authored 32-grid cosmetic.",
+      "sha256": "f1f4071e32bd4b2488f35b78270010bc05b869326aaaf478825225d9458dc2e4",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.git_bandana",
+      "slot": "head",
+      "path": "px3/items/git_bandana.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Git Bandana. Hand-authored 32-grid cosmetic.",
+      "sha256": "5b1392db932af58834e89d92d255d45451f7ccbf908fa8cedf2b8431f8fb18f1",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.kernel_helm",
+      "slot": "head",
+      "path": "px3/items/kernel_helm.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Kernel Helm. Hand-authored 32-grid cosmetic.",
+      "sha256": "124080cd90f66886f29afdf21f479f825e316cd5be18bd29b2bbd0de58b9230a",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.lambda_tiara",
+      "slot": "head",
+      "path": "px3/items/lambda_tiara.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Lambda Tiara. Hand-authored 32-grid cosmetic.",
+      "sha256": "776536845eeb0fb5f720005ef49854a9b1aa3aa291aacf0ca2b2c0bdc148dafb",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.nginx_visor",
+      "slot": "head",
+      "path": "px3/items/nginx_visor.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Nginx Visor Cap. Hand-authored 32-grid cosmetic.",
+      "sha256": "655902a924076c34ed4ce7247918524384011f28882276fb1c5552fa66d22d5b",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.packet_cap",
+      "slot": "head",
+      "path": "px3/items/packet_cap.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Packet Cap. Hand-authored 32-grid cosmetic.",
+      "sha256": "85ba3e467b14006c1b672fd1934373ea67e9af41775fa3aadb4e529ce9181ff2",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.rss_antenna",
+      "slot": "head",
+      "path": "px3/items/rss_antenna.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "RSS Antenna. Hand-authored 32-grid cosmetic.",
+      "sha256": "858b7c9fa5f3cac8afcc66ee119d891fde1ca6b71f031be8d6531a396ce8c42b",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.sudo_cap",
+      "slot": "head",
+      "path": "px3/items/sudo_cap.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Sudo Cap. Hand-authored 32-grid cosmetic.",
+      "sha256": "5c8dedf0864e8dfcb2cfcc769c12b6a1ea2d13048fef38d034aeae6152426b62",
+      "occludes": [
+        "ear_base"
+      ]
+    },
+    {
+      "id": "hat.topo_beanie",
+      "slot": "head",
+      "path": "px3/items/topo_beanie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Topo Beanie. Hand-authored 32-grid cosmetic.",
+      "sha256": "e1c5d9ed06592868469a389d0ad7832d9edafed2cd6532eb67dc9ae2fe76d712",
+      "occludes": [
+        "ear_base"
+      ]
     }
   ]
 }
