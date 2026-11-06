@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { jsx } from "react/jsx-runtime";
 import { buildPreviewLayers } from "../logic/shop.js";
-import { joinAssetUrl, speciesBodyPath } from "../logic/assets.js";
+import { joinAssetUrl, resolveAnimPalette, speciesBodyPath } from "../logic/assets.js";
 import {
   contract,
   createPlayer,
@@ -87,11 +87,16 @@ export function PetPreview(props = {}) {
   const manifest = props.manifest || props.assetManifest || null;
   const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
   const species = pet && pet.species ? String(pet.species) : "";
-  const palette =
+  const rawPalette =
     props.palette ||
+    (pet &&
+      pet.appearance &&
+      pet.appearance.traits &&
+      pet.appearance.traits.palette) ||
     (pet && pet.appearance && pet.appearance.palette) ||
     (pet && pet.palette) ||
-    "teal";
+    "";
+  const palette = resolveAnimPalette(rawPalette || "teal");
   const layers = buildPreviewLayers({
     pet: pet,
     loadout: props.loadout,
@@ -219,6 +224,7 @@ export function PetPreview(props = {}) {
 
   const children = [];
   if (animated) {
+    const stripUrl = joinAssetUrl(assetBaseUrl, clip.path || "") || baseLayer.url;
     children.push(
       jsx(
         "div",
@@ -229,8 +235,9 @@ export function PetPreview(props = {}) {
           "data-layer-slot": "body",
           "data-anim-state": requestedState,
           "data-frame-index": String(frameIndex),
+          "data-strip-path": clip.path || "",
           "aria-hidden": "true",
-          style: stripStyle(baseLayer.url, clip, frameIndex),
+          style: stripStyle(stripUrl, clip, frameIndex),
         },
         "anim:" + baseLayer.id
       )

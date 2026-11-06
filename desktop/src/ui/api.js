@@ -219,7 +219,17 @@ export function createApiClient(options) {
     return relative ? root + "/" + relative : root;
   }
 
+  function bridgeUrl(path) {
+    return basePath + normalizePath(path);
+  }
+
   return {
+    status: function status() {
+      return request("GET", bridgeUrl("/status"), {});
+    },
+    health: function health() {
+      return request("GET", bridgeUrl("/health"), {});
+    },
     assets: {
       manifest: function manifest() {
         return request("GET", assetsUrl("manifest"), {});

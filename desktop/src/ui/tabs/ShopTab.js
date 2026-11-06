@@ -143,22 +143,23 @@ function itemThumbPath(item, manifest) {
   if (item.assetUrl) {
     return String(item.assetUrl);
   }
-  const shortName = String(item.id || "").split(".").pop();
-  return shortName ? "px3/items/" + shortName + ".png" : "";
+  // Prefer an empty thumb over a guessed path that 404s for launch-001-only ids.
+  return "";
+}
+
+function joinShopAssetUrl(assetBase, relativePath) {
+  if (!relativePath) return "";
+  const value = String(relativePath);
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  const base = typeof assetBase === "string" ? assetBase.replace(/\/+$/, "") : "";
+  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
+  if (!base) return relative;
+  if (!relative) return base;
+  return base + "/" + relative;
 }
 
 function itemThumbUrl(assetBase, item, manifest) {
-  const path = itemThumbPath(item, manifest);
-  if (!path) {
-    return "";
-  }
-  if (/^(?:https?:|data:|blob:)/i.test(path)) {
-    return path;
-  }
-  if (!assetBase) {
-    return "";
-  }
-  return joinAssetUrl(assetBase, path);
+  return joinShopAssetUrl(assetBase || "", itemThumbPath(item, manifest));
 }
 
 function ShopCard(props) {

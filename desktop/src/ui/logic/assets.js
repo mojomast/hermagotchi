@@ -6,6 +6,26 @@
 
 export const ANIM_STRIP_TEMPLATE = "px3/anims/{species}_{palette}_{state}.png";
 
+/** Server appearance.traits.palette (palette_0N) → anim strip palette names. */
+export const SERVER_PALETTE_TO_ANIM = Object.freeze({
+  palette_01: "teal",
+  palette_02: "grape",
+  palette_03: "lime",
+  palette_04: "brick",
+  palette_05: "teal",
+  palette_06: "grape",
+  teal: "teal",
+  grape: "grape",
+  lime: "lime",
+  brick: "brick",
+});
+
+export function resolveAnimPalette(value) {
+  if (!value) return "teal";
+  const key = String(value);
+  return SERVER_PALETTE_TO_ANIM[key] || SERVER_PALETTE_TO_ANIM[key.toLowerCase()] || "teal";
+}
+
 export const NPC_PORTRAITS = Object.freeze({
   "npc.don_piedro": "px3/npcs/don_piedro_portrait.png",
   "npc.nous_girl": "px3/npcs/nous_girl_portrait.png",
@@ -33,7 +53,11 @@ function petSpecies(pet) {
 function petPalette(pet) {
   if (!pet || typeof pet !== "object") return "";
   if (pet.appearance && typeof pet.appearance === "object") {
-    const fromAppearance = pet.appearance.palette || pet.appearance.palette_id;
+    const appearance = pet.appearance;
+    const traits = appearance.traits && typeof appearance.traits === "object" ? appearance.traits : null;
+    const fromTraits = traits && (traits.palette || traits.palette_id);
+    if (fromTraits) return String(fromTraits);
+    const fromAppearance = appearance.palette || appearance.palette_id;
     if (fromAppearance) return String(fromAppearance);
   }
   const direct = pet.palette || pet.palette_id;
@@ -98,9 +122,8 @@ export function itemAssetPath(manifest, itemOrId) {
       itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
     if (direct) return String(direct);
   }
-  const dot = assetId.lastIndexOf(".");
-  const shortName = dot >= 0 ? assetId.slice(dot + 1) : assetId;
-  return "px3/items/" + shortName + ".png";
+  // Prefer a silent miss over a guessed path that 404s in the shop grid.
+  return "";
 }
 
 export function npcPortraitPath(npcId) {

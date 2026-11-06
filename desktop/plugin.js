@@ -393,6 +393,26 @@ const __m3 = (function () {
 
 const ANIM_STRIP_TEMPLATE = "px3/anims/{species}_{palette}_{state}.png";
 
+/** Server appearance.traits.palette (palette_0N) → anim strip palette names. */
+const SERVER_PALETTE_TO_ANIM = Object.freeze({
+  palette_01: "teal",
+  palette_02: "grape",
+  palette_03: "lime",
+  palette_04: "brick",
+  palette_05: "teal",
+  palette_06: "grape",
+  teal: "teal",
+  grape: "grape",
+  lime: "lime",
+  brick: "brick",
+});
+
+function resolveAnimPalette(value) {
+  if (!value) return "teal";
+  const key = String(value);
+  return SERVER_PALETTE_TO_ANIM[key] || SERVER_PALETTE_TO_ANIM[key.toLowerCase()] || "teal";
+}
+
 const NPC_PORTRAITS = Object.freeze({
   "npc.don_piedro": "px3/npcs/don_piedro_portrait.png",
   "npc.nous_girl": "px3/npcs/nous_girl_portrait.png",
@@ -420,7 +440,11 @@ function petSpecies(pet) {
 function petPalette(pet) {
   if (!pet || typeof pet !== "object") return "";
   if (pet.appearance && typeof pet.appearance === "object") {
-    const fromAppearance = pet.appearance.palette || pet.appearance.palette_id;
+    const appearance = pet.appearance;
+    const traits = appearance.traits && typeof appearance.traits === "object" ? appearance.traits : null;
+    const fromTraits = traits && (traits.palette || traits.palette_id);
+    if (fromTraits) return String(fromTraits);
+    const fromAppearance = appearance.palette || appearance.palette_id;
     if (fromAppearance) return String(fromAppearance);
   }
   const direct = pet.palette || pet.palette_id;
@@ -485,9 +509,8 @@ function itemAssetPath(manifest, itemOrId) {
       itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
     if (direct) return String(direct);
   }
-  const dot = assetId.lastIndexOf(".");
-  const shortName = dot >= 0 ? assetId.slice(dot + 1) : assetId;
-  return "px3/items/" + shortName + ".png";
+  // Prefer a silent miss over a guessed path that 404s in the shop grid.
+  return "";
 }
 
 function npcPortraitPath(npcId) {
@@ -506,7 +529,7 @@ function animStripPath(species, palette, state) {
     .replace("{state}", String(state || "idle"));
 }
 
-  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
+  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
 })();
 
 // desktop/src/ui/components/NpcHostBanner.js
@@ -1011,6 +1034,7 @@ const __m8 = (function () {
   const jsx = __ext0;
   const buildPreviewLayers = __m5["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
+  const resolveAnimPalette = __m3["resolveAnimPalette"];
   const speciesBodyPath = __m3["speciesBodyPath"];
   const contract = __m7["contract"];
   const createPlayer = __m7["createPlayer"];
@@ -1095,11 +1119,16 @@ function PetPreview(props = {}) {
   const manifest = props.manifest || props.assetManifest || null;
   const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
   const species = pet && pet.species ? String(pet.species) : "";
-  const palette =
+  const rawPalette =
     props.palette ||
+    (pet &&
+      pet.appearance &&
+      pet.appearance.traits &&
+      pet.appearance.traits.palette) ||
     (pet && pet.appearance && pet.appearance.palette) ||
     (pet && pet.palette) ||
-    "teal";
+    "";
+  const palette = resolveAnimPalette(rawPalette || "teal");
   const layers = buildPreviewLayers({
     pet: pet,
     loadout: props.loadout,
@@ -1227,6 +1256,7 @@ function PetPreview(props = {}) {
 
   const children = [];
   if (animated) {
+    const stripUrl = joinAssetUrl(assetBaseUrl, clip.path || "") || baseLayer.url;
     children.push(
       jsx(
         "div",
@@ -1237,8 +1267,9 @@ function PetPreview(props = {}) {
           "data-layer-slot": "body",
           "data-anim-state": requestedState,
           "data-frame-index": String(frameIndex),
+          "data-strip-path": clip.path || "",
           "aria-hidden": "true",
-          style: stripStyle(baseLayer.url, clip, frameIndex),
+          style: stripStyle(stripUrl, clip, frameIndex),
         },
         "anim:" + baseLayer.id
       )
@@ -5136,22 +5167,23 @@ function itemThumbPath(item, manifest) {
   if (item.assetUrl) {
     return String(item.assetUrl);
   }
-  const shortName = String(item.id || "").split(".").pop();
-  return shortName ? "px3/items/" + shortName + ".png" : "";
+  // Prefer an empty thumb over a guessed path that 404s for launch-001-only ids.
+  return "";
+}
+
+function joinShopAssetUrl(assetBase, relativePath) {
+  if (!relativePath) return "";
+  const value = String(relativePath);
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  const base = typeof assetBase === "string" ? assetBase.replace(/\/+$/, "") : "";
+  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
+  if (!base) return relative;
+  if (!relative) return base;
+  return base + "/" + relative;
 }
 
 function itemThumbUrl(assetBase, item, manifest) {
-  const path = itemThumbPath(item, manifest);
-  if (!path) {
-    return "";
-  }
-  if (/^(?:https?:|data:|blob:)/i.test(path)) {
-    return path;
-  }
-  if (!assetBase) {
-    return "";
-  }
-  return joinAssetUrl(assetBase, path);
+  return joinShopAssetUrl(assetBase || "", itemThumbPath(item, manifest));
 }
 
 function ShopCard(props) {
@@ -6048,7 +6080,17 @@ function createApiClient(options) {
     return relative ? root + "/" + relative : root;
   }
 
+  function bridgeUrl(path) {
+    return basePath + normalizePath(path);
+  }
+
   return {
+    status: function status() {
+      return request("GET", bridgeUrl("/status"), {});
+    },
+    health: function health() {
+      return request("GET", bridgeUrl("/health"), {});
+    },
     assets: {
       manifest: function manifest() {
         return request("GET", assetsUrl("manifest"), {});

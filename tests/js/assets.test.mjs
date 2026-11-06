@@ -10,6 +10,7 @@ import {
   itemAssetPath,
   joinAssetUrl,
   npcPortraitPath,
+  resolveAnimPalette,
   speciesBodyPath,
 } from "../../desktop/src/ui/logic/assets.js";
 import { buildPreviewLayers } from "../../desktop/src/ui/logic/shop.js";
@@ -82,17 +83,14 @@ test("speciesBodyPath honours a palette-specific manifest path", () => {
   );
 });
 
-test("itemAssetPath reads manifest assets and falls back to the short name", () => {
+test("itemAssetPath reads manifest assets and skips unknown ids", () => {
   const manifest = {
-    assets: [
-      { id: "hat.binary_crown", path: "px3/items/binary_crown.png" },
-      { asset_id: "face.pixel_shades", path: "px3/items/pixel_shades.png" },
-    ],
+    assets: [{ id: "hat.binary_crown", path: "px3/items/binary_crown.png" }],
   };
+  assert.equal(itemAssetPath(manifest, { id: "hat.binary_crown" }), "px3/items/binary_crown.png");
   assert.equal(itemAssetPath(manifest, "hat.binary_crown"), "px3/items/binary_crown.png");
-  assert.equal(itemAssetPath(manifest, { id: "face.pixel_shades" }), "px3/items/pixel_shades.png");
-  assert.equal(itemAssetPath({ assets: [] }, "aura.ping_pulse"), "px3/items/ping_pulse.png");
-  assert.equal(itemAssetPath(null, ""), "");
+  assert.equal(itemAssetPath(null, { id: "aura.ping_pulse", asset_id: "aura.ping_pulse" }), "");
+  assert.equal(itemAssetPath(manifest, { assetUrl: "https://cdn.example/x.png", id: "x" }), "https://cdn.example/x.png");
 });
 
 test("npcPortraitPath maps the four launch NPCs", () => {
@@ -156,4 +154,22 @@ test("api.assets builds safe asset URLs and resolves the raw manifest envelope",
   assert.equal(envelope.data.asset_pack_id, "launch-003");
   assert.equal(calls[0].url, "/api/plugins/hermagotchi/assets/manifest");
   assert.equal(calls[0].init.method, "GET");
+});
+
+test("resolveAnimPalette maps server palette_0N names onto anim strips", () => {
+  assert.equal(resolveAnimPalette("palette_01"), "teal");
+  assert.equal(resolveAnimPalette("palette_04"), "brick");
+  assert.equal(resolveAnimPalette("grape"), "grape");
+  assert.equal(resolveAnimPalette(""), "teal");
+});
+
+test("itemAssetPath returns empty when the manifest has no matching asset", () => {
+  assert.equal(itemAssetPath({ assets: [] }, { id: "hat.wizard_hat", asset_id: "hat.wizard_hat" }), "");
+  assert.equal(
+    itemAssetPath(
+      { assets: [{ id: "hat.binary_crown", path: "px3/items/binary_crown.png" }] },
+      { id: "hat.binary_crown", asset_id: "hat.binary_crown" }
+    ),
+    "px3/items/binary_crown.png"
+  );
 });
