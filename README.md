@@ -8,7 +8,7 @@ A Hermes Agent plugin with exactly **8 composable tools**, a native pane in the 
   <img src="docs/images/hero-hermes-habitat.png" alt="Hermes web app with Hermagotchi Habitat pane and lobby rail" width="100%">
 </p>
 
-<p align="center"><sub>Hermes web app (`hermes webapp`) · Habitat pane · Focus layout · live lobby rail</sub></p>
+<p align="center"><sub>Hermes web app (`hermes webapp`) · dark Focus layout · Habitat · live lobby</sub></p>
 
 ## Why it exists
 
