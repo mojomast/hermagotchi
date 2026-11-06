@@ -99,20 +99,21 @@ Pets without an explicit `type` field use the species → type map below. An opt
 
 ## Species → type mapping
 
-Launch-003 currently ships **3** playable species. An art worker is expanding toward **10** (2 per type). Planned names are reserved here; **do not** invent assets under `assets/` from this doc.
+Launch-003 ships **10** playable species (2 per type). Starter combat budgets for
+`byteblob` / `patchfox` / `nullgeist` are unchanged from `battle-1`.
 
-| Species | Type | Status |
+| Species | Type | Notes |
 |---|---|---|
-| `byteblob` | kernel | live |
-| `patchfox` | payload | live |
-| `nullgeist` | glitch | live |
-| `antennix` | signal | planned |
-| `wavemite` | signal | planned |
-| `rootcube` | kernel | planned |
-| `injectail` | payload | planned |
-| `wallbit` | firewall | planned |
-| `portcull` | firewall | planned |
-| `segfault` | glitch | planned |
+| `cachebat` | signal | hovering cache/network bat |
+| `daemowl` | signal | daemon owl, lightning chest |
+| `byteblob` | kernel | starter robot-slime |
+| `kernelcrab` | kernel | chip-shell crab |
+| `patchfox` | payload | starter coding fox |
+| `shellsnail` | payload | terminal-shell snail |
+| `stacktoise` | firewall | server-rack tortoise |
+| `firewyrm` | firewall | fire-wall pun dragon |
+| `nullgeist` | glitch | starter glitch ghost |
+| `regexopus` | glitch | asterisk-spotted octopus |
 
 ## Balance targets
 
@@ -143,7 +144,7 @@ win the pairwise; balance is the flat overall meta, not a soft 60% SE rate.
 1. When should matchmaking default to `battle-2`? (Recommend after art ships ≥1 species per type.)
 2. Dual-typing later? Chart is single-type only; dual would need a new ruleset (`battle-3`) to keep replays stable.
 3. Should `glitch_pulse` stay universally glitch-typed, or become a per-type special catalogue?
-4. Final names for the 7 planned species are owned by the art worker — remap in `PLANNED_SPECIES_TYPES` if they rename.
+4. Pet adopt API still enumerates the original 3 starters until a follow-up widens `/pets` — combat already accepts all 10.
 
 ## Test / eval commands
 

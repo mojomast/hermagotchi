@@ -82,6 +82,14 @@ def test_species_type_mapping_covers_starters():
     assert SPECIES_TYPES["byteblob"] == "kernel"
     assert SPECIES_TYPES["patchfox"] == "payload"
     assert SPECIES_TYPES["nullgeist"] == "glitch"
+    assert SPECIES_TYPES["cachebat"] == "signal"
+    assert SPECIES_TYPES["firewyrm"] == "firewall"
+    assert len(SPECIES_TYPES) == 10
+    # two of each type
+    from collections import Counter
+    counts = Counter(SPECIES_TYPES.values())
+    assert set(counts) == set(TYPES)
+    assert all(v == 2 for v in counts.values())
 
 
 def test_battle_1_golden_replay_unchanged():

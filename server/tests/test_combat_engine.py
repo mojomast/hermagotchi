@@ -62,7 +62,8 @@ def test_ruleset_constants_are_frozen():
     assert RULESET_VERSION == "battle-1"
     assert BASE_HP == 100
     assert MAX_ROUNDS == 6
-    assert set(SPECIES_STATS) == {"byteblob", "patchfox", "nullgeist"}
+    assert {"byteblob", "patchfox", "nullgeist"} <= set(SPECIES_STATS)
+    assert len(SPECIES_STATS) >= 3
     for stats in SPECIES_STATS.values():
         assert stats["max_hp"] == BASE_HP
         assert stats["attack"] + stats["guard"] + stats["speed"] + stats["focus"] == 20

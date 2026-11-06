@@ -14,6 +14,7 @@ FOCUS_BONUS_BASE = 2
 HEAL_POWER = 10
 
 SPECIES_STATS = {
+    # starters (battle-1 budgets unchanged)
     "byteblob": {
         "max_hp": BASE_HP,
         "attack": 6,
@@ -33,6 +34,56 @@ SPECIES_STATS = {
         "attack": 5,
         "guard": 4,
         "speed": 5,
+        "focus": 6,
+    },
+    # launch-003 expansion (budget 20 each)
+    "cachebat": {
+        "max_hp": BASE_HP,
+        "attack": 6,
+        "guard": 3,
+        "speed": 8,
+        "focus": 3,
+    },
+    "daemowl": {
+        "max_hp": BASE_HP,
+        "attack": 5,
+        "guard": 4,
+        "speed": 6,
+        "focus": 5,
+    },
+    "kernelcrab": {
+        "max_hp": BASE_HP,
+        "attack": 5,
+        "guard": 8,
+        "speed": 3,
+        "focus": 4,
+    },
+    "shellsnail": {
+        "max_hp": BASE_HP,
+        "attack": 6,
+        "guard": 5,
+        "speed": 3,
+        "focus": 6,
+    },
+    "stacktoise": {
+        "max_hp": BASE_HP,
+        "attack": 4,
+        "guard": 9,
+        "speed": 2,
+        "focus": 5,
+    },
+    "firewyrm": {
+        "max_hp": BASE_HP,
+        "attack": 8,
+        "guard": 4,
+        "speed": 5,
+        "focus": 3,
+    },
+    "regexopus": {
+        "max_hp": BASE_HP,
+        "attack": 5,
+        "guard": 3,
+        "speed": 6,
         "focus": 6,
     },
 }

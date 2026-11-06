@@ -60,21 +60,22 @@ TYPE_PASSIVES = {
 
 # Existing launch-003 species + planned art expansion to 10 (2 per type).
 # Planned names are reserved for the art worker; do not invent assets here.
+# Live launch-003 roster (10 species, 2 per type).
 SPECIES_TYPES = {
+    "cachebat": "signal",
+    "daemowl": "signal",
     "byteblob": "kernel",
+    "kernelcrab": "kernel",
     "patchfox": "payload",
+    "shellsnail": "payload",
+    "stacktoise": "firewall",
+    "firewyrm": "firewall",
     "nullgeist": "glitch",
+    "regexopus": "glitch",
 }
 
-PLANNED_SPECIES_TYPES = {
-    "antennix": "signal",
-    "wavemite": "signal",
-    "rootcube": "kernel",
-    "injectail": "payload",
-    "wallbit": "firewall",
-    "portcull": "firewall",
-    "segfault": "glitch",
-}
+# Kept for docs/back-compat; all launch-003 names now live in SPECIES_TYPES.
+PLANNED_SPECIES_TYPES: dict[str, str] = {}
 
 ALL_SPECIES_TYPES = {**SPECIES_TYPES, **PLANNED_SPECIES_TYPES}
 
