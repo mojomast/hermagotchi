@@ -14,7 +14,7 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
 - Branch: `feat/hackathon`
-- **Deploy tip SHA (full):** `dc53d3fd0dc5f9a03e1d9b492beb173fc0ec4397`
+- **Deploy tip SHA (full):** `c763d8dcf85b7e06df44860328fe772285625d54`
 - Prior rollback SHA: `12b0217` (full `12b0217666c7303971de423436c6adca4c0b70a7`) — use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
@@ -65,7 +65,7 @@ Reload nginx only if you change its config; verify with a dry config test first.
    ```bash
    cd /opt/hermagotchi
    git fetch origin
-   git checkout dc53d3fd0dc5f9a03e1d9b492beb173fc0ec4397
+   git checkout c763d8dcf85b7e06df44860328fe772285625d54
    ```
 4. **Deps:** activate `/opt/hermagotchi/.venv` and `pip install -r requirements-dev.txt` (or the production requirements file the unit already uses). Prefer the same install path as the prior deploy.
 5. **Migrations:** run the app's normal migration path (startup migration via create_app / documented migrate command). Do not hand-edit the DB. Forward-only only.
@@ -106,7 +106,7 @@ After restart + migration:
 If health checks fail or pairing is broken:
 1. `systemctl stop hermagotchi`
 2. Restore DB from the backup just taken (copy backup over `HERMAGOTCHI_DB` only after stopping the service).
-3. `cd /opt/hermagotchi && git checkout dc53d3fd0dc5f9a03e1d9b492beb173fc0ec4397` (or the full prior SHA from notes)
+3. `cd /opt/hermagotchi && git checkout c763d8dcf85b7e06df44860328fe772285625d54` (or the full prior SHA from notes)
 4. Reinstall deps if needed, `systemctl start hermagotchi`, re-check `/healthz`
 5. Report what failed and leave the new tip unchecked out until the owner decides.
 
