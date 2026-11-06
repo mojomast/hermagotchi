@@ -1,0 +1,17 @@
+{
+  "name": "hermagotchi-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && hyperframes preview .build",
+    "preview": "npm run build && hyperframes preview .build --background --port 4333",
+    "lint": "npm run build && hyperframes lint .build",
+    "check": "npm run build && hyperframes check .build",
+    "render": "npm run build && node scripts/render.mjs",
+    "stills": "node scripts/stills.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "devDependencies": { "hyperframes": "0.9.19", "esbuild": "0.25.12" }
+}

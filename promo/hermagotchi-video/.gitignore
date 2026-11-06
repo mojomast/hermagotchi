@@ -1,0 +1,7 @@
+node_modules/
+.build/
+.hyperframes/
+out/
+*.log
+.env*
+slots/*.local.*

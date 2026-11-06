@@ -1,0 +1,11 @@
+{
+  "effectIntensity": 0.7,
+  "seed": 1996,
+  "fps": 60,
+  "width": 1920,
+  "height": 1080,
+  "duration": 92,
+  "voiceGain": 0.92,
+  "musicGain": 0.18,
+  "broadcastGain": 0.28
+}

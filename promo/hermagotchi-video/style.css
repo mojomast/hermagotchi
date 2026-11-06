@@ -1,0 +1,7 @@
+@font-face{font-family:Broadcast;src:url('assets/fonts/Anton-Regular.ttf') format('truetype');font-display:block}
+@font-face{font-family:BroadcastMono;src:url('assets/fonts/VT323-Regular.ttf') format('truetype');font-display:block}
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#050509}
+#broadcast{position:relative;width:1920px;height:1080px;overflow:hidden}
+.scene-host,.broadcast-scene{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden}
+.broadcast-screen{display:block;width:1920px;height:1080px;image-rendering:pixelated}

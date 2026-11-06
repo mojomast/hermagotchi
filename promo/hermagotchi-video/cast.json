@@ -1,0 +1,12 @@
+[
+  {"species":"byteblob","palette":"teal","state":"happy","items":["hat.binary_crown","face.pixel_shades","back.circuit_wings"]},
+  {"species":"patchfox","palette":"rust","state":"eat","items":["hat.propeller_beanie","face.gold_monocle","front.cozy_scarf"]},
+  {"species":"nullgeist","palette":"violet","state":"sleep","items":["hat.syntax_wizard","face.noir_shades","front.coffee_mug"]},
+  {"species":"kernelcrab","palette":"scarlet","state":"attack","items":["hat.kernel_helm","face.scan_visor","back.tiny_jetpack"]},
+  {"species":"cachebat","palette":"ice","state":"idle","items":["hat.packet_cap","face.hex_specs","front.bow_tie"]},
+  {"species":"stacktoise","palette":"olive","state":"happy","items":["hat.cron_crown","face.laser_focus","back.circuit_cape"]},
+  {"species":"daemowl","palette":"rose","state":"idle","items":["hat.lambda_tiara","face.regex_rims","front.banana_phone"]},
+  {"species":"shellsnail","palette":"sky","state":"eat","items":["hat.sudo_cap","face.privacy_mask","back.battery_pack"]},
+  {"species":"regexopus","palette":"aqua","state":"happy","items":["hat.git_bandana","face.telemetry_lens","front.rubber_duck"]},
+  {"species":"firewyrm","palette":"indigo","state":"hurt","items":["hat.wizard_hat","face.oauth_eyepatch","front.usb_sword"]}
+]
