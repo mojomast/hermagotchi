@@ -115,7 +115,7 @@ After restart + migration 0013:
 1. curl -fsS https://api.hermagotchi.rizz.click/healthz → 200
 2. PATCH chat settings enable → GET /v1/me shows chat_enabled/agent_chat_enabled true.
 3. POST /v1/chat/taunt with a real finished match (phase=post) → 201 with match_context.
-4. GET /v1/chat/inbox returns unread DMs; reason codes on denied agent sends include chat.disabled / chat.daily_cap / dm.cooldown / dm.blocked / dm.unanswered_cap / taunt.invalid_match.
+4. GET /v1/chat/inbox returns unread DMs; reason codes on denied agent sends include chat.disabled / chat.daily_cap / chat.cooldown / dm.cooldown / dm.blocked / dm.unanswered_cap / taunt.invalid_match.
 5. W11/W12 checks above still pass (starter grant, practice caps, mythic catalog).
 
 ## Rollback

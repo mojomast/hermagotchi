@@ -16,6 +16,7 @@ import pytest
 from server.app.db import connect, init_db, seed_account
 from server.app.social import (
     AgentChatDisabled,
+    ChatCooldown,
     ChatDailyCap,
     DMBlocked,
     DMCooldown,
@@ -335,17 +336,18 @@ def test_agent_dm_daily_cap_is_ten_across_recipients(app, account_a):
         conn.close()
 
 
-def test_agent_recipient_cooldown_is_sixty_seconds(app, account_a):
+def test_agent_lobby_cooldown_is_ten_seconds_chat_cooldown(app, account_a):
+    """Lobby anti-spam uses chat.cooldown (~10s), never dm.cooldown."""
     conn = _conn(app)
     try:
         _enable_agent(conn, account_a)
         send_message(conn, "lobby", account_a, "first", actor_mode="agent", now=BASE)
-        with pytest.raises(DMCooldown) as cooldown:
+        with pytest.raises(ChatCooldown) as cooldown:
             send_message(
                 conn, "lobby", account_a, "second", actor_mode="agent", now=BASE
             )
-        assert cooldown.value.code == "dm.cooldown"
-        assert 0 < cooldown.value.retry_after_s <= 60
+        assert cooldown.value.code == "chat.cooldown"
+        assert 0 < cooldown.value.retry_after_s <= 10
 
         allowed = send_message(
             conn,
@@ -353,9 +355,138 @@ def test_agent_recipient_cooldown_is_sixty_seconds(app, account_a):
             account_a,
             "third",
             actor_mode="agent",
-            now=BASE + timedelta(seconds=61),
+            now=BASE + timedelta(seconds=11),
         )
         assert allowed["body"] == "third"
+    finally:
+        conn.close()
+
+
+def test_agent_dm_recipient_cooldown_is_sixty_seconds(app, account_a, account_b):
+    """60s cooldown is per DM recipient only."""
+    conn = _conn(app)
+    try:
+        _enable_agent(conn, account_a)
+        channel = dm_channel_for(account_a, account_b)
+        send_message(
+            conn, channel, account_a, "dm one", actor_mode="agent", now=BASE
+        )
+        with pytest.raises(DMCooldown) as cooldown:
+            send_message(
+                conn,
+                channel,
+                account_a,
+                "dm two",
+                actor_mode="agent",
+                now=BASE + timedelta(seconds=5),
+            )
+        assert cooldown.value.code == "dm.cooldown"
+        assert 0 < cooldown.value.retry_after_s <= 60
+
+        allowed = send_message(
+            conn,
+            channel,
+            account_a,
+            "dm three",
+            actor_mode="agent",
+            now=BASE + timedelta(seconds=61),
+        )
+        assert allowed["body"] == "dm three"
+    finally:
+        conn.close()
+
+
+def test_lobby_post_does_not_block_lobby_taunt_via_dm_cooldown(
+    app, account_a, account_b
+):
+    """Regression: lobby chat then lobby taunt must not raise dm.cooldown.
+
+    Within the short lobby window (<10s) chat.cooldown applies; after 10s the
+    taunt succeeds even though 60s have not elapsed.
+    """
+    conn = _conn(app)
+    try:
+        _enable_agent(conn, account_a)
+        resolved = (BASE - timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+        match_id = _add_match(
+            conn,
+            challenger=account_a,
+            defender=account_b,
+            status="resolved",
+            winner="a",
+            rounds=2,
+            final_hp={"a": 20, "b": 0},
+            resolved_at=resolved,
+        )
+        send_message(
+            conn, "lobby", account_a, "gg all", actor_mode="agent", now=BASE
+        )
+        # Immediate taunt hits lobby anti-spam, not DM cooldown.
+        with pytest.raises(ChatCooldown) as cool:
+            send_taunt(
+                conn,
+                account_a,
+                match_id,
+                "too easy",
+                phase="post",
+                lobby=True,
+                actor_mode="agent",
+                now=BASE + timedelta(seconds=1),
+            )
+        assert cool.value.code == "chat.cooldown"
+        assert cool.value.code != "dm.cooldown"
+
+        # After the short lobby window, taunt succeeds (< 60s since lobby post).
+        message = send_taunt(
+            conn,
+            account_a,
+            match_id,
+            "too easy",
+            phase="post",
+            lobby=True,
+            actor_mode="agent",
+            now=BASE + timedelta(seconds=11),
+        )
+        assert message["kind"] == "taunt"
+        assert message["channel_id"] == "lobby"
+        assert message["body"] == "too easy"
+    finally:
+        conn.close()
+
+
+def test_dm_cooldown_does_not_block_lobby_taunt(app, account_a, account_b):
+    """A recent DM must not impose dm.cooldown on a subsequent lobby taunt."""
+    conn = _conn(app)
+    try:
+        _enable_agent(conn, account_a)
+        channel = dm_channel_for(account_a, account_b)
+        send_message(
+            conn, channel, account_a, "privately", actor_mode="agent", now=BASE
+        )
+        resolved = (BASE - timedelta(minutes=30)).isoformat().replace("+00:00", "Z")
+        match_id = _add_match(
+            conn,
+            challenger=account_a,
+            defender=account_b,
+            status="resolved",
+            winner="a",
+            rounds=1,
+            final_hp={"a": 5, "b": 0},
+            resolved_at=resolved,
+        )
+        # 5s later: still inside DM cooldown for that recipient, but lobby taunt OK.
+        message = send_taunt(
+            conn,
+            account_a,
+            match_id,
+            "see you in lobby",
+            phase="post",
+            lobby=True,
+            actor_mode="agent",
+            now=BASE + timedelta(seconds=5),
+        )
+        assert message["kind"] == "taunt"
+        assert message["channel_id"] == "lobby"
     finally:
         conn.close()
 

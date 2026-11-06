@@ -17,6 +17,7 @@ from .. import CONTRACTS_VERSION
 from .blocks import blocked_account_ids, is_blocked_either_way
 from .errors import (
     AgentChatDisabled,
+    ChatCooldown,
     ChatDailyCap,
     DMBlocked,
     DMCooldown,
@@ -38,7 +39,8 @@ INBOX_CURSOR_CHANNEL = "inbox"
 
 AGENT_LOBBY_DAILY_CAP = 20
 AGENT_DM_DAILY_CAP = 10
-AGENT_RECIPIENT_COOLDOWN_S = 60
+AGENT_RECIPIENT_COOLDOWN_S = 60  # DMs only, per recipient channel
+AGENT_LOBBY_COOLDOWN_S = 10  # lobby/taunt anti-spam; reason chat.cooldown
 AGENT_UNANSWERED_DM_CAP = 2
 
 _CHANNEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -338,15 +340,28 @@ def _enforce_agent_limits(
             retry_after_s=_seconds_until_midnight(now),
         )
 
+    # Cooldowns: DMs use a 60s per-recipient window (dm.cooldown). Lobby posts
+    # and lobby taunts share a short 10s lobby window (chat.cooldown) and must
+    # never be blocked by dm.cooldown after a prior lobby message.
     last = _last_outgoing_at(
         conn, account_id, channel_id if dm else LOBBY_CHANNEL, dm=dm
     )
     if last is not None:
         elapsed = (now - last).total_seconds()
-        if elapsed < AGENT_RECIPIENT_COOLDOWN_S:
-            raise DMCooldown(
-                "Wait before messaging this recipient again.",
-                retry_after_s=max(1, int(math.ceil(AGENT_RECIPIENT_COOLDOWN_S - elapsed))),
+        if dm:
+            if elapsed < AGENT_RECIPIENT_COOLDOWN_S:
+                raise DMCooldown(
+                    "Wait before messaging this recipient again.",
+                    retry_after_s=max(
+                        1, int(math.ceil(AGENT_RECIPIENT_COOLDOWN_S - elapsed))
+                    ),
+                )
+        elif elapsed < AGENT_LOBBY_COOLDOWN_S:
+            raise ChatCooldown(
+                "Wait a moment before posting to lobby again.",
+                retry_after_s=max(
+                    1, int(math.ceil(AGENT_LOBBY_COOLDOWN_S - elapsed))
+                ),
             )
 
     if dm and other_id is not None:

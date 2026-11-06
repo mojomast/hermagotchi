@@ -63,6 +63,13 @@ class ChatDailyCap(SocialError):
     status_code = 429
 
 
+class ChatCooldown(SocialError):
+    """Short lobby anti-spam window (not the DM per-recipient cooldown)."""
+
+    code = "chat.cooldown"
+    status_code = 429
+
+
 class DMCooldown(SocialError):
     code = "dm.cooldown"
     status_code = 429
@@ -86,6 +93,7 @@ class TauntInvalidMatch(SocialError):
 # Friendly aliases keep reason-named imports readable at call sites.
 ChatDisabled = AgentChatDisabled
 DailyCap = ChatDailyCap
+LobbyCooldown = ChatCooldown
 Cooldown = DMCooldown
 UnansweredCap = DMUnansweredCap
 InvalidMatch = TauntInvalidMatch

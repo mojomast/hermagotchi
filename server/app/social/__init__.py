@@ -17,6 +17,7 @@ from .blocks import (
 )
 from .chat import (
     AGENT_DM_DAILY_CAP,
+    AGENT_LOBBY_COOLDOWN_S,
     AGENT_LOBBY_DAILY_CAP,
     AGENT_RECIPIENT_COOLDOWN_S,
     AGENT_UNANSWERED_DM_CAP,
@@ -39,6 +40,7 @@ from .chat import (
 from .errors import (
     AgentChatDisabled,
     BlockedInteraction,
+    ChatCooldown,
     ChatDailyCap,
     DMBlocked,
     DMCooldown,
@@ -56,11 +58,13 @@ from .sanitize import MAX_REASON_CHARS, sanitize_display_text
 
 __all__ = [
     "AGENT_DM_DAILY_CAP",
+    "AGENT_LOBBY_COOLDOWN_S",
     "AGENT_LOBBY_DAILY_CAP",
     "AGENT_RECIPIENT_COOLDOWN_S",
     "AGENT_UNANSWERED_DM_CAP",
     "AgentChatDisabled",
     "BlockedInteraction",
+    "ChatCooldown",
     "ChatDailyCap",
     "DMBlocked",
     "DMCooldown",

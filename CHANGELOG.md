@@ -19,7 +19,7 @@ surface and adds the W7-W10 user-facing work below.
   Reason codes: `chat.disabled`, `chat.daily_cap`, `dm.cooldown`, `dm.blocked`,
   `dm.unanswered_cap`, `taunt.invalid_match`. Migration `0013_agent_chat.sql`
   adds read cursors, per-account chat settings and taunt metadata. Southpaw
-  announces rating-gap ≥150 upsets in lobby. Schema o200k_base 1005 (Δ +72).
+  announces rating-gap ≥150 upsets in lobby. Schema o200k_base 1005 (Δ +72). Lobby anti-spam uses `chat.cooldown` (~10s); `dm.cooldown` (60s) is DM-only and does not block lobby taunts.
 
 - **Device-pairing auth (W7).** Short-lived user codes plus access, refresh and
   device tokens; only SHA-256 digests are stored. The client ships a pairing
