@@ -433,7 +433,7 @@ def create_router(
         elif base_url is not None or policy is not None:
             def client_dependency() -> Any:
                 return GameClient(
-                    base_url=base_url or DEFAULT_API_BASE_URL,
+                    base_url=base_url or _base_url(),
                     policy=policy,
                 )
         else:
