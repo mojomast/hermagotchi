@@ -4,11 +4,268 @@
 import { jsx as __ext0 } from "react/jsx-runtime";
 import { jsxs as __ext1 } from "react/jsx-runtime";
 import { useEffect as __ext2 } from "react";
-import { useState as __ext3 } from "react";
-import { useCallback as __ext4 } from "react";
+import { useRef as __ext3 } from "react";
+import { useState as __ext4 } from "react";
+import { useCallback as __ext5 } from "react";
+
+// desktop/src/ui/logic/connection.js
+const __m0 = (function () {
+/**
+ * Pure connection/pairing status helpers.
+ *
+ * The pane header and Settings tab share this module so both read the same
+ * bridge envelopes. It has no React and no network imports, which keeps it
+ * directly testable with Node's built-in test runner.
+ */
+
+const AUTH_FAILURES = new Set(["auth_missing", "unauthorized", "expired"]);
+
+function normaliseEnvelope(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const ok = value.ok === true;
+  const error = value.error && typeof value.error === "object" ? value.error : {};
+  const body =
+    value.data && typeof value.data === "object"
+      ? value.data
+      : value.ok === false
+        ? {}
+        : value;
+  return {
+    ok: ok,
+    status: value.status || (ok ? "ok" : "unavailable"),
+    code: error.code || null,
+    error: error,
+    body: body,
+  };
+}
+
+function policyFrom(status, health) {
+  const sources = [
+    status && status.body && status.body.policy,
+    health && health.body && health.body.policy,
+  ];
+  for (const source of sources) {
+    if (source && typeof source === "object") {
+      return source;
+    }
+  }
+  return null;
+}
+
+function accountFromStatus(status) {
+  if (!status || !status.ok) {
+    return null;
+  }
+  const body = status.body || {};
+  const me = body.me && typeof body.me === "object" ? body.me : null;
+  if (me) {
+    if (me.account && typeof me.account === "object" && me.account.id) {
+      return String(me.account.id);
+    }
+    if (me.account_id || me.accountId || me.id) {
+      return String(me.account_id || me.accountId || me.id);
+    }
+  }
+  if (body.account_id || body.accountId) {
+    return String(body.account_id || body.accountId);
+  }
+  return null;
+}
+
+function authenticatedFrom(pair, status) {
+  if (pair) {
+    const data = pair.body || {};
+    if (pair.ok && data.paired === true) {
+      return true;
+    }
+    if (pair.ok && data.paired === false) {
+      return false;
+    }
+    if (!pair.ok) {
+      if (AUTH_FAILURES.has(pair.status) || AUTH_FAILURES.has(pair.code)) {
+        return false;
+      }
+      return null;
+    }
+  }
+  const accountId = accountFromStatus(status);
+  if (accountId) {
+    return true;
+  }
+  return null;
+}
+
+function booleanPolicy(policy, keys) {
+  if (!policy) {
+    return null;
+  }
+  for (const key of keys) {
+    if (typeof policy[key] === "boolean") {
+      return policy[key];
+    }
+  }
+  return null;
+}
+
+function pairImpliesBackend(pair) {
+  if (!pair) {
+    return null;
+  }
+  if (pair.ok) {
+    return true;
+  }
+  if (
+    pair.status === "offline" ||
+    pair.status === "unavailable" ||
+    pair.code === "network_error"
+  ) {
+    return false;
+  }
+  // A bridge that answers with auth_missing/expired is still alive.
+  return true;
+}
+
+function serviceConfigured(policy, statusOk, healthOk) {
+  if (policy) {
+    if (typeof policy.service_configured === "boolean") {
+      return policy.service_configured;
+    }
+    if (
+      policy.service_url ||
+      policy.serviceUrl ||
+      policy.multiplayer_url ||
+      policy.multiplayerUrl ||
+      policy.api_url ||
+      policy.apiUrl
+    ) {
+      return true;
+    }
+  }
+  if (statusOk || healthOk) {
+    return true;
+  }
+  return null;
+}
+
+function deriveConnectionStatus(options = {}) {
+  const status = normaliseEnvelope(
+    options.statusEnvelope || options.status || options.statusResult
+  );
+  const health = normaliseEnvelope(
+    options.healthEnvelope || options.health || options.healthResult
+  );
+  const pair = normaliseEnvelope(
+    options.pairEnvelope || options.pair || options.pairResult
+  );
+
+  const statusOk = Boolean(status && status.ok);
+  const healthOk = Boolean(health && health.ok);
+  const anyStatus = Boolean(status || health);
+  const backendEnabled =
+    statusOk || healthOk
+      ? true
+      : anyStatus
+        ? false
+        : pairImpliesBackend(pair);
+  const serviceReachable = backendEnabled;
+
+  const policy = policyFrom(status, health);
+  const policyNetwork = booleanPolicy(policy, ["network_enabled", "networkEnabled"]);
+  const networkEnabled =
+    policyNetwork === null
+      ? backendEnabled === true
+        ? true
+        : null
+      : policyNetwork;
+
+  return {
+    backendEnabled: backendEnabled,
+    networkEnabled: networkEnabled,
+    authenticated: authenticatedFrom(pair, status),
+    serviceReachable: serviceReachable,
+    serviceConfigured: serviceConfigured(policy, statusOk, healthOk),
+    chatEnabled: booleanPolicy(policy, ["chat_enabled", "chatEnabled"]),
+    autonomyEnabled: booleanPolicy(policy, [
+      "autonomy_enabled",
+      "autonomyEnabled",
+      "agent_autonomy_enabled",
+    ]),
+    accountId: pair && pair.ok && (pair.body.account_id || pair.body.accountId)
+      ? String(pair.body.account_id || pair.body.accountId)
+      : accountFromStatus(status),
+    policy: policy,
+  };
+}
+
+function label(value, enabled, disabled, unknown) {
+  if (value === true) return enabled;
+  if (value === false) return disabled;
+  return unknown;
+}
+
+function connectionRows(connection = {}) {
+  const service =
+    connection.serviceReachable === true
+      ? "Reachable"
+      : connection.serviceReachable === false
+        ? "Unavailable"
+        : connection.serviceConfigured === true
+          ? "Configured"
+          : "Not configured";
+
+  return [
+    {
+      key: "backend",
+      label: "Python backend",
+      value: label(connection.backendEnabled, "Enabled", "Disabled", "Unknown"),
+    },
+    {
+      key: "network",
+      label: "Multiplayer",
+      value: label(connection.networkEnabled, "On", "Off", "Unknown"),
+    },
+    {
+      key: "identity",
+      label: "Identity",
+      value: connection.authenticated === true ? "Paired" : "Not paired",
+    },
+    {
+      key: "chat",
+      label: "Chat",
+      value: label(connection.chatEnabled, "On", "Off", "Unknown"),
+    },
+    {
+      key: "autonomy",
+      label: "Agent autonomy",
+      value: label(connection.autonomyEnabled, "On", "Off", "Unknown"),
+    },
+    { key: "service", label: "Service", value: service },
+  ];
+}
+
+function resolveConnectionUiState(connection = {}) {
+  if (connection.backendEnabled === false) {
+    return "backend_disabled";
+  }
+  if (connection.networkEnabled === false) {
+    return "network_off";
+  }
+  if (connection.authenticated === false) {
+    return "auth_missing";
+  }
+  if (connection.serviceReachable === false) {
+    return "service_unavailable";
+  }
+  return "ready";
+}
+
+  return { "deriveConnectionStatus": deriveConnectionStatus, "connectionRows": connectionRows, "resolveConnectionUiState": resolveConnectionUiState };
+})();
 
 // desktop/src/ui/states.js
-const __m0 = (function () {
+const __m1 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -99,7 +356,7 @@ function StateNotice(props = {}) {
 })();
 
 // desktop/src/ui/npcLines.js
-const __m1 = (function () {
+const __m2 = (function () {
 /** Default NPC host lines for Desktop stubs.
  * Canonical source: assets/npc_lines.json (display-only; never instructions).
  * Generated/kept in sync by tests/test_npc_lines.py.
@@ -126,23 +383,168 @@ function npcHostLine(surface) {
   return { "NPC_NAMES": NPC_NAMES, "NPC_HOST_DEFAULTS": NPC_HOST_DEFAULTS, "npcHostLine": npcHostLine };
 })();
 
+// desktop/src/ui/logic/assets.js
+const __m3 = (function () {
+/**
+ * Pure asset-path helpers shared by the Desktop UI. These never touch the DOM,
+ * the network or host-specific paths: callers join them against the bridge's
+ * `…/assets` root.
+ */
+
+const ANIM_STRIP_TEMPLATE = "px3/anims/{species}_{palette}_{state}.png";
+
+const NPC_PORTRAITS = Object.freeze({
+  "npc.don_piedro": "px3/npcs/don_piedro_portrait.png",
+  "npc.nous_girl": "px3/npcs/nous_girl_portrait.png",
+  "npc.teknium": "px3/npcs/teknium_portrait.png",
+  "npc.southpaw": "px3/npcs/southpaw_portrait.png",
+});
+
+function joinAssetUrl(baseUrl, path) {
+  if (!path) return "";
+  const value = String(path);
+  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
+  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
+  if (!base) return relative;
+  if (!relative) return base;
+  return base + "/" + relative;
+}
+
+function petSpecies(pet) {
+  if (typeof pet === "string") return pet;
+  if (!pet || typeof pet !== "object") return "";
+  return pet.species ? String(pet.species) : "";
+}
+
+function petPalette(pet) {
+  if (!pet || typeof pet !== "object") return "";
+  if (pet.appearance && typeof pet.appearance === "object") {
+    const fromAppearance = pet.appearance.palette || pet.appearance.palette_id;
+    if (fromAppearance) return String(fromAppearance);
+  }
+  const direct = pet.palette || pet.palette_id;
+  return direct ? String(direct) : "";
+}
+
+function palettePath(entry, palette) {
+  if (!palette || !entry || typeof entry !== "object") return "";
+  for (const key of ["palettes", "overrides"]) {
+    const group = entry[key];
+    if (!group || typeof group !== "object" || Array.isArray(group)) continue;
+    const value = group[palette];
+    if (typeof value === "string" && value) return value;
+    if (value && typeof value === "object") {
+      if (typeof value.base === "string" && value.base) return value.base;
+      if (typeof value.path === "string" && value.path) return value.path;
+    }
+  }
+  return "";
+}
+
+function speciesBodyPath(manifest, pet) {
+  const species = petSpecies(pet);
+  if (!species) return "";
+  const entry =
+    manifest &&
+    manifest.species &&
+    typeof manifest.species === "object" &&
+    manifest.species[species];
+  if (entry && typeof entry === "object") {
+    const palette = petPalette(pet);
+    const override = palettePath(entry, palette);
+    if (override) return override;
+    if (typeof entry.base === "string" && entry.base) return entry.base;
+    if (typeof entry.path === "string" && entry.path) return entry.path;
+  }
+  return "px3/species/" + species + "_body.png";
+}
+
+function itemAssetId(itemOrId) {
+  if (typeof itemOrId === "string") return itemOrId;
+  if (!itemOrId || typeof itemOrId !== "object") return "";
+  const id = itemOrId.asset_id || itemOrId.assetId || itemOrId.id;
+  return id ? String(id) : "";
+}
+
+function itemAssetPath(manifest, itemOrId) {
+  const assetId = itemAssetId(itemOrId);
+  if (!assetId) return "";
+  const assets =
+    manifest && Array.isArray(manifest.assets) ? manifest.assets : [];
+  for (const asset of assets) {
+    if (!asset || typeof asset !== "object") continue;
+    const id = asset.id ? String(asset.id) : "";
+    const alternate = asset.asset_id || asset.assetId;
+    if (id === assetId || (alternate && String(alternate) === assetId)) {
+      if (typeof asset.path === "string" && asset.path) return asset.path;
+    }
+  }
+  if (itemOrId && typeof itemOrId === "object") {
+    const direct =
+      itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
+    if (direct) return String(direct);
+  }
+  const dot = assetId.lastIndexOf(".");
+  const shortName = dot >= 0 ? assetId.slice(dot + 1) : assetId;
+  return "px3/items/" + shortName + ".png";
+}
+
+function npcPortraitPath(npcId) {
+  if (!npcId) return "";
+  const id = String(npcId);
+  if (NPC_PORTRAITS[id]) return NPC_PORTRAITS[id];
+  const prefixed = id.startsWith("npc.") ? id : "npc." + id;
+  return NPC_PORTRAITS[prefixed] || "";
+}
+
+function animStripPath(species, palette, state) {
+  if (!species) return "";
+  return ANIM_STRIP_TEMPLATE
+    .replace("{species}", String(species))
+    .replace("{palette}", String(palette || "teal"))
+    .replace("{state}", String(state || "idle"));
+}
+
+  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
+})();
+
 // desktop/src/ui/components/NpcHostBanner.js
-const __m2 = (function () {
+const __m4 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const npcHostLine = __m1["npcHostLine"];
+  const npcHostLine = __m2["npcHostLine"];
+  const joinAssetUrl = __m3["joinAssetUrl"];
+  const npcPortraitPath = __m3["npcPortraitPath"];
 
 /** Display-only NPC quip strip for a Desktop tab. */
 function NpcHostBanner(props = {}) {
   const surface = props.surface;
   const host = props.host || (surface ? npcHostLine(surface) : null);
   if (!host || !host.line) return null;
+  const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
+  const portrait = npcPortraitPath(host.id);
+  const portraitUrl =
+    portrait && assetBaseUrl ? joinAssetUrl(assetBaseUrl, portrait) : "";
   return jsxs("aside", {
     className: "hg-npc-host",
     "data-npc-id": host.id,
     "data-npc-context": host.context,
     "data-display-only": "true",
     children: [
+      portraitUrl
+        ? jsx("img", {
+            className: "hg-npc-host__portrait",
+            src: portraitUrl,
+            alt: "",
+            "aria-hidden": "true",
+            loading: "lazy",
+            decoding: "async",
+            draggable: "false",
+            width: 56,
+            height: 56,
+          })
+        : null,
       jsx("strong", { className: "hg-npc-host__name", children: host.name }),
       jsx("p", {
         className: "hg-npc-host__line",
@@ -155,8 +557,763 @@ function NpcHostBanner(props = {}) {
   return { "NpcHostBanner": NpcHostBanner };
 })();
 
+// desktop/src/ui/logic/shop.js
+const __m5 = (function () {
+  const joinAssetUrl = __m3["joinAssetUrl"];
+  const speciesBodyPath = __m3["speciesBodyPath"];
+/**
+ * Pure Shop helpers. Catalog data always comes from the server response; item
+ * ids are never hardcoded here so new cosmetics show up automatically.
+ */
+
+
+
+const SLOT_ORDER = Object.freeze([
+  "head",
+  "face",
+  "back",
+  "front",
+  "aura",
+  "emote",
+  "habitat",
+  "title",
+]);
+
+const SLOT_LABELS = Object.freeze({
+  head: "Head",
+  face: "Face",
+  back: "Back",
+  front: "Front",
+  aura: "Aura",
+  emote: "Emote",
+  habitat: "Habitat",
+  title: "Title",
+});
+
+const SLOT_Z = Object.freeze({
+  aura: -30,
+  habitat: -20,
+  back: -10,
+  front: 40,
+  face: 20,
+  head: 30,
+  emote: 50,
+  title: 50,
+});
+
+function number(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function readEnvelope(envelope) {
+  const value = envelope && typeof envelope === "object" ? envelope : {};
+  const ok = value.ok === true;
+  const error = value.error && typeof value.error === "object" ? value.error : {};
+  return {
+    ok,
+    status: value.status || (ok ? "ok" : "unavailable"),
+    data: ok ? value.data : null,
+    error,
+    code: error.code || null,
+    message: error.message || (ok ? "" : "The game service did not apply that action."),
+    retryAfterS: Math.max(0, Number(error.retry_after_s) || 0),
+  };
+}
+
+function catalogItems(catalog) {
+  if (Array.isArray(catalog)) return catalog.filter((item) => item && item.id);
+  if (!catalog || typeof catalog !== "object") return [];
+  if (Array.isArray(catalog.items)) return catalog.items.filter((item) => item && item.id);
+  if (catalog.catalog && Array.isArray(catalog.catalog.items)) {
+    return catalog.catalog.items.filter((item) => item && item.id);
+  }
+  return [];
+}
+
+function itemView(item) {
+  const slot = String(item && item.slot ? item.slot : "front");
+  return {
+    raw: item,
+    id: String(item.id),
+    name: String(item.name || item.id),
+    slot,
+    slotLabel: SLOT_LABELS[slot] || slot,
+    rarity: String(item.rarity || "common"),
+    priceBits: Math.max(0, Math.round(number(item.price_bits, number(item.priceBits, 0)))),
+    assetId: String(item.asset_id || item.assetId || item.id),
+    assetUrl: item.asset_url || item.assetUrl || "",
+    compatibleRigs: Array.isArray(item.compatible_rigs)
+      ? item.compatible_rigs
+      : Array.isArray(item.compatibleRigs)
+        ? item.compatibleRigs
+        : [],
+    owned: Boolean(item.owned || item.inventory_owned || item.inventoryOwned),
+  };
+}
+
+function groupCatalogBySlot(catalog) {
+  const groups = new Map();
+  for (const raw of catalogItems(catalog)) {
+    const item = itemView(raw);
+    if (!groups.has(item.slot)) groups.set(item.slot, []);
+    groups.get(item.slot).push(item);
+  }
+
+  const slotRank = (slot) => {
+    const index = SLOT_ORDER.indexOf(slot);
+    return index === -1 ? SLOT_ORDER.length : index;
+  };
+
+  return Array.from(groups.entries())
+    .map(([slot, items]) => ({
+      slot,
+      label: SLOT_LABELS[slot] || slot,
+      items: items.slice().sort((a, b) => a.id.localeCompare(b.id)),
+    }))
+    .sort((a, b) => {
+      const rank = slotRank(a.slot) - slotRank(b.slot);
+      return rank === 0 ? a.slot.localeCompare(b.slot) : rank;
+    });
+}
+
+function normaliseWallet(wallet) {
+  const value = wallet && typeof wallet === "object" ? wallet : {};
+  return {
+    balance: Math.max(0, Math.round(number(value.balance, 0))),
+    currency: value.currency || "bits",
+    revision: Math.max(0, Math.round(number(value.revision, 0))),
+  };
+}
+
+function manifestFromCatalog(catalog) {
+  if (!catalog || typeof catalog !== "object") return null;
+  if (catalog.manifest && typeof catalog.manifest === "object") return catalog.manifest;
+  if (catalog.asset_manifest && typeof catalog.asset_manifest === "object") {
+    return catalog.asset_manifest;
+  }
+  if (catalog.assetManifest && typeof catalog.assetManifest === "object") {
+    return catalog.assetManifest;
+  }
+  return null;
+}
+
+function manifestAssetMap(manifest) {
+  const map = new Map();
+  if (!manifest || !Array.isArray(manifest.assets)) return map;
+  for (const asset of manifest.assets) {
+    if (!asset || !asset.id) continue;
+    map.set(String(asset.id), asset);
+  }
+  return map;
+}
+
+function normaliseLoadout(loadout) {
+  if (!loadout) return [];
+  if (Array.isArray(loadout)) {
+    return loadout
+      .filter((value) => value && typeof value === "object")
+      .map((value) => [value.slot, value]);
+  }
+  if (typeof loadout !== "object") return [];
+  return Object.entries(loadout).filter(([, value]) => value != null);
+}
+
+function zFor(slot, manifestAsset) {
+  if (manifestAsset && Number.isFinite(Number(manifestAsset.z))) {
+    return Number(manifestAsset.z);
+  }
+  return Number.isFinite(SLOT_Z[slot]) ? SLOT_Z[slot] : 0;
+}
+
+function buildPreviewLayers(options = {}) {
+  const pet = options.pet || null;
+  const manifest = options.manifest || null;
+  const catalog = options.catalog || null;
+  const baseUrl =
+    options.assetBaseUrl ||
+    options.asset_base_url ||
+    (manifest && (manifest.base_url || manifest.baseUrl)) ||
+    "";
+
+  const byId = new Map();
+  const byAssetId = new Map();
+  for (const raw of catalogItems(catalog)) {
+    const item = itemView(raw);
+    byId.set(item.id, item);
+    byAssetId.set(item.assetId, item);
+  }
+  const assetMap = manifestAssetMap(manifest);
+  const layers = [];
+
+  const species = pet && pet.species ? String(pet.species) : "";
+  const speciesPath = speciesBodyPath(manifest, pet);
+  const conventionPath = species ? "px3/species/" + species + "_body.png" : "";
+  const explicitBase =
+    (pet && pet.asset_url) ||
+    (pet && pet.assetUrl) ||
+    (pet && pet.appearance && (pet.appearance.asset_url || pet.appearance.assetUrl)) ||
+    "";
+  const basePath = speciesPath || explicitBase;
+  const manifestDerived = Boolean(speciesPath && speciesPath !== conventionPath);
+  const includeBase = Boolean(basePath) && Boolean(baseUrl || manifestDerived || explicitBase);
+  if (includeBase) {
+    layers.push({
+      kind: "base",
+      id: "species." + String((pet && pet.species) || "pet"),
+      slot: "body",
+      label: (pet && pet.name) || "Pet",
+      url: joinAssetUrl(baseUrl, basePath),
+      z: 0,
+      scale: 1,
+      offsetPx: [0, 0],
+      anchor: "ground",
+    });
+  }
+
+  for (const [slotKey, value] of normaliseLoadout(options.loadout)) {
+    const valueObject = value && typeof value === "object" ? value : {};
+    const itemId =
+      typeof value === "string"
+        ? value
+        : String(valueObject.id || valueObject.item_id || "");
+    if (!itemId) continue;
+
+    const catalogItem = byId.get(itemId) || byAssetId.get(itemId) || null;
+    const slot = String(valueObject.slot || (catalogItem && catalogItem.slot) || slotKey);
+    const assetId = String(
+      valueObject.asset_id ||
+        valueObject.assetId ||
+        (catalogItem && catalogItem.assetId) ||
+        itemId
+    );
+    const manifestAsset = assetMap.get(assetId) || assetMap.get(itemId) || null;
+    const assetUrl =
+      valueObject.asset_url ||
+      valueObject.assetUrl ||
+      (catalogItem && catalogItem.assetUrl) ||
+      (manifestAsset && manifestAsset.path) ||
+      "";
+
+    layers.push({
+      kind: "item",
+      id: itemId,
+      slot,
+      label:
+        valueObject.name ||
+        (catalogItem && catalogItem.name) ||
+        itemId,
+      url: joinAssetUrl(baseUrl, assetUrl),
+      z: zFor(slot, manifestAsset),
+      scale: number(
+        valueObject.scale != null
+          ? valueObject.scale
+          : manifestAsset && manifestAsset.scale,
+        1
+      ),
+      offsetPx:
+        valueObject.offset_px ||
+        valueObject.offsetPx ||
+        (manifestAsset && manifestAsset.offset_px) ||
+        [0, 0],
+      anchor:
+        valueObject.anchor || (manifestAsset && manifestAsset.anchor) || "body",
+    });
+  }
+
+  return layers
+    .filter((layer) => layer.url)
+    .sort((a, b) => {
+      const z = a.z - b.z;
+      return z === 0 ? a.id.localeCompare(b.id) : z;
+    });
+}
+
+function mergeLoadout(loadout, slot, itemId) {
+  const next = {};
+  for (const [key, value] of normaliseLoadout(loadout)) {
+    const id = typeof value === "string" ? value : value && (value.id || value.item_id);
+    if (key !== slot && id) next[key] = id;
+  }
+  if (itemId) next[slot] = itemId;
+  return next;
+}
+
+function removeFromLoadout(loadout, slot) {
+  return mergeLoadout(loadout, slot, null);
+}
+
+function loadoutItemId(loadout, slot) {
+  for (const [key, value] of normaliseLoadout(loadout)) {
+    if (key !== slot) continue;
+    if (typeof value === "string") return value;
+    if (value && typeof value === "object") {
+      return value.id || value.item_id || null;
+    }
+  }
+  return null;
+}
+
+function itemAvailability(options = {}) {
+  const item = options.item && options.item.id ? options.item : itemView(options.item || {});
+  const wallet = normaliseWallet(options.wallet);
+  const petId = options.petId || null;
+  const equippedId = loadoutItemId(options.loadout, item.slot);
+  const equipped = equippedId === item.id;
+  return {
+    equipped,
+    affordable: wallet.balance >= item.priceBits,
+    canBuy: !item.owned && wallet.balance >= item.priceBits,
+    canEquip: Boolean(petId) && !equipped,
+    canUnequip: Boolean(petId) && equipped,
+  };
+}
+
+  return { "joinAssetUrl": joinAssetUrl, "SLOT_ORDER": SLOT_ORDER, "SLOT_LABELS": SLOT_LABELS, "SLOT_Z": SLOT_Z, "readEnvelope": readEnvelope, "catalogItems": catalogItems, "itemView": itemView, "groupCatalogBySlot": groupCatalogBySlot, "normaliseWallet": normaliseWallet, "manifestFromCatalog": manifestFromCatalog, "buildPreviewLayers": buildPreviewLayers, "mergeLoadout": mergeLoadout, "removeFromLoadout": removeFromLoadout, "loadoutItemId": loadoutItemId, "itemAvailability": itemAvailability };
+})();
+
+// desktop/src/anim/petAnimContract.json
+const __m6 = (function () {
+{
+  "schema": "hermagotchi-pet-anim-contract-v1",
+  "native_size": 32,
+  "pixel_factor": 16,
+  "strip_layout": "horizontal",
+  "strip_path_template": "px3/anims/{species}_{palette}_{state}.png",
+  "clip_id_template": "{species}.{palette}.{state}",
+  "states": ["idle", "happy", "eat", "sleep", "hurt", "attack"],
+  "state_from_pet": {
+    "idle": "idle",
+    "play": "happy",
+    "feed": "eat",
+    "rest": "sleep",
+    "hurt": "hurt",
+    "hit": "hurt",
+    "attack": "attack",
+    "battle_attack": "attack",
+    "battle_hit": "hurt",
+    "win": "happy",
+    "lose": "sleep"
+  },
+  "clip_meta": {
+    "idle":   {"fps": 6,  "loop": true,  "frame_count": 4},
+    "happy":  {"fps": 8,  "loop": true,  "frame_count": 4},
+    "eat":    {"fps": 6,  "loop": true,  "frame_count": 3},
+    "sleep":  {"fps": 3,  "loop": true,  "frame_count": 3},
+    "hurt":   {"fps": 10, "loop": false, "frame_count": 3},
+    "attack": {"fps": 10, "loop": false, "frame_count": 4}
+  },
+  "cosmetics": {
+    "follow_anchor_delta": ["head", "face", "back", "front", "hand", "neck"],
+    "aura_frame_cycle": 2,
+    "note": "Apply clip.frames[i].anchor_delta to head/face/back/hand anchors each frame; aura items keep their own 2-frame strip cycle keyed by time, not bob."
+  },
+  "manifest_pointer": {
+    "asset_manifest": "assets/manifest.launch-003.json#animations",
+    "art_ext": "assets/art_ext.launch-003.json#animations"
+  }
+}
+
+  return {  };
+})();
+
+// desktop/src/anim/petAnimPlayer.js
+const __m7 = (function () {
+  const contract = __m6["default"];
+/**
+ * Standalone pet animation helper for Hermagotchi desktop.
+ * Pane UI imports this; do not put React/UI here.
+ *
+ * Clip metadata lives in assets/manifest.launch-003.json → animations.clips
+ * (also mirrored in art_ext). This module only needs the contract JSON + a
+ * clip list (or fetch of the manifest animations block).
+ */
+
+
+/** @typedef {{ i:number, anchor_delta:number[], duration_ms?:number }} AnimFrame */
+/** @typedef {{ id:string, species:string, palette:string, state:string, path:string, frame_count:number, fps:number, loop:boolean, frames:AnimFrame[] }} AnimClip */
+
+function resolveAnimState(petState) {
+  if (!petState) return 'idle';
+  const key = String(petState).toLowerCase();
+  return contract.state_from_pet[key] || (contract.states.includes(key) ? key : 'idle');
+}
+
+function clipId(species, palette, state) {
+  return `${species}.${palette}.${state}`;
+}
+
+/**
+ * @param {AnimClip[]} clips
+ * @param {{species:string, palette:string, state?:string, petState?:string}} query
+ * @returns {AnimClip|null}
+ */
+function findClip(clips, { species, palette, state, petState }) {
+  const st = state || resolveAnimState(petState);
+  const id = clipId(species, palette, st);
+  return clips.find((c) => c.id === id) || null;
+}
+
+/**
+ * Mutable player clock. Call tick(dtMs) from rAF.
+ * @param {AnimClip} clip
+ */
+function createPlayer(clip) {
+  let elapsed = 0;
+  let index = 0;
+  let done = false;
+  const frameMs = () => {
+    const fr = clip.frames?.[index];
+    if (fr?.duration_ms) return fr.duration_ms;
+    return 1000 / (clip.fps || 6);
+  };
+  return {
+    get frameIndex() { return index; },
+    get done() { return done; },
+    get anchorDelta() {
+      const fr = clip.frames?.[index];
+      return fr?.anchor_delta ? [...fr.anchor_delta] : [0, 0];
+    },
+    get auraFrame() {
+      // auras keep independent 2-frame cycle by wall time
+      return Math.floor(elapsed / frameMs()) % (contract.cosmetics.aura_frame_cycle || 2);
+    },
+    reset() { elapsed = 0; index = 0; done = false; },
+    tick(dtMs) {
+      if (done) return index;
+      elapsed += dtMs;
+      while (elapsed >= frameMs()) {
+        elapsed -= frameMs();
+        if (index + 1 >= clip.frame_count) {
+          if (clip.loop) index = 0;
+          else { done = true; break; }
+        } else {
+          index += 1;
+        }
+      }
+      return index;
+    },
+    /** Source rect into a horizontal strip (native px). */
+    sourceRect(native = 32) {
+      return { x: index * native, y: 0, w: native, h: native };
+    },
+  };
+}
+
+
+  return { "resolveAnimState": resolveAnimState, "clipId": clipId, "findClip": findClip, "createPlayer": createPlayer, "contract": contract };
+})();
+
+// desktop/src/ui/components/PetPreview.js
+const __m8 = (function () {
+  const useEffect = __ext2;
+  const useRef = __ext3;
+  const useState = __ext4;
+  const jsx = __ext0;
+  const buildPreviewLayers = __m5["buildPreviewLayers"];
+  const joinAssetUrl = __m3["joinAssetUrl"];
+  const speciesBodyPath = __m3["speciesBodyPath"];
+  const contract = __m7["contract"];
+  const createPlayer = __m7["createPlayer"];
+  const findClip = __m7["findClip"];
+  const resolveAnimState = __m7["resolveAnimState"];
+
+function layerStyle(layer) {
+  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
+  const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
+  return {
+    position: "absolute",
+    inset: "0",
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    zIndex: String(layer.z),
+    transform:
+      "translate(" +
+      (Number(offset[0]) || 0) +
+      "px, " +
+      (Number(offset[1]) || 0) +
+      "px) scale(" +
+      scale +
+      ")",
+    transformOrigin: "center",
+    pointerEvents: "none",
+  };
+}
+
+function stripStyle(url, clip, frameIndex) {
+  const count = Math.max(
+    1,
+    Number(clip && clip.frame_count) ||
+      (clip && Array.isArray(clip.frames) ? clip.frames.length : 1)
+  );
+  const position =
+    count > 1 ? (Math.max(0, frameIndex) / (count - 1)) * 100 : 0;
+  return {
+    position: "absolute",
+    inset: "0",
+    width: "100%",
+    height: "100%",
+    backgroundImage: "url(" + JSON.stringify(url) + ")",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: count * 100 + "% 100%",
+    backgroundPosition: String(position) + "% 0%",
+    imageRendering: "pixelated",
+    zIndex: "0",
+    pointerEvents: "none",
+  };
+}
+
+function followAnchors() {
+  const list =
+    contract &&
+    contract.cosmetics &&
+    Array.isArray(contract.cosmetics.follow_anchor_delta)
+      ? contract.cosmetics.follow_anchor_delta
+      : [];
+  return list.map((value) => String(value));
+}
+
+function withAnchorDelta(layer, delta, anchors, frameScale) {
+  const anchor = String(layer.anchor || layer.slot || "");
+  if (!anchors.includes(anchor)) return layer;
+  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
+  return Object.assign({}, layer, {
+    offsetPx: [
+      (Number(offset[0]) || 0) + (Number(delta[0]) || 0) * frameScale,
+      (Number(offset[1]) || 0) + (Number(delta[1]) || 0) * frameScale,
+    ],
+  });
+}
+
+/**
+ * Layered, read-only pet preview. The species base always resolves from the
+ * manifest (or the px3 convention) and animation clips come from
+ * manifest.animations.clips via the shared petAnimPlayer clock.
+ */
+function PetPreview(props = {}) {
+  const pet = props.pet || null;
+  const manifest = props.manifest || props.assetManifest || null;
+  const assetBaseUrl = props.assetBaseUrl || props.asset_base_url || "";
+  const species = pet && pet.species ? String(pet.species) : "";
+  const palette =
+    props.palette ||
+    (pet && pet.appearance && pet.appearance.palette) ||
+    (pet && pet.palette) ||
+    "teal";
+  const layers = buildPreviewLayers({
+    pet: pet,
+    loadout: props.loadout,
+    catalog: props.catalog,
+    manifest: manifest,
+    assetBaseUrl: assetBaseUrl,
+  });
+
+  let baseLayer = null;
+  const itemLayers = [];
+  for (const layer of layers) {
+    if (layer.kind === "base" && !baseLayer) {
+      baseLayer = layer;
+    } else {
+      itemLayers.push(layer);
+    }
+  }
+  if (!baseLayer && species) {
+    const path = speciesBodyPath(manifest, pet);
+    baseLayer = {
+      kind: "base",
+      id: "species." + species,
+      slot: "body",
+      label: (pet && pet.name) || "Pet",
+      url: joinAssetUrl(assetBaseUrl, path),
+      z: 0,
+      scale: 1,
+      offsetPx: [0, 0],
+      anchor: "ground",
+    };
+  }
+
+  const clips = Array.isArray(props.clips)
+    ? props.clips
+    : manifest &&
+        manifest.animations &&
+        Array.isArray(manifest.animations.clips)
+      ? manifest.animations.clips
+      : null;
+  const requestedState =
+    props.animState ||
+    (props.petState ? resolveAnimState(props.petState) : "");
+  const clip =
+    species && clips && requestedState
+      ? findClip(clips, { species: species, palette: palette, state: requestedState })
+      : null;
+  const animated = Boolean(clip && baseLayer && baseLayer.url);
+
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [anchorDelta, setAnchorDelta] = useState([0, 0]);
+  const [auraFrame, setAuraFrame] = useState(0);
+  const playerRef = useRef(null);
+  const clipId = clip ? String(clip.id || clip.path || "") : "";
+
+  useEffect(
+    function () {
+      if (!clip) {
+        playerRef.current = null;
+        setFrameIndex(0);
+        setAnchorDelta([0, 0]);
+        setAuraFrame(0);
+        return undefined;
+      }
+      const player = createPlayer(clip);
+      playerRef.current = player;
+      setFrameIndex(player.frameIndex);
+      setAnchorDelta(player.anchorDelta);
+      setAuraFrame(player.auraFrame);
+      if (typeof requestAnimationFrame !== "function") {
+        return function () {
+          playerRef.current = null;
+        };
+      }
+      let raf = 0;
+      let last = null;
+      let stopped = false;
+      function step(now) {
+        if (stopped) return;
+        const time = typeof now === "number" ? now : Date.now();
+        if (last === null) last = time;
+        const deltaMs = Math.max(0, time - last);
+        last = time;
+        player.tick(deltaMs);
+        setFrameIndex(player.frameIndex);
+        setAnchorDelta(player.anchorDelta);
+        setAuraFrame(player.auraFrame);
+        if (!(player.done && !clip.loop)) {
+          raf = requestAnimationFrame(step);
+        }
+      }
+      raf = requestAnimationFrame(step);
+      return function () {
+        stopped = true;
+        if (typeof cancelAnimationFrame === "function") {
+          cancelAnimationFrame(raf);
+        }
+        playerRef.current = null;
+      };
+    },
+    [clipId]
+  );
+
+  if (!baseLayer && itemLayers.length === 0) {
+    return jsx("div", {
+      className: "hg-sprite hg-sprite--empty",
+      role: "img",
+      "aria-label": props.label || "Pet preview",
+      "data-preview-empty": "true",
+      style: { width: props.size || "256px", height: props.size || "256px" },
+      children: "?",
+    });
+  }
+
+  const label =
+    props.label ||
+    (pet && pet.name ? pet.name + " preview" : "Pet preview");
+  const spriteSize = props.size || "256px";
+  const anchors = followAnchors();
+  const numericSize = parseFloat(spriteSize);
+  const nativeSize = Number(contract && contract.native_size) || 32;
+  const frameScale =
+    Number.isFinite(numericSize) && numericSize > 0
+      ? numericSize / nativeSize
+      : 1;
+
+  const children = [];
+  if (animated) {
+    children.push(
+      jsx(
+        "div",
+        {
+          className: "hg-sprite__base hg-sprite__base--anim",
+          "data-layer-kind": "base",
+          "data-layer-id": baseLayer.id,
+          "data-layer-slot": "body",
+          "data-anim-state": requestedState,
+          "data-frame-index": String(frameIndex),
+          "aria-hidden": "true",
+          style: stripStyle(baseLayer.url, clip, frameIndex),
+        },
+        "anim:" + baseLayer.id
+      )
+    );
+  } else if (baseLayer) {
+    children.push(
+      jsx(
+        "img",
+        {
+          className: "hg-sprite__layer hg-sprite__base",
+          src: baseLayer.url,
+          alt: label,
+          "data-layer-kind": "base",
+          "data-layer-id": baseLayer.id,
+          "data-layer-slot": "body",
+          loading: "lazy",
+          decoding: "async",
+          draggable: "false",
+          style: layerStyle(baseLayer),
+        },
+        "base:" + baseLayer.id
+      )
+    );
+  }
+
+  for (const layer of itemLayers) {
+    const adjusted = animated
+      ? withAnchorDelta(layer, anchorDelta, anchors, frameScale)
+      : layer;
+    children.push(
+      jsx(
+        "img",
+        {
+          className: "hg-sprite__layer",
+          src: layer.url,
+          alt: "",
+          "aria-hidden": "true",
+          "data-layer-kind": layer.kind,
+          "data-layer-id": layer.id,
+          "data-layer-slot": layer.slot,
+          "data-aura-frame":
+            animated && layer.slot === "aura" ? String(auraFrame) : undefined,
+          loading: "lazy",
+          decoding: "async",
+          draggable: "false",
+          style: layerStyle(adjusted),
+        },
+        layer.kind + ":" + layer.id
+      )
+    );
+  }
+
+  return jsx("div", {
+    className: "hg-sprite",
+    role: "img",
+    "aria-label": label,
+    "data-pet-id": (pet && pet.id) || undefined,
+    "data-anim-state": animated ? requestedState : undefined,
+    "data-sprite-mode": animated ? "anim" : "static",
+    style: {
+      position: "relative",
+      width: spriteSize,
+      height: spriteSize,
+      isolation: "isolate",
+    },
+    children: children,
+  });
+}
+
+  return { "PetPreview": PetPreview };
+})();
+
 // desktop/src/ui/logic/battle.js
-const __m3 = (function () {
+const __m9 = (function () {
 /**
  * Pure battle presentation helpers for the Desktop Battle tab.
  *
@@ -425,10 +1582,10 @@ function replaySummary(replay = {}, participants = {}) {
 })();
 
 // desktop/src/ui/components/TurnLog.js
-const __m4 = (function () {
+const __m10 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const formatTurnLog = __m3["formatTurnLog"];
+  const formatTurnLog = __m9["formatTurnLog"];
 
 function TypeChip(props) {
   const type = props.type;
@@ -473,31 +1630,49 @@ function TurnLog(props = {}) {
         "data-round": String(row.round),
         "data-actor": row.actor || "",
         children: [
-          jsx("span", { className: "hg-badge", children: "R" + row.round }),
-          jsx("span", { className: "hg-log__actor", children: row.actorName }),
-          jsx("span", { className: "hg-log__move", children: row.moveLabel }),
-          row.damage > 0
-            ? jsx("span", {
-                className: "hg-log__damage",
-                children: "-" + row.damage + " HP",
-              })
-            : null,
-          jsx(TypeChip, { type: row.actorType }),
-          jsx(TypeChip, { type: row.defenderType }),
-          jsx(EffectivenessBadge, {
-            label: row.effectiveness,
-            text: row.effectivenessText,
+          jsx("span", {
+            className: "hg-log__round",
+            "data-column": "round",
+            children: jsx("span", { className: "hg-badge", children: "R" + row.round }),
           }),
-          row.hpAfter
-            ? jsx("span", {
-                className: "hg-muted hg-log__hp",
-                children:
-                  "HP " +
-                  String(row.hpAfter.a) +
-                  " / " +
-                  String(row.hpAfter.b),
-              })
-            : null,
+          jsx("span", {
+            className: "hg-log__actor",
+            "data-column": "actor",
+            children: row.actorName,
+          }),
+          jsx("span", {
+            className: "hg-log__move",
+            "data-column": "move",
+            children: row.moveLabel,
+          }),
+          jsx("span", {
+            className: "hg-log__damage",
+            "data-column": "damage",
+            children: row.damage > 0 ? "-" + row.damage + " HP" : "",
+          }),
+          jsxs("span", {
+            className: "hg-log__types",
+            "data-column": "types",
+            children: [
+              jsx(TypeChip, { type: row.actorType }),
+              jsx(TypeChip, { type: row.defenderType }),
+            ],
+          }),
+          jsx("span", {
+            className: "hg-log__effect",
+            "data-column": "effect",
+            children: jsx(EffectivenessBadge, {
+              label: row.effectiveness,
+              text: row.effectivenessText,
+            }),
+          }),
+          jsx("span", {
+            className: "hg-muted hg-log__hp",
+            "data-column": "hp",
+            children: row.hpAfter
+              ? "HP " + String(row.hpAfter.a) + " / " + String(row.hpAfter.b)
+              : "",
+          }),
         ],
       },
       String(row.index)
@@ -518,17 +1693,18 @@ function TurnLog(props = {}) {
 })();
 
 // desktop/src/ui/tabs/BattleTab.js
-const __m5 = (function () {
+const __m11 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
-  const NpcHostBanner = __m2["NpcHostBanner"];
-  const TurnLog = __m4["TurnLog"];
-  const battleParticipantsFromMatch = __m3["battleParticipantsFromMatch"];
-  const replaySummary = __m3["replaySummary"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+  const PetPreview = __m8["PetPreview"];
+  const TurnLog = __m10["TurnLog"];
+  const battleParticipantsFromMatch = __m9["battleParticipantsFromMatch"];
+  const replaySummary = __m9["replaySummary"];
 
 const CHALLENGE_INBOX_PLACEHOLDER = "No pending challenges.";
 const PRACTICE_BOT_NAME = "Teknium";
@@ -544,6 +1720,19 @@ function challengeLine(challenge) {
   const mode = challenge.mode || "casual";
   const label = mode.charAt(0).toUpperCase() + mode.slice(1);
   return label + " challenge";
+}
+
+function battleAnimState(replay) {
+  const events = replay && Array.isArray(replay.events) ? replay.events : [];
+  let state = "idle";
+  for (const event of events) {
+    const status = event && event.status_delta ? event.status_delta : {};
+    const damage = Number(status.damage || (event && event.damage) || 0);
+    if (damage <= 0) continue;
+    if (event.actor === "a") state = "attack";
+    else if (event.actor === "b") state = "hurt";
+  }
+  return state;
 }
 
 function ChallengeRow(props) {
@@ -603,7 +1792,10 @@ function StubBattle(props) {
     "data-tab": "battle",
     children: [
       jsx(StateNotice, { state: props.state }),
-      jsx(NpcHostBanner, { surface: "battle" }),
+      jsx(NpcHostBanner, {
+        surface: "battle",
+        assetBaseUrl: props.assetBaseUrl,
+      }),
       jsxs("div", {
         className: "hg-card",
         children: [
@@ -663,6 +1855,35 @@ function BattleTab(props = {}) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
+  const [manifest, setManifest] = useState(
+    props.manifest || props.assetManifest || null
+  );
+  const [assetBaseUrl, setAssetBaseUrl] = useState(props.assetBaseUrl || "");
+
+  useEffect(
+    function () {
+      if (!api || !api.assets) return undefined;
+      if (!props.assetBaseUrl && typeof api.assets.url === "function") {
+        setAssetBaseUrl(api.assets.url(""));
+      }
+      if (props.manifest || typeof api.assets.manifest !== "function") {
+        return undefined;
+      }
+      let alive = true;
+      api.assets.manifest().then(
+        function (envelope) {
+          if (alive && envelope && envelope.ok && envelope.data) {
+            setManifest(envelope.data);
+          }
+        },
+        function () {}
+      );
+      return function () {
+        alive = false;
+      };
+    },
+    [api, props.assetBaseUrl, props.manifest]
+  );
 
   async function refreshInbox() {
     if (!api || typeof api.get !== "function") return;
@@ -744,7 +1965,10 @@ function BattleTab(props = {}) {
   }
 
   if (!api) {
-    return jsx(StubBattle, { state: uiState });
+    return jsx(StubBattle, {
+      state: uiState,
+      assetBaseUrl: props.assetBaseUrl,
+    });
   }
 
   const data = inbox || {};
@@ -757,13 +1981,19 @@ function BattleTab(props = {}) {
     : {};
   const summary =
     replay && practiceMatch ? replaySummary(replay, participants) : null;
+  const previewPet = props.pet || (practiceMatch && practiceMatch.pet) || null;
+  const previewLoadout = props.loadout || {};
+  const previewAnimState = battleAnimState(replay);
 
   return jsxs("section", {
     className: "hg-battle",
     "data-tab": "battle",
     children: [
       jsx(StateNotice, { state: uiState }),
-      jsx(NpcHostBanner, { surface: "battle" }),
+      jsx(NpcHostBanner, {
+        surface: "battle",
+        assetBaseUrl: assetBaseUrl,
+      }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
@@ -871,6 +2101,22 @@ function BattleTab(props = {}) {
                     ],
                   })
                 : null,
+              previewPet
+                ? jsx("div", {
+                    className: "hg-pet-card__art",
+                    "data-battle-anim-state": previewAnimState,
+                    children: jsx(PetPreview, {
+                      pet: previewPet,
+                      loadout: previewLoadout,
+                      catalog: props.catalog,
+                      manifest,
+                      assetBaseUrl,
+                      animState: previewAnimState,
+                      label:
+                        (previewPet.name || "Pet") + " battle preview",
+                    }),
+                  })
+                : null,
               jsx("button", {
                 type: "button",
                 className: "hg-btn",
@@ -898,8 +2144,8 @@ function BattleTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/chat.js
-const __m6 = (function () {
-  const npcHostLine = __m1["npcHostLine"];
+const __m12 = (function () {
+  const npcHostLine = __m2["npcHostLine"];
 /** Pure chat helpers shared by the Desktop Chat tab and its tests. */
 
 
@@ -1147,28 +2393,28 @@ function chatHost() {
 })();
 
 // desktop/src/ui/tabs/ChatTab.js
-const __m7 = (function () {
+const __m13 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const NpcHostBanner = __m2["NpcHostBanner"];
-  const npcHostLine = __m1["npcHostLine"];
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
-  const CHAT_BLOCKS_PATH = __m6["CHAT_BLOCKS_PATH"];
-  const CHAT_MESSAGES_PATH = __m6["CHAT_MESSAGES_PATH"];
-  const CHAT_REPORT_PATH = __m6["CHAT_REPORT_PATH"];
-  const CHAT_REPORT_REASON = __m6["CHAT_REPORT_REASON"];
-  const chatActionNotice = __m6["chatActionNotice"];
-  const chatMessagePayload = __m6["chatMessagePayload"];
-  const chatModerationHost = __m6["chatModerationHost"];
-  const chatNoticeFromEnvelope = __m6["chatNoticeFromEnvelope"];
-  const isChatEnabled = __m6["isChatEnabled"];
-  const mergeMessages = __m6["mergeMessages"];
-  const messageFromEnvelope = __m6["messageFromEnvelope"];
-  const normalizeMessages = __m6["normalizeMessages"];
-  const validateChatDraft = __m6["validateChatDraft"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+  const npcHostLine = __m2["npcHostLine"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const CHAT_BLOCKS_PATH = __m12["CHAT_BLOCKS_PATH"];
+  const CHAT_MESSAGES_PATH = __m12["CHAT_MESSAGES_PATH"];
+  const CHAT_REPORT_PATH = __m12["CHAT_REPORT_PATH"];
+  const CHAT_REPORT_REASON = __m12["CHAT_REPORT_REASON"];
+  const chatActionNotice = __m12["chatActionNotice"];
+  const chatMessagePayload = __m12["chatMessagePayload"];
+  const chatModerationHost = __m12["chatModerationHost"];
+  const chatNoticeFromEnvelope = __m12["chatNoticeFromEnvelope"];
+  const isChatEnabled = __m12["isChatEnabled"];
+  const mergeMessages = __m12["mergeMessages"];
+  const messageFromEnvelope = __m12["messageFromEnvelope"];
+  const normalizeMessages = __m12["normalizeMessages"];
+  const validateChatDraft = __m12["validateChatDraft"];
 
 function ChatOffStub(props) {
   const uiState = props.uiState || UI_STATES.NETWORK_OFF;
@@ -1541,7 +2787,7 @@ function ChatTab(props = {}) {
 })();
 
 // desktop/src/ui/components/CareMeter.js
-const __m8 = (function () {
+const __m14 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -1583,424 +2829,8 @@ function CareMeter(props = {}) {
   return { "CareMeter": CareMeter };
 })();
 
-// desktop/src/ui/logic/shop.js
-const __m9 = (function () {
-/**
- * Pure Shop helpers. Catalog data always comes from the server response; item
- * ids are never hardcoded here so new cosmetics show up automatically.
- */
-
-const SLOT_ORDER = Object.freeze([
-  "head",
-  "face",
-  "back",
-  "front",
-  "aura",
-  "emote",
-  "habitat",
-  "title",
-]);
-
-const SLOT_LABELS = Object.freeze({
-  head: "Head",
-  face: "Face",
-  back: "Back",
-  front: "Front",
-  aura: "Aura",
-  emote: "Emote",
-  habitat: "Habitat",
-  title: "Title",
-});
-
-const SLOT_Z = Object.freeze({
-  aura: -30,
-  habitat: -20,
-  back: -10,
-  front: 40,
-  face: 20,
-  head: 30,
-  emote: 50,
-  title: 50,
-});
-
-function number(value, fallback = 0) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function readEnvelope(envelope) {
-  const value = envelope && typeof envelope === "object" ? envelope : {};
-  const ok = value.ok === true;
-  const error = value.error && typeof value.error === "object" ? value.error : {};
-  return {
-    ok,
-    status: value.status || (ok ? "ok" : "unavailable"),
-    data: ok ? value.data : null,
-    error,
-    code: error.code || null,
-    message: error.message || (ok ? "" : "The game service did not apply that action."),
-    retryAfterS: Math.max(0, Number(error.retry_after_s) || 0),
-  };
-}
-
-function catalogItems(catalog) {
-  if (Array.isArray(catalog)) return catalog.filter((item) => item && item.id);
-  if (!catalog || typeof catalog !== "object") return [];
-  if (Array.isArray(catalog.items)) return catalog.items.filter((item) => item && item.id);
-  if (catalog.catalog && Array.isArray(catalog.catalog.items)) {
-    return catalog.catalog.items.filter((item) => item && item.id);
-  }
-  return [];
-}
-
-function itemView(item) {
-  const slot = String(item && item.slot ? item.slot : "front");
-  return {
-    raw: item,
-    id: String(item.id),
-    name: String(item.name || item.id),
-    slot,
-    slotLabel: SLOT_LABELS[slot] || slot,
-    rarity: String(item.rarity || "common"),
-    priceBits: Math.max(0, Math.round(number(item.price_bits, number(item.priceBits, 0)))),
-    assetId: String(item.asset_id || item.assetId || item.id),
-    assetUrl: item.asset_url || item.assetUrl || "",
-    compatibleRigs: Array.isArray(item.compatible_rigs)
-      ? item.compatible_rigs
-      : Array.isArray(item.compatibleRigs)
-        ? item.compatibleRigs
-        : [],
-    owned: Boolean(item.owned || item.inventory_owned || item.inventoryOwned),
-  };
-}
-
-function groupCatalogBySlot(catalog) {
-  const groups = new Map();
-  for (const raw of catalogItems(catalog)) {
-    const item = itemView(raw);
-    if (!groups.has(item.slot)) groups.set(item.slot, []);
-    groups.get(item.slot).push(item);
-  }
-
-  const slotRank = (slot) => {
-    const index = SLOT_ORDER.indexOf(slot);
-    return index === -1 ? SLOT_ORDER.length : index;
-  };
-
-  return Array.from(groups.entries())
-    .map(([slot, items]) => ({
-      slot,
-      label: SLOT_LABELS[slot] || slot,
-      items: items.slice().sort((a, b) => a.id.localeCompare(b.id)),
-    }))
-    .sort((a, b) => {
-      const rank = slotRank(a.slot) - slotRank(b.slot);
-      return rank === 0 ? a.slot.localeCompare(b.slot) : rank;
-    });
-}
-
-function normaliseWallet(wallet) {
-  const value = wallet && typeof wallet === "object" ? wallet : {};
-  return {
-    balance: Math.max(0, Math.round(number(value.balance, 0))),
-    currency: value.currency || "bits",
-    revision: Math.max(0, Math.round(number(value.revision, 0))),
-  };
-}
-
-function manifestFromCatalog(catalog) {
-  if (!catalog || typeof catalog !== "object") return null;
-  if (catalog.manifest && typeof catalog.manifest === "object") return catalog.manifest;
-  if (catalog.asset_manifest && typeof catalog.asset_manifest === "object") {
-    return catalog.asset_manifest;
-  }
-  if (catalog.assetManifest && typeof catalog.assetManifest === "object") {
-    return catalog.assetManifest;
-  }
-  return null;
-}
-
-function joinAssetUrl(baseUrl, path) {
-  if (!path) return "";
-  const value = String(path);
-  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
-  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
-  if (!base) return value;
-  if (value.startsWith("/")) return base + value;
-  return base + "/" + value.replace(/^\.?\//, "");
-}
-
-function manifestAssetMap(manifest) {
-  const map = new Map();
-  if (!manifest || !Array.isArray(manifest.assets)) return map;
-  for (const asset of manifest.assets) {
-    if (!asset || !asset.id) continue;
-    map.set(String(asset.id), asset);
-  }
-  return map;
-}
-
-function speciesBasePath(manifest, species) {
-  if (!manifest || !species || !manifest.species) return "";
-  const entry = manifest.species[species];
-  return entry && entry.base ? entry.base : "";
-}
-
-function normaliseLoadout(loadout) {
-  if (!loadout) return [];
-  if (Array.isArray(loadout)) {
-    return loadout
-      .filter((value) => value && typeof value === "object")
-      .map((value) => [value.slot, value]);
-  }
-  if (typeof loadout !== "object") return [];
-  return Object.entries(loadout).filter(([, value]) => value != null);
-}
-
-function zFor(slot, manifestAsset) {
-  if (manifestAsset && Number.isFinite(Number(manifestAsset.z))) {
-    return Number(manifestAsset.z);
-  }
-  return Number.isFinite(SLOT_Z[slot]) ? SLOT_Z[slot] : 0;
-}
-
-function buildPreviewLayers(options = {}) {
-  const pet = options.pet || null;
-  const manifest = options.manifest || null;
-  const catalog = options.catalog || null;
-  const baseUrl =
-    options.assetBaseUrl ||
-    options.asset_base_url ||
-    (manifest && (manifest.base_url || manifest.baseUrl)) ||
-    "";
-
-  const byId = new Map();
-  const byAssetId = new Map();
-  for (const raw of catalogItems(catalog)) {
-    const item = itemView(raw);
-    byId.set(item.id, item);
-    byAssetId.set(item.assetId, item);
-  }
-  const assetMap = manifestAssetMap(manifest);
-  const layers = [];
-
-  const basePath =
-    speciesBasePath(manifest, pet && pet.species) ||
-    (pet && pet.asset_url) ||
-    (pet && pet.assetUrl) ||
-    (pet && pet.appearance && (pet.appearance.asset_url || pet.appearance.assetUrl)) ||
-    "";
-  if (basePath) {
-    layers.push({
-      kind: "base",
-      id: "species." + String((pet && pet.species) || "pet"),
-      slot: "body",
-      label: (pet && pet.name) || "Pet",
-      url: joinAssetUrl(baseUrl, basePath),
-      z: 0,
-      scale: 1,
-      offsetPx: [0, 0],
-      anchor: "ground",
-    });
-  }
-
-  for (const [slotKey, value] of normaliseLoadout(options.loadout)) {
-    const valueObject = value && typeof value === "object" ? value : {};
-    const itemId =
-      typeof value === "string"
-        ? value
-        : String(valueObject.id || valueObject.item_id || "");
-    if (!itemId) continue;
-
-    const catalogItem = byId.get(itemId) || byAssetId.get(itemId) || null;
-    const slot = String(valueObject.slot || (catalogItem && catalogItem.slot) || slotKey);
-    const assetId = String(
-      valueObject.asset_id ||
-        valueObject.assetId ||
-        (catalogItem && catalogItem.assetId) ||
-        itemId
-    );
-    const manifestAsset = assetMap.get(assetId) || assetMap.get(itemId) || null;
-    const assetUrl =
-      valueObject.asset_url ||
-      valueObject.assetUrl ||
-      (catalogItem && catalogItem.assetUrl) ||
-      (manifestAsset && manifestAsset.path) ||
-      "";
-
-    layers.push({
-      kind: "item",
-      id: itemId,
-      slot,
-      label:
-        valueObject.name ||
-        (catalogItem && catalogItem.name) ||
-        itemId,
-      url: joinAssetUrl(baseUrl, assetUrl),
-      z: zFor(slot, manifestAsset),
-      scale: number(
-        valueObject.scale != null
-          ? valueObject.scale
-          : manifestAsset && manifestAsset.scale,
-        1
-      ),
-      offsetPx:
-        valueObject.offset_px ||
-        valueObject.offsetPx ||
-        (manifestAsset && manifestAsset.offset_px) ||
-        [0, 0],
-      anchor:
-        valueObject.anchor || (manifestAsset && manifestAsset.anchor) || "body",
-    });
-  }
-
-  return layers
-    .filter((layer) => layer.url)
-    .sort((a, b) => {
-      const z = a.z - b.z;
-      return z === 0 ? a.id.localeCompare(b.id) : z;
-    });
-}
-
-function mergeLoadout(loadout, slot, itemId) {
-  const next = {};
-  for (const [key, value] of normaliseLoadout(loadout)) {
-    const id = typeof value === "string" ? value : value && (value.id || value.item_id);
-    if (key !== slot && id) next[key] = id;
-  }
-  if (itemId) next[slot] = itemId;
-  return next;
-}
-
-function removeFromLoadout(loadout, slot) {
-  return mergeLoadout(loadout, slot, null);
-}
-
-function loadoutItemId(loadout, slot) {
-  for (const [key, value] of normaliseLoadout(loadout)) {
-    if (key !== slot) continue;
-    if (typeof value === "string") return value;
-    if (value && typeof value === "object") {
-      return value.id || value.item_id || null;
-    }
-  }
-  return null;
-}
-
-function itemAvailability(options = {}) {
-  const item = options.item && options.item.id ? options.item : itemView(options.item || {});
-  const wallet = normaliseWallet(options.wallet);
-  const petId = options.petId || null;
-  const equippedId = loadoutItemId(options.loadout, item.slot);
-  const equipped = equippedId === item.id;
-  return {
-    equipped,
-    affordable: wallet.balance >= item.priceBits,
-    canBuy: !item.owned && wallet.balance >= item.priceBits,
-    canEquip: Boolean(petId) && !equipped,
-    canUnequip: Boolean(petId) && equipped,
-  };
-}
-
-  return { "SLOT_ORDER": SLOT_ORDER, "SLOT_LABELS": SLOT_LABELS, "SLOT_Z": SLOT_Z, "readEnvelope": readEnvelope, "catalogItems": catalogItems, "itemView": itemView, "groupCatalogBySlot": groupCatalogBySlot, "normaliseWallet": normaliseWallet, "manifestFromCatalog": manifestFromCatalog, "joinAssetUrl": joinAssetUrl, "buildPreviewLayers": buildPreviewLayers, "mergeLoadout": mergeLoadout, "removeFromLoadout": removeFromLoadout, "loadoutItemId": loadoutItemId, "itemAvailability": itemAvailability };
-})();
-
-// desktop/src/ui/components/PetPreview.js
-const __m10 = (function () {
-  const jsx = __ext0;
-  const buildPreviewLayers = __m9["buildPreviewLayers"];
-
-function layerStyle(layer) {
-  const offset = Array.isArray(layer.offsetPx) ? layer.offsetPx : [0, 0];
-  const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
-  return {
-    position: "absolute",
-    inset: "0",
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    zIndex: String(layer.z),
-    transform:
-      "translate(" +
-      (Number(offset[0]) || 0) +
-      "px, " +
-      (Number(offset[1]) || 0) +
-      "px) scale(" +
-      scale +
-      ")",
-    transformOrigin: "center",
-    pointerEvents: "none",
-  };
-}
-
-/**
- * Layered, read-only pet preview. Layer order comes from the asset manifest's
- * z values (with a documented slot fallback), never from a hardcoded item list.
- */
-function PetPreview(props = {}) {
-  const layers = buildPreviewLayers({
-    pet: props.pet,
-    loadout: props.loadout,
-    catalog: props.catalog,
-    manifest: props.manifest,
-    assetBaseUrl: props.assetBaseUrl || props.asset_base_url,
-  });
-  const label =
-    props.label ||
-    (props.pet && props.pet.name ? props.pet.name + " preview" : "Pet preview");
-  const spriteSize = props.size || "256px";
-
-  if (layers.length === 0) {
-    return jsx("div", {
-      className: "hg-sprite hg-sprite--empty",
-      role: "img",
-      "aria-label": label,
-      "data-preview-empty": "true",
-      style: { width: spriteSize, height: spriteSize },
-      children: "?",
-    });
-  }
-
-  return jsx("div", {
-    className: "hg-sprite",
-    role: "img",
-    "aria-label": label,
-    "data-pet-id": (props.pet && props.pet.id) || undefined,
-    style: {
-      position: "relative",
-      width: spriteSize,
-      height: spriteSize,
-      isolation: "isolate",
-    },
-    children: layers.map((layer) =>
-      jsx(
-        "img",
-        {
-          className:
-            "hg-sprite__layer" +
-            (layer.kind === "base" ? " hg-sprite__base" : ""),
-          src: layer.url,
-          alt: layer.kind === "base" ? label : "",
-          "aria-hidden": layer.kind === "base" ? undefined : "true",
-          "data-layer-kind": layer.kind,
-          "data-layer-id": layer.id,
-          "data-layer-slot": layer.slot,
-          loading: "lazy",
-          decoding: "async",
-          draggable: "false",
-          style: layerStyle(layer),
-        },
-        layer.kind + ":" + layer.id
-      )
-    ),
-  });
-}
-
-  return { "PetPreview": PetPreview };
-})();
-
 // desktop/src/ui/logic/habitat.js
-const __m11 = (function () {
+const __m15 = (function () {
 /**
  * Pure Habitat helpers. No React, network or DOM access so the same rules can
  * be exercised directly with `node --test`.
@@ -2178,28 +3008,29 @@ function petFromCareResponse(data, previous) {
 })();
 
 // desktop/src/ui/tabs/HabitatTab.js
-const __m12 = (function () {
+const __m16 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useRef = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const CareMeter = __m8["CareMeter"];
-  const NpcHostBanner = __m2["NpcHostBanner"];
-  const PetPreview = __m10["PetPreview"];
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
-  const CARE_ACTIONS = __m11["CARE_ACTIONS"];
-  const CARE_LABELS = __m11["CARE_LABELS"];
-  const MODES = __m11["MODES"];
-  const MODE_LABELS = __m11["MODE_LABELS"];
-  const SPECIES = __m11["SPECIES"];
-  const SPECIES_LABELS = __m11["SPECIES_LABELS"];
-  const buildAdoptRequest = __m11["buildAdoptRequest"];
-  const careMeters = __m11["careMeters"];
-  const extractPetId = __m11["extractPetId"];
-  const habitatView = __m11["habitatView"];
-  const petFromCareResponse = __m11["petFromCareResponse"];
-  const readEnvelope = __m11["readEnvelope"];
+  const CareMeter = __m14["CareMeter"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+  const PetPreview = __m8["PetPreview"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const CARE_ACTIONS = __m15["CARE_ACTIONS"];
+  const CARE_LABELS = __m15["CARE_LABELS"];
+  const MODES = __m15["MODES"];
+  const MODE_LABELS = __m15["MODE_LABELS"];
+  const SPECIES = __m15["SPECIES"];
+  const SPECIES_LABELS = __m15["SPECIES_LABELS"];
+  const buildAdoptRequest = __m15["buildAdoptRequest"];
+  const careMeters = __m15["careMeters"];
+  const extractPetId = __m15["extractPetId"];
+  const habitatView = __m15["habitatView"];
+  const petFromCareResponse = __m15["petFromCareResponse"];
+  const readEnvelope = __m15["readEnvelope"];
 
 const HABITAT_PLACEHOLDER = Object.freeze({
   name: "Not named yet",
@@ -2207,6 +3038,27 @@ const HABITAT_PLACEHOLDER = Object.freeze({
   xp: "0 / 100",
   mode: "human",
 });
+
+const CARE_ANIM = Object.freeze({
+  feed: "eat",
+  play: "happy",
+  rest: "sleep",
+});
+
+function loadoutFromPet(pet) {
+  if (!pet || typeof pet !== "object") return {};
+  const candidates = [
+    pet.loadout,
+    pet.equipment,
+    pet.appearance && pet.appearance.loadout,
+  ];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+  return {};
+}
 
 function stateForEnvelope(result) {
   if (!result || result.ok) return null;
@@ -2239,7 +3091,10 @@ function StubHabitat(props) {
     "data-tab": "habitat",
     children: [
       jsx(StateNotice, { state: props.uiState }),
-      jsx(NpcHostBanner, { surface: "habitat" }),
+      jsx(NpcHostBanner, {
+        surface: "habitat",
+        assetBaseUrl: props.assetBaseUrl,
+      }),
       jsxs("div", {
         className: "hg-card hg-pet-card",
         children: [
@@ -2323,6 +3178,43 @@ function HabitatTab(props = {}) {
   const [error, setError] = useState("");
   const [bridgeState, setBridgeState] = useState(null);
   const [loading, setLoading] = useState(hasApi);
+  const [manifest, setManifest] = useState(
+    props.manifest || props.assetManifest || null
+  );
+  const [catalog, setCatalog] = useState(props.catalog || null);
+  const [assetBaseUrl, setAssetBaseUrl] = useState(props.assetBaseUrl || "");
+  const [loadout, setLoadout] = useState(props.loadout || {});
+  const [animState, setAnimState] = useState(props.animState || "idle");
+  const animTimer = useRef(null);
+
+  useEffect(function () {
+    return function () {
+      if (animTimer.current) clearTimeout(animTimer.current);
+    };
+  }, []);
+
+  useEffect(
+    function () {
+      const fromPet = loadoutFromPet(pet);
+      if (Object.keys(fromPet).length) {
+        setLoadout(function (previous) {
+          return Object.assign({}, fromPet, previous);
+        });
+      }
+    },
+    [pet]
+  );
+
+  function flashAnim(action) {
+    const next = CARE_ANIM[action];
+    if (!next) return;
+    setAnimState(next);
+    if (animTimer.current) clearTimeout(animTimer.current);
+    animTimer.current = setTimeout(function () {
+      setAnimState("idle");
+      animTimer.current = null;
+    }, 2000);
+  }
 
   useEffect(() => {
     if (!hasApi) return undefined;
@@ -2331,6 +3223,9 @@ function HabitatTab(props = {}) {
     async function load() {
       setLoading(true);
       setError("");
+      if (!props.assetBaseUrl && api.assets && typeof api.assets.url === "function") {
+        setAssetBaseUrl(api.assets.url(""));
+      }
       let meData = null;
       let loadResult = null;
 
@@ -2353,15 +3248,34 @@ function HabitatTab(props = {}) {
         petId = meData.pet.id;
       }
 
-      const requests = [api.get("/goals").catch(() => null)];
-      if (petId && !(meData && meData.pet && meData.pet.id === petId)) {
-        requests.push(api.get("/pets/" + encodeURIComponent(petId)).catch(() => null));
-      } else {
-        requests.push(Promise.resolve(null));
-      }
+      const manifestRequest =
+        api.assets && typeof api.assets.manifest === "function"
+          ? api.assets.manifest().catch(() => null)
+          : Promise.resolve(null);
+      const catalogRequest = props.catalog
+        ? Promise.resolve(null)
+        : api.get("/catalog").catch(() => null);
+      const requests = [
+        api.get("/goals").catch(() => null),
+        petId && !(meData && meData.pet && meData.pet.id === petId)
+          ? api.get("/pets/" + encodeURIComponent(petId)).catch(() => null)
+          : Promise.resolve(null),
+        manifestRequest,
+        catalogRequest,
+      ];
 
-      const [goalEnvelope, petEnvelope] = await Promise.all(requests);
+      const [goalEnvelope, petEnvelope, manifestEnvelope, catalogEnvelope] =
+        await Promise.all(requests);
       if (!alive) return;
+
+      const manifestResult = readEnvelope(manifestEnvelope);
+      if (manifestResult.ok && manifestResult.data) {
+        setManifest(manifestResult.data);
+      }
+      const catalogResult = readEnvelope(catalogEnvelope);
+      if (catalogResult.ok && catalogResult.data) {
+        setCatalog(catalogResult.data);
+      }
 
       const goalResult = readEnvelope(goalEnvelope);
       if (goalResult.ok) {
@@ -2386,17 +3300,18 @@ function HabitatTab(props = {}) {
     return function cleanup() {
       alive = false;
     };
-  }, [api, hasApi, requestedPetId]);
+  }, [api, hasApi, requestedPetId, props.assetBaseUrl, props.catalog]);
 
   const uiState =
     props.state || props.uiState || bridgeState || UI_STATES.READY;
   if (!hasApi) {
-    return jsx(StubHabitat, { uiState });
+    return jsx(StubHabitat, {
+      uiState,
+      assetBaseUrl: props.assetBaseUrl,
+    });
   }
 
   const view = habitatView({ pet, me, goal });
-  const loadout = props.loadout || {};
-  const manifest = props.manifest || props.assetManifest || null;
 
   async function adopt(event) {
     if (event && typeof event.preventDefault === "function") event.preventDefault();
@@ -2434,6 +3349,7 @@ function HabitatTab(props = {}) {
         return;
       }
       setPet((previous) => petFromCareResponse(result.data, previous));
+      flashAnim(action);
     } catch (_error) {
       setError("Care could not be completed.");
     } finally {
@@ -2446,7 +3362,10 @@ function HabitatTab(props = {}) {
     "data-tab": "habitat",
     children: [
       jsx(StateNotice, { state: uiState }),
-      jsx(NpcHostBanner, { surface: "habitat" }),
+      jsx(NpcHostBanner, {
+        surface: "habitat",
+        assetBaseUrl: assetBaseUrl,
+      }),
       error
         ? jsx("p", { className: "hg-error", role: "alert", children: error })
         : null,
@@ -2458,9 +3377,10 @@ function HabitatTab(props = {}) {
             children: jsx(PetPreview, {
               pet,
               loadout,
-              catalog: props.catalog,
+              catalog,
               manifest,
-              assetBaseUrl: props.assetBaseUrl,
+              assetBaseUrl,
+              animState,
               label: view.name + " preview",
             }),
           }),
@@ -2612,7 +3532,7 @@ function HabitatTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/leaderboard.js
-const __m13 = (function () {
+const __m17 = (function () {
 /**
  * Pure ranking and bounty presentation helpers for the Desktop Leaderboard tab.
  * No React, no network.
@@ -2751,18 +3671,18 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 })();
 
 // desktop/src/ui/tabs/LeaderboardTab.js
-const __m14 = (function () {
+const __m18 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
-  const NpcHostBanner = __m2["NpcHostBanner"];
-  const bountyRows = __m13["bountyRows"];
-  const leaderboardRows = __m13["leaderboardRows"];
-  const mergeBountyClaim = __m13["mergeBountyClaim"];
-  const normalizeLeaderboard = __m13["normalizeLeaderboard"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+  const bountyRows = __m17["bountyRows"];
+  const leaderboardRows = __m17["leaderboardRows"];
+  const mergeBountyClaim = __m17["mergeBountyClaim"];
+  const normalizeLeaderboard = __m17["normalizeLeaderboard"];
 
 function envelopeMessage(envelope) {
   if (!envelope) return "The bridge did not return a response.";
@@ -3090,7 +4010,7 @@ function LeaderboardTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/session.js
-const __m15 = (function () {
+const __m19 = (function () {
 /**
  * Pure pairing/session view-model helpers.
  *
@@ -3467,22 +4387,25 @@ const createPairingViewModel = buildPairingViewModel;
 })();
 
 // desktop/src/ui/tabs/SettingsTab.js
-const __m16 = (function () {
-  const useCallback = __ext4;
+const __m20 = (function () {
+  const useCallback = __ext5;
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
-  const NpcHostBanner = __m2["NpcHostBanner"];
-  const PAIRING_STATES = __m15["PAIRING_STATES"];
-  const deviceRowsFromEnvelope = __m15["deviceRowsFromEnvelope"];
-  const emptyPairingState = __m15["emptyPairingState"];
-  const formatCountdown = __m15["formatCountdown"];
-  const pairingStateFromPoll = __m15["pairingStateFromPoll"];
-  const pairingStateFromStart = __m15["pairingStateFromStart"];
-  const secondsRemaining = __m15["secondsRemaining"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+  const connectionRows = __m0["connectionRows"];
+  const deriveConnectionStatus = __m0["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m0["resolveConnectionUiState"];
+  const PAIRING_STATES = __m19["PAIRING_STATES"];
+  const deviceRowsFromEnvelope = __m19["deviceRowsFromEnvelope"];
+  const emptyPairingState = __m19["emptyPairingState"];
+  const formatCountdown = __m19["formatCountdown"];
+  const pairingStateFromPoll = __m19["pairingStateFromPoll"];
+  const pairingStateFromStart = __m19["pairingStateFromStart"];
+  const secondsRemaining = __m19["secondsRemaining"];
 
 const SETTINGS_PLACEHOLDER = Object.freeze([
   { key: "backend", label: "Python backend", value: "Disabled" },
@@ -3510,6 +4433,56 @@ function noticeText(envelope, fallback) {
     return envelope.error.message;
   }
   return fallback;
+}
+
+function callMaybe(fn) {
+  try {
+    const result = fn();
+    return result && typeof result.catch === "function"
+      ? result.catch(function () {
+          return null;
+        })
+      : Promise.resolve(result);
+  } catch (_error) {
+    return Promise.resolve(null);
+  }
+}
+
+function statusEnvelopeFor(api) {
+  if (api && typeof api.status === "function") {
+    return callMaybe(function () {
+      return api.status();
+    });
+  }
+  if (api && typeof api.get === "function") {
+    return callMaybe(function () {
+      return api.get("/status");
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function healthEnvelopeFor(api) {
+  if (api && typeof api.health === "function") {
+    return callMaybe(function () {
+      return api.health();
+    });
+  }
+  if (api && typeof api.get === "function") {
+    return callMaybe(function () {
+      return api.get("/health");
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function pairEnvelopeFor(api) {
+  if (api && api.pair && typeof api.pair.poll === "function") {
+    return callMaybe(function () {
+      return api.pair.poll();
+    });
+  }
+  return Promise.resolve(null);
 }
 
 function formatExpiry(value) {
@@ -3612,6 +4585,7 @@ function SettingsTab(props = {}) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [connection, setConnection] = useState(null);
 
   const loadDevices = useCallback(
     async function loadDevices() {
@@ -3636,6 +4610,39 @@ function SettingsTab(props = {}) {
         setNow(Date.now());
       }, 1000);
       return function () {
+        clearInterval(timer);
+      };
+    },
+    [api]
+  );
+
+  useEffect(
+    function pollConnection() {
+      if (!api) {
+        return undefined;
+      }
+      let cancelled = false;
+      async function run() {
+        const [statusEnvelope, healthEnvelope, pairEnvelope] = await Promise.all([
+          statusEnvelopeFor(api),
+          healthEnvelopeFor(api),
+          pairEnvelopeFor(api),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setConnection(
+          deriveConnectionStatus({
+            statusEnvelope: statusEnvelope,
+            healthEnvelope: healthEnvelope,
+            pairEnvelope: pairEnvelope,
+          })
+        );
+      }
+      run();
+      const timer = setInterval(run, 10000);
+      return function () {
+        cancelled = true;
         clearInterval(timer);
       };
     },
@@ -3698,6 +4705,9 @@ function SettingsTab(props = {}) {
   if (!api) {
     return jsx(SettingsStub, { uiState: uiState });
   }
+
+  const liveRows = connection ? connectionRows(connection) : SETTINGS_PLACEHOLDER;
+  const liveState = connection ? resolveConnectionUiState(connection) : uiState;
 
   async function startPairing() {
     setBusy("start");
@@ -3771,7 +4781,7 @@ function SettingsTab(props = {}) {
     className: "hg-settings",
     "data-tab": "settings",
     children: [
-      jsx(StateNotice, { state: uiState }),
+      jsx(StateNotice, { state: liveState }),
       jsx(NpcHostBanner, { surface: "settings" }),
       jsxs("div", {
         className: "hg-card",
@@ -3784,7 +4794,8 @@ function SettingsTab(props = {}) {
           }),
           jsx("div", {
             className: "hg-settings__list",
-            children: SETTINGS_PLACEHOLDER.map((setting) =>
+            "data-live-status": connection ? "true" : "false",
+            children: liveRows.map((setting) =>
               jsx(SettingRow, { setting }, setting.key)
             ),
           }),
@@ -3979,26 +4990,36 @@ function SettingsTab(props = {}) {
 })();
 
 // desktop/src/ui/tabs/ShopTab.js
-const __m17 = (function () {
+const __m21 = (function () {
   const useEffect = __ext2;
-  const useState = __ext3;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
-  const NpcHostBanner = __m2["NpcHostBanner"];
-  const PetPreview = __m10["PetPreview"];
-  const extractPetId = __m11["extractPetId"];
-  const groupCatalogBySlot = __m9["groupCatalogBySlot"];
-  const itemAvailability = __m9["itemAvailability"];
-  const manifestFromCatalog = __m9["manifestFromCatalog"];
-  const normaliseWallet = __m9["normaliseWallet"];
-  const readEnvelope = __m9["readEnvelope"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
+  const NpcHostBanner = __m4["NpcHostBanner"];
+  const PetPreview = __m8["PetPreview"];
+  const extractPetId = __m15["extractPetId"];
+  const groupCatalogBySlot = __m5["groupCatalogBySlot"];
+  const itemAvailability = __m5["itemAvailability"];
+  const joinAssetUrl = __m5["joinAssetUrl"];
+  const manifestFromCatalog = __m5["manifestFromCatalog"];
+  const normaliseWallet = __m5["normaliseWallet"];
+  const readEnvelope = __m5["readEnvelope"];
 
 const SHOP_PLACEHOLDER_ITEMS = Object.freeze([
   { id: "placeholder.crown", name: "Binary Crown", slot: "head", priceBits: 2000 },
   { id: "placeholder.scarf", name: "Patch Scarf", slot: "front", priceBits: 350 },
   { id: "placeholder.aura", name: "Soft Static Aura", slot: "aura", priceBits: 700 },
+]);
+
+const SHOP_FILTERS = Object.freeze([
+  { id: "all", label: "All" },
+  { id: "head", label: "Hats" },
+  { id: "face", label: "Face" },
+  { id: "back", label: "Neck/Back" },
+  { id: "front", label: "Hand props" },
+  { id: "aura", label: "Auras" },
 ]);
 
 function stateForEnvelope(result) {
@@ -4089,6 +5110,158 @@ function StubShop(props) {
   });
 }
 
+function manifestAssetFor(manifest, item) {
+  if (!manifest || !Array.isArray(manifest.assets) || !item) {
+    return null;
+  }
+  const wanted = new Set(
+    [item.assetId, item.id].filter(Boolean).map((value) => String(value))
+  );
+  for (const asset of manifest.assets) {
+    if (!asset || typeof asset !== "object") continue;
+    const candidates = [asset.id, asset.asset_id, asset.assetId]
+      .filter(Boolean)
+      .map((value) => String(value));
+    if (candidates.some((value) => wanted.has(value))) {
+      return asset;
+    }
+  }
+  return null;
+}
+
+function itemThumbPath(item, manifest) {
+  const asset = manifestAssetFor(manifest, item);
+  if (asset && asset.path) {
+    return String(asset.path);
+  }
+  if (item.assetUrl) {
+    return String(item.assetUrl);
+  }
+  const shortName = String(item.id || "").split(".").pop();
+  return shortName ? "px3/items/" + shortName + ".png" : "";
+}
+
+function itemThumbUrl(assetBase, item, manifest) {
+  const path = itemThumbPath(item, manifest);
+  if (!path) {
+    return "";
+  }
+  if (/^(?:https?:|data:|blob:)/i.test(path)) {
+    return path;
+  }
+  if (!assetBase) {
+    return "";
+  }
+  return joinAssetUrl(assetBase, path);
+}
+
+function ShopCard(props) {
+  const item = props.item;
+  const availability = props.availability;
+  const busy = props.busy;
+  const thumb = props.thumb;
+  const equipped = availability.equipped;
+
+  return jsxs("article", {
+    className:
+      "hg-shop-card" +
+      (item.owned ? " hg-shop-card--owned" : "") +
+      (equipped ? " hg-shop-card--equipped" : ""),
+    "data-item-id": item.id,
+    "data-slot": item.slot,
+    "data-owned": item.owned ? "true" : "false",
+    "data-equipped": equipped ? "true" : "false",
+    children: [
+      jsx("div", {
+        className: "hg-shop-card__thumb",
+        children: thumb
+          ? jsx("img", {
+              className: "hg-shop-card__image",
+              src: thumb,
+              alt: item.name,
+              loading: "lazy",
+              decoding: "async",
+              draggable: "false",
+            })
+          : jsx("span", {
+              className: "hg-shop-card__thumb-empty",
+              "aria-hidden": "true",
+            }),
+      }),
+      jsx("h4", { className: "hg-shop-card__name", children: item.name }),
+      jsxs("div", {
+        className: "hg-shop-card__meta",
+        children: [
+          jsx("span", { className: "hg-shop-card__slot", children: item.slotLabel }),
+          jsx("span", {
+            className: "hg-shop-card__price",
+            children: item.priceBits + " Bits",
+          }),
+        ],
+      }),
+      jsxs("div", {
+        className: "hg-shop-card__badges",
+        children: [
+          item.owned
+            ? jsx("span", { className: "hg-badge", children: "Owned" })
+            : null,
+          equipped
+            ? jsx("span", {
+                className: "hg-badge hg-badge--equipped",
+                children: "Equipped",
+              })
+            : null,
+        ],
+      }),
+      jsxs("div", {
+        className: "hg-shop-card__actions",
+        children: [
+          jsx("button", {
+            type: "button",
+            className: "hg-btn hg-btn--primary",
+            "data-action": "buy",
+            "data-item-id": item.id,
+            disabled: Boolean(busy) || item.owned || !availability.affordable,
+            onClick: function () {
+              props.onBuy(item);
+            },
+            children: item.owned
+              ? "Owned"
+              : busy === "buy:" + item.id
+                ? "Buying..."
+                : "Buy",
+          }),
+          equipped
+            ? jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                "data-action": "unequip",
+                "data-item-id": item.id,
+                disabled: Boolean(busy) || !props.petId,
+                onClick: function () {
+                  props.onUnequip(item.slot);
+                },
+                children:
+                  busy === "unequip:" + item.slot ? "Removing..." : "Unequip",
+              })
+            : jsx("button", {
+                type: "button",
+                className: "hg-btn",
+                "data-action": "equip",
+                "data-item-id": item.id,
+                disabled: Boolean(busy) || !props.petId,
+                onClick: function () {
+                  props.onEquip(item);
+                },
+                children:
+                  busy === "equip:" + item.id ? "Equipping..." : "Equip",
+              }),
+        ],
+      }),
+    ],
+  });
+}
+
 function ShopTab(props = {}) {
   const api = props.api;
   const hasApi = Boolean(api && typeof api.get === "function" && typeof api.post === "function");
@@ -4104,6 +5277,8 @@ function ShopTab(props = {}) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [bridgeState, setBridgeState] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     if (!hasApi) return undefined;
@@ -4186,11 +5361,33 @@ function ShopTab(props = {}) {
     };
   }, [api, hasApi, requestedPetId]);
 
+  useEffect(() => {
+    if (!hasApi || manifest) return undefined;
+    if (!api.assets || typeof api.assets.manifest !== "function") return undefined;
+    let alive = true;
+    api.assets.manifest().then(
+      function (envelope) {
+        if (alive && envelope && envelope.ok && envelope.data) {
+          setManifest(envelope.data);
+        }
+      },
+      function () {}
+    );
+    return function cleanup() {
+      alive = false;
+    };
+  }, [api, hasApi, manifest]);
+
   const uiState = props.state || props.uiState || bridgeState || UI_STATES.READY;
   if (!hasApi) {
     return jsx(StubShop, { uiState });
   }
 
+  const assetBase =
+    props.assetBaseUrl ||
+    (api.assets && typeof api.assets.url === "function"
+      ? api.assets.url("")
+      : "");
   const walletView = normaliseWallet(wallet);
   const petId = requestedPetId || (pet && pet.id) || "";
   const groups = groupCatalogBySlot(catalog).map((group) => ({
@@ -4200,6 +5397,17 @@ function ShopTab(props = {}) {
       owned: Boolean(item.owned || owned.has(item.id)),
     })),
   }));
+  const allItems = groups.reduce((items, group) => items.concat(group.items), []);
+  const needle = query.trim().toLowerCase();
+  const visibleItems = allItems.filter(function (item) {
+    if (filter !== "all" && item.slot !== filter) return false;
+    if (!needle) return true;
+    return (
+      item.name.toLowerCase().includes(needle) ||
+      item.id.toLowerCase().includes(needle) ||
+      item.slot.toLowerCase().includes(needle)
+    );
+  });
 
   async function buy(item) {
     setBusy("buy:" + item.id);
@@ -4321,147 +5529,126 @@ function ShopTab(props = {}) {
             loadout,
             catalog,
             manifest,
-            assetBaseUrl: props.assetBaseUrl,
+            assetBaseUrl: props.assetBaseUrl || assetBase,
             label: (pet && pet.name ? pet.name : "Pet") + " loadout preview",
           }),
         ],
       }),
-      groups.length === 0
-        ? jsx("p", {
-            className: "hg-muted",
-            children: "No catalog items are available yet.",
-          })
-        : null,
-      groups.map((group) =>
-        jsxs(
-          "div",
-          {
-            className: "hg-card",
-            "data-slot": group.slot,
+      jsxs("div", {
+        className: "hg-card hg-shop-catalog",
+        children: [
+          jsxs("header", {
+            className: "hg-card__header",
             children: [
-              jsx("h3", { children: group.label }),
-              jsxs("table", {
-                className: "hg-table",
-                children: [
-                  jsx("thead", {
-                    children: jsxs("tr", {
-                      children: [
-                        jsx("th", { children: "Item" }),
-                        jsx("th", { children: "Rarity" }),
-                        jsx("th", { children: "Price" }),
-                        jsx("th", { children: "Action" }),
-                      ],
-                    }),
-                  }),
-                  jsx("tbody", {
-                    children: group.items.map((item) => {
-                      const availability = itemAvailability({
-                        item,
-                        wallet: walletView,
-                        petId,
-                        loadout,
-                      });
-                      return jsxs(
-                        "tr",
-                        {
-                          className: availability.equipped ? "hg-row--equipped" : undefined,
-                          children: [
-                            jsx("td", {
-                              children: [
-                                item.name,
-                                availability.equipped
-                                  ? jsx("span", {
-                                      className: "hg-badge",
-                                      children: "Equipped",
-                                    })
-                                  : null,
-                              ],
-                            }),
-                            jsx("td", { children: item.rarity }),
-                            jsx("td", { children: item.priceBits + " Bits" }),
-                            jsx("td", {
-                              className: "hg-row",
-                              children: [
-                                jsx("button", {
-                                  type: "button",
-                                  className: "hg-btn hg-btn--primary",
-                                  "data-action": "buy",
-                                  "data-item-id": item.id,
-                                  disabled:
-                                    Boolean(busy) || item.owned || !availability.affordable,
-                                  onClick: function () {
-                                    buy(item);
-                                  },
-                                  children: item.owned
-                                    ? "Owned"
-                                    : busy === "buy:" + item.id
-                                      ? "Buying..."
-                                      : "Buy",
-                                }),
-                                availability.equipped
-                                  ? jsx("button", {
-                                      type: "button",
-                                      className: "hg-btn",
-                                      "data-action": "unequip",
-                                      "data-item-id": item.id,
-                                      disabled: Boolean(busy) || !petId,
-                                      onClick: function () {
-                                        unequip(item.slot);
-                                      },
-                                      children:
-                                        busy === "unequip:" + item.slot
-                                          ? "Removing..."
-                                          : "Unequip",
-                                    })
-                                  : jsx("button", {
-                                      type: "button",
-                                      className: "hg-btn",
-                                      "data-action": "equip",
-                                      "data-item-id": item.id,
-                                      disabled: Boolean(busy) || !petId,
-                                      onClick: function () {
-                                        equip(item);
-                                      },
-                                      children:
-                                        busy === "equip:" + item.id
-                                          ? "Equipping..."
-                                          : "Equip",
-                                    }),
-                              ],
-                            }),
-                          ],
-                        },
-                        item.id
-                      );
-                    }),
-                  }),
-                ],
+              jsx("h3", { children: "Merch" }),
+              jsx("span", {
+                className: "hg-muted",
+                "data-shop-count": String(visibleItems.length),
+                children:
+                  visibleItems.length +
+                  " item" +
+                  (visibleItems.length === 1 ? "" : "s"),
               }),
             ],
-          },
-          group.slot
-        )
-      ),
+          }),
+          jsxs("div", {
+            className: "hg-shop-tabs",
+            role: "tablist",
+            "aria-label": "Shop item slots",
+            children: SHOP_FILTERS.map((option) =>
+              jsx(
+                "button",
+                {
+                  type: "button",
+                  role: "tab",
+                  "aria-selected": filter === option.id ? "true" : "false",
+                  className:
+                    "hg-shop-tab" +
+                    (filter === option.id ? " hg-shop-tab--active" : ""),
+                  "data-filter": option.id,
+                  onClick: function () {
+                    setFilter(option.id);
+                  },
+                  children: option.label,
+                },
+                option.id
+              )
+            ),
+          }),
+          jsx("label", {
+            className: "hg-shop-search",
+            children: [
+              jsx("span", { className: "hg-label", children: "Search" }),
+              jsx("input", {
+                className: "hg-input hg-shop-search__input",
+                type: "search",
+                value: query,
+                placeholder: "Find merch by name",
+                "aria-label": "Search shop items",
+                onChange: function (event) {
+                  setQuery(event.target.value);
+                },
+              }),
+            ],
+          }),
+          visibleItems.length === 0
+            ? jsx("p", {
+                className: "hg-muted hg-shop-empty",
+                children:
+                  allItems.length === 0
+                    ? "No catalog items are available yet."
+                    : "No merch matches that filter.",
+              })
+            : jsx("div", {
+                className: "hg-shop-grid",
+                children: visibleItems.map((item) => {
+                  const availability = itemAvailability({
+                    item,
+                    wallet: walletView,
+                    petId,
+                    loadout,
+                  });
+                  return jsx(
+                    ShopCard,
+                    {
+                      item,
+                      availability,
+                      busy,
+                      petId,
+                      thumb: itemThumbUrl(assetBase, item, manifest),
+                      onBuy: buy,
+                      onEquip: equip,
+                      onUnequip: unequip,
+                    },
+                    item.id
+                  );
+                }),
+              }),
+        ],
+      }),
     ],
   });
 }
 
-  return { "SHOP_PLACEHOLDER_ITEMS": SHOP_PLACEHOLDER_ITEMS, "ShopTab": ShopTab };
+  return { "SHOP_PLACEHOLDER_ITEMS": SHOP_PLACEHOLDER_ITEMS, "SHOP_FILTERS": SHOP_FILTERS, "ShopTab": ShopTab };
 })();
 
 // desktop/src/ui/pane.js
-const __m18 = (function () {
-  const useState = __ext3;
+const __m22 = (function () {
+  const useEffect = __ext2;
+  const useState = __ext4;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const BattleTab = __m5["BattleTab"];
-  const ChatTab = __m7["ChatTab"];
-  const HabitatTab = __m12["HabitatTab"];
-  const LeaderboardTab = __m14["LeaderboardTab"];
-  const SettingsTab = __m16["SettingsTab"];
-  const ShopTab = __m17["ShopTab"];
-  const StateNotice = __m0["StateNotice"];
-  const UI_STATES = __m0["UI_STATES"];
+  const deriveConnectionStatus = __m0["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m0["resolveConnectionUiState"];
+  const BattleTab = __m11["BattleTab"];
+  const ChatTab = __m13["ChatTab"];
+  const HabitatTab = __m16["HabitatTab"];
+  const LeaderboardTab = __m18["LeaderboardTab"];
+  const SettingsTab = __m20["SettingsTab"];
+  const ShopTab = __m21["ShopTab"];
+  const StateNotice = __m1["StateNotice"];
+  const UI_STATES = __m1["UI_STATES"];
 
 const TAB_IDS = Object.freeze(["habitat", "battle", "shop", "leaderboard", "chat", "settings"]);
 
@@ -4483,13 +5670,107 @@ const TAB_COMPONENTS = Object.freeze({
   settings: SettingsTab,
 });
 
+function callMaybe(fn) {
+  try {
+    const result = fn();
+    return result && typeof result.catch === "function"
+      ? result.catch(function () {
+          return null;
+        })
+      : Promise.resolve(result);
+  } catch (_error) {
+    return Promise.resolve(null);
+  }
+}
+
+function statusEnvelopeFor(api) {
+  if (api && typeof api.status === "function") {
+    return callMaybe(function () {
+      return api.status();
+    });
+  }
+  if (api && typeof api.get === "function") {
+    return callMaybe(function () {
+      return api.get("/status");
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function healthEnvelopeFor(api) {
+  if (api && typeof api.health === "function") {
+    return callMaybe(function () {
+      return api.health();
+    });
+  }
+  if (api && typeof api.get === "function") {
+    return callMaybe(function () {
+      return api.get("/health");
+    });
+  }
+  return Promise.resolve(null);
+}
+
+function pairEnvelopeFor(api) {
+  if (api && api.pair && typeof api.pair.poll === "function") {
+    return callMaybe(function () {
+      return api.pair.poll();
+    });
+  }
+  return Promise.resolve(null);
+}
+
 function HermagotchiPane(props = {}) {
   const initialTab = TAB_IDS.includes(props.initialTab) ? props.initialTab : "habitat";
-  const effectiveState = props.state || props.uiState || UI_STATES.READY;
+  const api = props.api;
+  const hasApi = Boolean(api && typeof api === "object");
+  const fallbackState = props.state || props.uiState || UI_STATES.READY;
   const startTab = useState(initialTab);
   const activeTab = startTab[0];
   const setActiveTab = startTab[1];
   const ActiveTab = TAB_COMPONENTS[activeTab] || HabitatTab;
+  const connectionState = useState(null);
+  const connection = connectionState[0];
+  const setConnection = connectionState[1];
+
+  useEffect(
+    function pollConnection() {
+      if (!hasApi) {
+        return undefined;
+      }
+      let cancelled = false;
+      async function run() {
+        const [statusEnvelope, healthEnvelope, pairEnvelope] = await Promise.all([
+          statusEnvelopeFor(api),
+          healthEnvelopeFor(api),
+          pairEnvelopeFor(api),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setConnection(
+          deriveConnectionStatus({
+            statusEnvelope: statusEnvelope,
+            healthEnvelope: healthEnvelope,
+            pairEnvelope: pairEnvelope,
+          })
+        );
+      }
+      run();
+      const timer = setInterval(run, 15000);
+      return function () {
+        cancelled = true;
+        clearInterval(timer);
+      };
+    },
+    [api, hasApi]
+  );
+
+  const effectiveState = hasApi
+    ? connection
+      ? resolveConnectionUiState(connection)
+      : UI_STATES.READY
+    : fallbackState;
 
   function selectTab(nextTab) {
     setActiveTab(nextTab);
@@ -4546,7 +5827,7 @@ function HermagotchiPane(props = {}) {
 })();
 
 // desktop/src/ui/api.js
-const __m19 = (function () {
+const __m23 = (function () {
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
@@ -4742,7 +6023,41 @@ function createApiClient(options) {
     return basePath + normalizePath(path);
   }
 
+  function safeAssetPath(relativePath) {
+    if (typeof relativePath !== "string") return "";
+    let value = relativePath.trim();
+    if (!value) return "";
+    value = value.replace(/^\/+/, "");
+    if (value.startsWith("assets/")) {
+      value = value.slice("assets/".length);
+    }
+    const parts = [];
+    for (const part of value.split("/")) {
+      if (!part || part === ".") continue;
+      if (part === "..") {
+        parts.pop();
+        continue;
+      }
+      parts.push(part);
+    }
+    return parts.join("/");
+  }
+
+  function assetsUrl(relativePath) {
+    const relative = safeAssetPath(relativePath);
+    const root = basePath + "/assets";
+    return relative ? root + "/" + relative : root;
+  }
+
   return {
+    assets: {
+      manifest: function manifest() {
+        return request("GET", assetsUrl("manifest"), {});
+      },
+      url: function url(relativePath) {
+        return assetsUrl(relativePath);
+      },
+    },
     basePath: basePath,
     get: function get(path) {
       return request("GET", proxyUrl(path), {});
@@ -4838,10 +6153,10 @@ function uiStateFromEnvelope(envelope) {
 })();
 
 // desktop/src/ui/register.js
-const __m20 = (function () {
+const __m24 = (function () {
   const jsx = __ext0;
-  const HermagotchiPane = __m18["HermagotchiPane"];
-  const createApiClient = __m19["createApiClient"];
+  const HermagotchiPane = __m22["HermagotchiPane"];
+  const createApiClient = __m23["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -4882,17 +6197,17 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m21 = (function () {
+const __m25 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m18["HermagotchiPane"], "TAB_IDS": __m18["TAB_IDS"], "TAB_LABELS": __m18["TAB_LABELS"], "TAB_COMPONENTS": __m18["TAB_COMPONENTS"], "UI_STATES": __m0["UI_STATES"], "UI_STATE_COPY": __m0["UI_STATE_COPY"], "StateNotice": __m0["StateNotice"], "resolveUiState": __m0["resolveUiState"], "PANE_ID": __m20["PANE_ID"], "PANE_TITLE": __m20["PANE_TITLE"], "createPaneContribution": __m20["createPaneContribution"], "registerHermagotchiPane": __m20["registerHermagotchiPane"], "createDesktopPlugin": __m20["createDesktopPlugin"], "HabitatTab": __m12["HabitatTab"], "HABITAT_PLACEHOLDER": __m12["HABITAT_PLACEHOLDER"], "BattleTab": __m5["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m5["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m17["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m17["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m14["LeaderboardTab"], "ChatTab": __m7["ChatTab"], "SettingsTab": __m16["SettingsTab"], "SETTINGS_PLACEHOLDER": __m16["SETTINGS_PLACEHOLDER"], "CareMeter": __m8["CareMeter"], "NpcHostBanner": __m2["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m1["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m1["NPC_NAMES"], "npcHostLine": __m1["npcHostLine"] };
+  return { "HermagotchiPane": __m22["HermagotchiPane"], "TAB_IDS": __m22["TAB_IDS"], "TAB_LABELS": __m22["TAB_LABELS"], "TAB_COMPONENTS": __m22["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m24["PANE_ID"], "PANE_TITLE": __m24["PANE_TITLE"], "createPaneContribution": __m24["createPaneContribution"], "registerHermagotchiPane": __m24["registerHermagotchiPane"], "createDesktopPlugin": __m24["createDesktopPlugin"], "HabitatTab": __m16["HabitatTab"], "HABITAT_PLACEHOLDER": __m16["HABITAT_PLACEHOLDER"], "BattleTab": __m11["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m11["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m21["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m21["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m18["LeaderboardTab"], "ChatTab": __m13["ChatTab"], "SettingsTab": __m20["SettingsTab"], "SETTINGS_PLACEHOLDER": __m20["SETTINGS_PLACEHOLDER"], "CareMeter": __m14["CareMeter"], "NpcHostBanner": __m4["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m2["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m2["NPC_NAMES"], "npcHostLine": __m2["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
-const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: baseline;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  height: auto;\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
+const HERMAGOTCHI_STYLES = "/* Hermagotchi Desktop pane: dark retro, pixel-friendly, no external assets. */\n\n.hg-pane {\n  --hg-bg: #0b0d16;\n  --hg-bg-raised: #141829;\n  --hg-bg-sunken: #080a11;\n  --hg-border: #2b3350;\n  --hg-border-bright: #4b5f8f;\n  --hg-text: #e6ebff;\n  --hg-muted: #9aa7c7;\n  --hg-accent: #66f2b1;\n  --hg-accent-strong: #b6ffdd;\n  --hg-warn: #ffcc66;\n  --hg-error: #ff7b8a;\n  --hg-radius: 0;\n  box-sizing: border-box;\n  color: var(--hg-text);\n  background:\n    linear-gradient(180deg, rgba(102, 242, 177, 0.04), transparent 180px),\n    var(--hg-bg);\n  padding: 12px;\n  font-family: \"IBM Plex Mono\", \"Cascadia Mono\", \"Courier New\", monospace;\n  line-height: 1.45;\n}\n\n.hg-pane *,\n.hg-pane *::before,\n.hg-pane *::after {\n  box-sizing: border-box;\n}\n\n.hg-pane__header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  padding: 8px 10px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n}\n\n.hg-pane__header h2 {\n  margin: 0;\n  font-size: 1rem;\n  letter-spacing: 0.08em;\n  text-transform: uppercase;\n}\n\n.hg-pane__body {\n  padding-top: 12px;\n  min-height: 240px;\n}\n\n.hg-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  margin-top: 8px;\n}\n\n.hg-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 6px 10px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-tab:hover,\n.hg-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-card {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-raised);\n  padding: 12px;\n  margin-bottom: 12px;\n  overflow-wrap: anywhere;\n}\n\n.hg-card__header {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 8px;\n  border-bottom: 1px dashed var(--hg-border);\n  padding-bottom: 6px;\n  margin-bottom: 8px;\n}\n\n.hg-card h3 {\n  margin: 0 0 8px;\n  font-size: 0.9375rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n}\n\n.hg-card__header h3 {\n  margin-bottom: 0;\n}\n\n.hg-row {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n}\n\n.hg-row--between {\n  justify-content: space-between;\n}\n\n.hg-col {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  min-width: 0;\n}\n\n.hg-grid {\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 12px;\n}\n\n.hg-label {\n  display: inline-block;\n  color: var(--hg-muted);\n  margin-right: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-muted {\n  color: var(--hg-muted);\n}\n\n.hg-error {\n  color: var(--hg-error);\n  border-left: 3px solid var(--hg-error);\n  padding-left: 8px;\n}\n\n.hg-badge {\n  display: inline-block;\n  border: 1px solid var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-accent);\n  padding: 1px 6px;\n  font-size: 0.75rem;\n  letter-spacing: 0.06em;\n  text-transform: uppercase;\n  white-space: nowrap;\n}\n\n.hg-input,\n.hg-field textarea,\n.hg-field input {\n  width: 100%;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-text);\n  padding: 8px;\n  font: inherit;\n  resize: vertical;\n}\n\n.hg-input:focus,\n.hg-field textarea:focus,\n.hg-field input:focus {\n  outline: 2px solid var(--hg-accent);\n  outline-offset: 1px;\n}\n\n.hg-input:disabled,\n.hg-field textarea:disabled {\n  color: var(--hg-muted);\n  border-style: dashed;\n}\n\n.hg-field {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n\n.hg-btn {\n  appearance: none;\n  border: 2px solid var(--hg-border-bright);\n  background: #1a2036;\n  color: var(--hg-text);\n  padding: 6px 12px;\n  font: inherit;\n  font-size: 0.8125rem;\n  cursor: pointer;\n}\n\n.hg-btn:hover:not(:disabled),\n.hg-btn:focus-visible:not(:disabled) {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-btn:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  border-style: dashed;\n}\n\n.hg-btn--primary {\n  border-color: var(--hg-accent);\n  background: #123528;\n  color: var(--hg-accent-strong);\n}\n\n.hg-actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n  align-items: center;\n}\n\n.hg-actions--tight {\n  gap: 6px;\n  margin-top: 6px;\n}\n\n.hg-actions--tight .hg-btn {\n  padding: 3px 8px;\n}\n\n.hg-meter {\n  margin-bottom: 8px;\n}\n\n.hg-meter__head {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  color: var(--hg-muted);\n  font-size: 0.8125rem;\n}\n\n.hg-meter__track {\n  height: 12px;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  margin-top: 3px;\n}\n\n.hg-meter__fill {\n  height: 100%;\n  background:\n    repeating-linear-gradient(\n      90deg,\n      var(--hg-accent) 0,\n      var(--hg-accent) 6px,\n      #3fc98d 6px,\n      #3fc98d 8px\n    );\n}\n\n.hg-table {\n  width: 100%;\n  border-collapse: collapse;\n  font-size: 0.8125rem;\n}\n\n.hg-table th,\n.hg-table td {\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 8px;\n  text-align: left;\n  vertical-align: top;\n}\n\n.hg-table th {\n  color: var(--hg-muted);\n  letter-spacing: 0.05em;\n  text-transform: uppercase;\n  font-weight: 600;\n}\n\n.hg-state {\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px 10px;\n  margin: 0 0 12px;\n}\n\n.hg-state strong {\n  display: block;\n  margin-bottom: 2px;\n}\n\n.hg-state p {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-state__hint {\n  display: block;\n  margin-top: 4px;\n  color: var(--hg-warn);\n  font-size: 0.8125rem;\n}\n\n.hg-state--ready {\n  border-style: dashed;\n}\n\n.hg-state--auth_missing,\n.hg-state--network_off,\n.hg-state--backend_disabled {\n  border-color: var(--hg-warn);\n}\n\n.hg-state--service_unavailable {\n  border-color: var(--hg-error);\n}\n\n.hg-npc-host {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  border: 2px solid #3a2f5f;\n  background: #17132a;\n  padding: 6px 10px;\n  margin-bottom: 12px;\n}\n\n.hg-npc-host__name {\n  color: #d9b8ff;\n  white-space: nowrap;\n}\n\n.hg-npc-host__line {\n  margin: 0;\n  color: var(--hg-muted);\n}\n\n.hg-pet-card {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n\n.hg-pet-card__art {\n  width: 96px;\n  height: 96px;\n  display: grid;\n  place-items: center;\n  border: 2px dashed var(--hg-border-bright);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  font-size: 2rem;\n}\n\n.hg-pet-card__meta {\n  min-width: 0;\n}\n\n.hg-pet-card__meta p {\n  margin: 4px 0;\n}\n\n.hg-setting {\n  display: flex;\n  justify-content: space-between;\n  gap: 12px;\n  border-bottom: 1px solid var(--hg-border);\n  padding: 6px 0;\n}\n\n.hg-settings__list {\n  display: flex;\n  flex-direction: column;\n}\n\n.hg-sprite {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  max-width: 100%;\n  height: auto;\n}\n\n.hg-sprite img,\n.hg-sprite .hg-sprite__layer {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-npc-host__portrait {\n  width: 56px;\n  height: 56px;\n  flex: 0 0 56px;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n  border: 1px solid #3a2f5f;\n  background: var(--hg-bg-sunken);\n}\n\n.hg-shop-tabs {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin: 4px 0 10px;\n}\n\n.hg-shop-tab {\n  appearance: none;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  color: var(--hg-muted);\n  padding: 4px 9px;\n  font: inherit;\n  font-size: 0.75rem;\n  letter-spacing: 0.04em;\n  text-transform: uppercase;\n  cursor: pointer;\n}\n\n.hg-shop-tab:hover,\n.hg-shop-tab:focus-visible {\n  border-color: var(--hg-border-bright);\n  color: var(--hg-text);\n}\n\n.hg-shop-tab--active {\n  border-color: var(--hg-accent);\n  background: #132a24;\n  color: var(--hg-accent-strong);\n}\n\n.hg-shop-search {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n\n.hg-shop-search .hg-label {\n  margin: 0;\n  flex: 0 0 auto;\n}\n\n.hg-shop-search__input {\n  max-width: 320px;\n}\n\n.hg-shop-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));\n  gap: 10px;\n  align-items: stretch;\n}\n\n.hg-shop-card {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  min-width: 0;\n  border: 2px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n}\n\n.hg-shop-card--equipped {\n  border-color: var(--hg-accent);\n}\n\n.hg-shop-card--owned {\n  background: #101a1c;\n}\n\n.hg-shop-card__thumb {\n  display: grid;\n  place-items: center;\n  width: 100%;\n  aspect-ratio: 1 / 1;\n  min-height: 96px;\n  border: 1px dashed var(--hg-border);\n  background: #0d1020;\n  overflow: hidden;\n}\n\n.hg-shop-card__thumb img,\n.hg-shop-card__image {\n  width: 100%;\n  height: 100%;\n  object-fit: contain;\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;\n}\n\n.hg-shop-card__thumb-empty {\n  display: block;\n  width: 48%;\n  height: 48%;\n  background: var(--hg-border);\n  opacity: 0.35;\n}\n\n.hg-shop-card__name {\n  margin: 0;\n  font-size: 0.8125rem;\n  line-height: 1.25;\n  overflow-wrap: anywhere;\n}\n\n.hg-shop-card__meta {\n  display: flex;\n  align-items: baseline;\n  justify-content: space-between;\n  gap: 6px;\n  font-size: 0.75rem;\n}\n\n.hg-shop-card__slot {\n  color: var(--hg-muted);\n  text-transform: uppercase;\n  letter-spacing: 0.05em;\n}\n\n.hg-shop-card__price {\n  color: var(--hg-accent);\n  white-space: nowrap;\n}\n\n.hg-shop-card__badges {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n  min-height: 1.2em;\n}\n\n.hg-shop-card__actions {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 6px;\n  margin-top: auto;\n}\n\n.hg-shop-card__actions .hg-btn {\n  flex: 1 1 auto;\n  padding: 4px 8px;\n}\n\n.hg-shop-card--equipped .hg-badge--equipped {\n  border-color: var(--hg-accent);\n  color: var(--hg-accent-strong);\n}\n\n.hg-log {\n  list-style: none;\n  margin: 0 0 12px;\n  padding: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  max-height: 340px;\n  overflow-y: auto;\n}\n\n.hg-log__item {\n  display: grid;\n  grid-template-columns:\n    3.25rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.4fr)\n    4.75rem\n    minmax(5.5rem, 1fr)\n    minmax(6.5rem, 1.2fr)\n    6rem;\n  grid-template-areas: \"round actor move damage types effect hp\";\n  gap: 4px 10px;\n  align-items: center;\n  border: 1px solid var(--hg-border);\n  background: var(--hg-bg-sunken);\n  padding: 8px;\n  font-size: 0.8125rem;\n}\n\n.hg-log__round {\n  grid-area: round;\n}\n\n.hg-log__actor {\n  grid-area: actor;\n  font-weight: 600;\n  overflow-wrap: anywhere;\n}\n\n.hg-log__move {\n  grid-area: move;\n  color: var(--hg-text);\n}\n\n.hg-log__damage {\n  grid-area: damage;\n  color: var(--hg-error);\n  white-space: nowrap;\n}\n\n.hg-log__types {\n  grid-area: types;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n.hg-log__effect {\n  grid-area: effect;\n}\n\n.hg-log__hp {\n  grid-area: hp;\n  white-space: nowrap;\n}\n\n.hg-log__body {\n  margin: 6px 0 0;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  color: var(--hg-text);\n}\n\n.hg-chat__compose {\n  border-top: 1px dashed var(--hg-border);\n  padding-top: 10px;\n}\n\n.hg-shop,\n.hg-habitat,\n.hg-battle,\n.hg-leaderboard,\n.hg-chat,\n.hg-settings {\n  min-width: 0;\n}\n\n@media (max-width: 679px) {\n  .hg-log__item {\n    grid-template-columns: 3.25rem minmax(0, 1fr) auto;\n    grid-template-areas:\n      \"round actor damage\"\n      \"move move move\"\n      \"types types effect\"\n      \"hp hp hp\";\n  }\n}\n\n@media (min-width: 640px) {\n  .hg-pane {\n    padding: 16px;\n  }\n\n  .hg-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n}\n\n@media (min-width: 960px) {\n  .hg-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n  }\n\n  .hg-log {\n    max-height: 420px;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .hg-pane *,\n  .hg-pane *::before,\n  .hg-pane *::after {\n    scroll-behavior: auto;\n    transition: none;\n    animation: none;\n  }\n}\n";
 
 function injectHermagotchiStyles() {
   if (typeof document === "undefined") return false;
@@ -4907,8 +6222,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m21["createDesktopPlugin"];
-const __hgRegisterPane = __m21["registerHermagotchiPane"];
+const __hgCreatePlugin = __m25["createDesktopPlugin"];
+const __hgRegisterPane = __m25["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -4926,34 +6241,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m21["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m21["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m21["CareMeter"];
-export const ChatTab = __m21["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m21["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m21["HabitatTab"];
-export const HermagotchiPane = __m21["HermagotchiPane"];
-export const LeaderboardTab = __m21["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m21["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m21["NPC_NAMES"];
-export const NpcHostBanner = __m21["NpcHostBanner"];
-export const PANE_ID = __m21["PANE_ID"];
-export const PANE_TITLE = __m21["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m21["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m21["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m21["SettingsTab"];
-export const ShopTab = __m21["ShopTab"];
-export const StateNotice = __m21["StateNotice"];
-export const TAB_COMPONENTS = __m21["TAB_COMPONENTS"];
-export const TAB_IDS = __m21["TAB_IDS"];
-export const TAB_LABELS = __m21["TAB_LABELS"];
-export const UI_STATES = __m21["UI_STATES"];
-export const UI_STATE_COPY = __m21["UI_STATE_COPY"];
-export const createDesktopPlugin = __m21["createDesktopPlugin"];
-export const createPaneContribution = __m21["createPaneContribution"];
-export const npcHostLine = __m21["npcHostLine"];
-export const registerHermagotchiPane = __m21["registerHermagotchiPane"];
-export const resolveUiState = __m21["resolveUiState"];
+export const BattleTab = __m25["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m25["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m25["CareMeter"];
+export const ChatTab = __m25["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m25["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m25["HabitatTab"];
+export const HermagotchiPane = __m25["HermagotchiPane"];
+export const LeaderboardTab = __m25["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m25["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m25["NPC_NAMES"];
+export const NpcHostBanner = __m25["NpcHostBanner"];
+export const PANE_ID = __m25["PANE_ID"];
+export const PANE_TITLE = __m25["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m25["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m25["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m25["SettingsTab"];
+export const ShopTab = __m25["ShopTab"];
+export const StateNotice = __m25["StateNotice"];
+export const TAB_COMPONENTS = __m25["TAB_COMPONENTS"];
+export const TAB_IDS = __m25["TAB_IDS"];
+export const TAB_LABELS = __m25["TAB_LABELS"];
+export const UI_STATES = __m25["UI_STATES"];
+export const UI_STATE_COPY = __m25["UI_STATE_COPY"];
+export const createDesktopPlugin = __m25["createDesktopPlugin"];
+export const createPaneContribution = __m25["createPaneContribution"];
+export const npcHostLine = __m25["npcHostLine"];
+export const registerHermagotchiPane = __m25["registerHermagotchiPane"];
+export const resolveUiState = __m25["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;
