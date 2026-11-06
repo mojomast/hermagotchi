@@ -13,9 +13,9 @@ DNS for it, including a wildcard (*.hermagotchi.rizz.click), is served from this
 
 ## Pin
 - Repo: https://github.com/mojomast/hermagotchi (public)
-- Branch: `hgt/w14-social-hub` (PR into `feat/hackathon`; switch pin branch to `feat/hackathon` after merge)
-- **Deploy tip SHA (full):** `ca971cc0acd0791797a320f322ed39cbd4bab3d6`
-- Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — W11 tip; W12+W13 not yet live. Use the full SHA recorded in prior deploy notes if available.
+- Branch: `feat/hackathon`
+- **Deploy tip SHA (full):** `49900cbbcf09d8641130bfdda58d3d7b06299efb` (W12+W13+W14; live on the VPS since 2026-11-06)
+- Prior rollback SHA: `1fec02f` (full `1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0`) — W11 tip (pre-W12). Use the full SHA recorded in prior deploy notes if available.
 
 ## Preflight: free disk space (check only)
 1. Run `df -h /` and `df -h /var` (and the filesystem that holds `/opt/hermagotchi` and `/var/lib/hermagotchi` if different).
@@ -65,7 +65,8 @@ Reload nginx only if you change its config; verify with a dry config test first.
    ```bash
    cd /opt/hermagotchi
    git fetch origin
-   git checkout 1fec02f8c518a5b2e59371be6c2f9e24ac32ebc0
+   git checkout 49900cbbcf09d8641130bfdda58d3d7b06299efb   # the Deploy tip SHA above, never the rollback SHA
+   git rev-parse HEAD
    ```
 4. **Deps:** activate `/opt/hermagotchi/.venv` and `pip install -r requirements-dev.txt` (or the production requirements file the unit already uses). Prefer the same install path as the prior deploy.
 5. **Migrations:** run the app's normal migration path (startup migration via create_app / documented migrate command). Do not hand-edit the DB. Forward-only only.
@@ -120,6 +121,10 @@ After restart + migration 0013:
 3. POST /v1/chat/taunt with a real finished match (phase=post) → 201 with match_context.
 4. GET /v1/chat/inbox returns unread DMs; reason codes on denied agent sends include chat.disabled / chat.daily_cap / chat.cooldown / dm.cooldown / dm.blocked / dm.unanswered_cap / taunt.invalid_match.
 5. W11/W12 checks above still pass (starter grant, practice caps, mythic catalog).
+
+## W14 verification (after this tip)
+1. GET /v1/friends → 200; GET /v1/social/history → 200; lobby GET /v1/chat/channels/lobby/messages → 200.
+2. Presence is POST-only: POST /v1/presence → 200 (GET returns 405 by design).
 
 ## Rollback
 If health checks fail or pairing is broken:
