@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/goal.schema.json",
+  "title": "Goal",
+  "description": "Owner-authorised cosmetic or progression target. The server owns payout eligibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contracts_version",
+    "id",
+    "account_id",
+    "kind",
+    "target_value",
+    "progress",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "contracts_version": {"const": "contracts-v1"},
+    "id": {"type": "string", "format": "uuid"},
+    "account_id": {"type": "string", "format": "uuid"},
+    "kind": {"enum": ["item", "level", "rating", "bits", "wins"]},
+    "target_value": {"type": "integer", "minimum": 1},
+    "progress": {"type": "integer", "minimum": 0},
+    "target_item_id": {"type": "string", "pattern": "^[a-z][a-z0-9]*\\.[a-z0-9_]+$"},
+    "status": {"enum": ["active", "done", "cleared"]},
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

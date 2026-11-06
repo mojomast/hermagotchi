@@ -1,0 +1,10 @@
+{
+  "contracts_version": "contracts-v1",
+  "id": "44444444-4444-4444-8444-444444444444",
+  "account_id": "00000000-0000-4000-8000-0000000000a1",
+  "delta": 50,
+  "reason": "pvp.participation",
+  "source_event_id": "match:33333333-3333-4333-8333-333333333333:casual:2026-11-06",
+  "balance_after": 1420,
+  "created_at": "2026-11-06T14:05:00Z"
+}

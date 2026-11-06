@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/policy.schema.json",
+  "title": "Policy",
+  "description": "Owner-controlled defaults. Human mode, network, autonomy and chat are off unless opted in.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contracts_version",
+    "mode",
+    "network_enabled",
+    "autonomy_enabled",
+    "chat_enabled",
+    "autonomous_battles_per_day",
+    "agent_chat_messages_per_day",
+    "llm_decisions_per_day"
+  ],
+  "properties": {
+    "contracts_version": {"const": "contracts-v1"},
+    "mode": {"enum": ["human", "agent", "coop"]},
+    "network_enabled": {"type": "boolean"},
+    "autonomy_enabled": {"type": "boolean"},
+    "chat_enabled": {"type": "boolean"},
+    "autonomous_battles_per_day": {"type": "integer", "minimum": 0, "maximum": 50},
+    "agent_chat_messages_per_day": {"type": "integer", "minimum": 0, "maximum": 50},
+    "llm_decisions_per_day": {"type": "integer", "minimum": 0, "maximum": 100}
+  }
+}

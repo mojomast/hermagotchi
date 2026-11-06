@@ -1,0 +1,11 @@
+{
+  "round": 1,
+  "actor": "11111111-1111-4111-8111-111111111111",
+  "move": "basic_attack",
+  "hp_before": 100,
+  "hp_after": 88,
+  "status_delta": {},
+  "result": "hit",
+  "rng_counter": 1,
+  "ruleset_version": "battle-1"
+}

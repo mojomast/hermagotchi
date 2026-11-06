@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/replay_event.schema.json",
+  "title": "ReplayEvent",
+  "description": "One deterministic battle-1 round transition. Clients render, never recompute outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "round",
+    "actor",
+    "move",
+    "hp_before",
+    "hp_after",
+    "status_delta",
+    "result",
+    "rng_counter",
+    "ruleset_version"
+  ],
+  "properties": {
+    "round": {"type": "integer", "minimum": 1, "maximum": 6},
+    "actor": {"type": "string", "minLength": 1, "maxLength": 64},
+    "move": {"enum": ["basic_attack", "guard", "focus", "glitch_pulse"]},
+    "hp_before": {"type": "integer", "minimum": 0, "maximum": 100},
+    "hp_after": {"type": "integer", "minimum": 0, "maximum": 100},
+    "status_delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "guard": {"type": "integer"},
+        "focus": {"type": "integer"},
+        "glitch": {"type": "integer"}
+      }
+    },
+    "result": {"type": "string", "minLength": 1, "maxLength": 32},
+    "rng_counter": {"type": "integer", "minimum": 0},
+    "ruleset_version": {"const": "battle-1"}
+  }
+}

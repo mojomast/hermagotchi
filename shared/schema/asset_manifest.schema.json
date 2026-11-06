@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/asset_manifest.schema.json",
+  "title": "AssetManifest",
+  "description": "Versioned 512x512 rig, species and cosmetic pack. Art must match sha256 file bytes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "asset_pack_id", "canvas", "rigs", "species", "assets"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "asset_pack_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+    "canvas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "baseline_y"],
+      "properties": {
+        "width": {"const": 512},
+        "height": {"const": 512},
+        "baseline_y": {"const": 448}
+      }
+    },
+    "rigs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["small_front_v1"],
+      "properties": {
+        "small_front_v1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["anchors"],
+          "properties": {
+            "anchors": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["head", "face", "back", "front", "ground"],
+              "properties": {
+                "head": {"$ref": "#/$defs/anchor"},
+                "face": {"$ref": "#/$defs/anchor"},
+                "back": {"$ref": "#/$defs/anchor"},
+                "front": {"$ref": "#/$defs/anchor"},
+                "ground": {"$ref": "#/$defs/anchor"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "species": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["byteblob", "patchfox", "nullgeist"],
+      "properties": {
+        "byteblob": {"$ref": "#/$defs/species"},
+        "patchfox": {"$ref": "#/$defs/species"},
+        "nullgeist": {"$ref": "#/$defs/species"}
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slot",
+          "path",
+          "rig_families",
+          "z",
+          "anchor",
+          "offset_px",
+          "scale",
+          "sha256"
+        ],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*\\.[a-z0-9_]+$"},
+          "slot": {"enum": ["head", "face", "back", "front", "aura", "emote", "habitat", "title"]},
+          "path": {"type": "string", "pattern": "^[a-z0-9_./-]+$"},
+          "rig_families": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "z": {"type": "integer", "minimum": -100, "maximum": 100},
+          "anchor": {"enum": ["head", "face", "back", "front", "ground"]},
+          "offset_px": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {"type": "number"}
+          },
+          "scale": {"type": "number", "exclusiveMinimum": 0},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "anchor": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"type": "number", "minimum": 0, "maximum": 1}
+    },
+    "species": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rig", "base", "overrides", "features"],
+      "properties": {
+        "rig": {"const": "small_front_v1"},
+        "base": {"type": "string", "pattern": "^[a-z0-9_./-]+$"},
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/anchor"}
+        },
+        "features": {"type": "object"}
+      }
+    }
+  }
+}

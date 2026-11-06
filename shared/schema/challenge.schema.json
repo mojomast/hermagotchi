@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/challenge.schema.json",
+  "title": "Challenge",
+  "description": "Async invitation between two accounts. Server owns expiry and resolution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contracts_version",
+    "id",
+    "challenger_id",
+    "defender_id",
+    "mode",
+    "status",
+    "expires_at",
+    "created_at"
+  ],
+  "properties": {
+    "contracts_version": {"const": "contracts-v1"},
+    "id": {"type": "string", "format": "uuid"},
+    "challenger_id": {"type": "string", "format": "uuid"},
+    "defender_id": {"type": "string", "format": "uuid"},
+    "mode": {"enum": ["practice", "casual", "ranked"]},
+    "status": {"enum": ["pending", "accepted", "declined", "expired", "resolved"]},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/game_event.schema.json",
+  "title": "GameEvent",
+  "description": "Optional polling/stream envelope for reconnectable game updates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "seq", "type", "version", "occurred_at", "data"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "seq": {"type": "integer", "minimum": 0},
+    "type": {"type": "string", "pattern": "^[a-z][a-z0-9_.]{1,63}$"},
+    "version": {"type": "string", "minLength": 1, "maxLength": 32},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "data": {"type": "object"}
+  }
+}

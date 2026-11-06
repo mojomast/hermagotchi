@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/pet_public.schema.json",
+  "title": "PetPublic",
+  "description": "Sanitised pet projection safe to show to any authenticated player.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contracts_version",
+    "id",
+    "name",
+    "species",
+    "appearance",
+    "level",
+    "xp",
+    "traits",
+    "stats",
+    "care",
+    "created_at",
+    "revision"
+  ],
+  "properties": {
+    "contracts_version": {
+      "const": "contracts-v1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "species": {
+      "enum": [
+        "byteblob",
+        "patchfox",
+        "nullgeist"
+      ]
+    },
+    "appearance": {
+      "$ref": "#/$defs/appearance"
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "xp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "traits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "temperament",
+        "quirk"
+      ],
+      "properties": {
+        "temperament": {
+          "enum": [
+            "calm",
+            "curious",
+            "bold"
+          ]
+        },
+        "quirk": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attack",
+        "defense",
+        "speed",
+        "control"
+      ],
+      "properties": {
+        "attack": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "defense": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "speed": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "control": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "care": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "health",
+        "comfort",
+        "hunger",
+        "energy"
+      ],
+      "properties": {
+        "health": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "comfort": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "hunger": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "energy": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "$defs": {
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contracts_version",
+        "species",
+        "seed",
+        "traits",
+        "rig",
+        "asset_pack_version"
+      ],
+      "properties": {
+        "contracts_version": {
+          "const": "contracts-v1"
+        },
+        "species": {
+          "enum": [
+            "byteblob",
+            "patchfox",
+            "nullgeist"
+          ]
+        },
+        "seed": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64
+        },
+        "traits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "palette",
+            "feature",
+            "marking"
+          ],
+          "properties": {
+            "palette": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            },
+            "feature": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            },
+            "marking": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            }
+          }
+        },
+        "rig": {
+          "const": "small_front_v1"
+        },
+        "asset_pack_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        }
+      }
+    }
+  }
+}

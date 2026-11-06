@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/tactic_card.schema.json",
+  "title": "TacticCard",
+  "description": "Bounded battle-1 tactic card. Four ordered conditional actions, no executable code.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ruleset_version", "stance", "actions"],
+  "properties": {
+    "ruleset_version": {"const": "battle-1"},
+    "stance": {"enum": ["aggressive", "balanced", "defensive", "control"]},
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["when", "move"],
+        "properties": {
+          "when": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "maxProperties": 1,
+            "properties": {
+              "self_hp_lte_pct": {"type": "integer", "minimum": 0, "maximum": 100},
+              "special_ready": {"type": "boolean"},
+              "opponent_guarding": {"type": "boolean"},
+              "always": {"const": true}
+            }
+          },
+          "move": {"enum": ["basic_attack", "guard", "focus", "glitch_pulse"]}
+        }
+      }
+    },
+    "emote_id": {"type": "string", "pattern": "^emote\\.[a-z0-9_]+$"}
+  }
+}

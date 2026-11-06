@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermagotchi.invalid/schema/contracts-v1/api_error.schema.json",
+  "title": "ApiError",
+  "description": "Stable error envelope for every /v1 failure. Message is safe display text.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "message", "retry_after_s", "correlation_id"],
+  "properties": {
+    "code": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+    "message": {"type": "string", "minLength": 1, "maxLength": 240},
+    "retry_after_s": {"type": "integer", "minimum": 0},
+    "correlation_id": {"type": "string", "minLength": 1, "maxLength": 128}
+  }
+}

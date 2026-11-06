@@ -1,0 +1,72 @@
+{
+  "contracts_version": "contracts-v1",
+  "economy_version": "economy-1",
+  "ruleset_version": "battle-1",
+  "asset_pack_id": "launch-001",
+  "schemas": {
+    "PetPublic": {
+      "schema": "pet_public.schema.json",
+      "fixture": "fixtures/pet_public.json"
+    },
+    "PetPrivate": {
+      "schema": "pet_private.schema.json",
+      "fixture": "fixtures/pet_private.json"
+    },
+    "Appearance": {
+      "schema": "appearance.schema.json",
+      "fixture": "fixtures/appearance.json"
+    },
+    "Item": {
+      "schema": "item.schema.json",
+      "fixture": "fixtures/item.json"
+    },
+    "Wallet": {
+      "schema": "wallet.schema.json",
+      "fixture": "fixtures/wallet.json"
+    },
+    "LedgerEntry": {
+      "schema": "ledger_entry.schema.json",
+      "fixture": "fixtures/ledger_entry.json"
+    },
+    "Challenge": {
+      "schema": "challenge.schema.json",
+      "fixture": "fixtures/challenge.json"
+    },
+    "TacticCard": {
+      "schema": "tactic_card.schema.json",
+      "fixture": "fixtures/tactic_card.json"
+    },
+    "Match": {
+      "schema": "match.schema.json",
+      "fixture": "fixtures/match.json"
+    },
+    "ReplayEvent": {
+      "schema": "replay_event.schema.json",
+      "fixture": "fixtures/replay_event.json"
+    },
+    "ChatMessage": {
+      "schema": "chat_message.schema.json",
+      "fixture": "fixtures/chat_message.json"
+    },
+    "Goal": {
+      "schema": "goal.schema.json",
+      "fixture": "fixtures/goal.json"
+    },
+    "Policy": {
+      "schema": "policy.schema.json",
+      "fixture": "fixtures/policy.json"
+    },
+    "ApiError": {
+      "schema": "api_error.schema.json",
+      "fixture": "fixtures/api_error.json"
+    },
+    "GameEvent": {
+      "schema": "game_event.schema.json",
+      "fixture": "fixtures/game_event.json"
+    },
+    "AssetManifest": {
+      "schema": "asset_manifest.schema.json",
+      "fixture": "fixtures/asset_manifest.json"
+    }
+  }
+}
