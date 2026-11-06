@@ -17,7 +17,13 @@ test("resolveAuthedAssetUrl fetches with credentials and returns an object URL",
   clearAuthedAssetCache();
   const calls = [];
   const blob = new Blob([Uint8Array.from([1, 2, 3])], { type: "image/png" });
+  const fakeSession = {
+    length: 1,
+    key(i) { return i === 0 ? 'hermes.webapp.session.v1:["http://127.0.0.1:9120",""]' : null; },
+    getItem(k) { return k.startsWith("hermes.webapp.session.v1:") ? "tok_webapp" : null; },
+  };
   const url = await resolveAuthedAssetUrl("/api/plugins/hermagotchi/assets/px3/npcs/don_piedro_portrait.png", {
+    sessionStorage: fakeSession,
     fetchImpl: async (input, init) => {
       calls.push({ input, init });
       return {
@@ -34,6 +40,7 @@ test("resolveAuthedAssetUrl fetches with credentials and returns an object URL",
   assert.equal(calls[0].input, "/api/plugins/hermagotchi/assets/px3/npcs/don_piedro_portrait.png");
   assert.equal(calls[0].init.credentials, "same-origin");
   assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[0].init.headers["X-Hermes-Session-Token"], "tok_webapp");
   assert.equal(authedAssetCacheSize(), 1);
   // Second call hits cache (no extra fetch)
   const again = await resolveAuthedAssetUrl("/api/plugins/hermagotchi/assets/px3/npcs/don_piedro_portrait.png", {

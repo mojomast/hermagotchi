@@ -2,11 +2,14 @@
  * Resolve plugin asset URLs through authenticated fetch into blob:/data: URLs.
  *
  * Hermes dashboard/webapp auth puts the session on fetch headers (or cookies),
- * but bare img tag / CSS background-image requests omit those headers and
- * 401. Fetching via the same window.fetch the pane already patches, then
- * swapping in an object URL, keeps non-secret art loading without weakening
- * the host auth gate.
+ * but bare img tags / CSS background-image requests omit those headers and
+ * 401. Fetching via the same window.fetch the pane already uses, attaching
+ * the Hermes webapp host session header when present, then swapping in an
+ * object URL, keeps non-secret art loading without weakening the host auth
+ * gate.
  */
+
+import { hermesHostAuthHeaders } from "./hermesHostAuth.js";
 
 const cache = new Map();
 
@@ -21,7 +24,7 @@ function fetchImpl() {
 
 /**
  * @param {string} url
- * @param {{ fetchImpl?: typeof fetch }=} options
+ * @param {object=} options
  * @returns {Promise of string}
  */
 export function resolveAuthedAssetUrl(url, options = {}) {
@@ -46,6 +49,9 @@ export function resolveAuthedAssetUrl(url, options = {}) {
         method: "GET",
         credentials: "same-origin",
         cache: "force-cache",
+        headers: hermesHostAuthHeaders({
+          sessionStorage: options.sessionStorage,
+        }),
       })
     )
     .then((response) => {

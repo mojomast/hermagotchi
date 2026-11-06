@@ -1117,17 +1117,75 @@ function animStripPath(species, palette, state) {
   return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
 })();
 
-// desktop/src/ui/logic/authedAssets.js
+// desktop/src/ui/logic/hermesHostAuth.js
 const __m4 = (function () {
+/**
+ * Hermes host (gateway) credentials for same-origin bridge calls.
+ *
+ * The Hermagotchi bridge itself adds the game Bearer server-side; the pane
+ * never sees that. But the Hermes webapp gates `/api/plugins/...` behind a
+ * host session: the SPA stores a launch-link grant in sessionStorage and
+ * sends it as `X-Hermes-Session-Token`. Bare fetch / img tags omit that
+ * header and 401. Electron injects the same header at the network layer, so
+ * this helper is a no-op there when sessionStorage has no webapp grant.
+ */
+
+const HERMES_SESSION_HEADER = "X-Hermes-Session-Token";
+const WEBAPP_SESSION_KEY_PREFIX = "hermes.webapp.session.v1:";
+
+/**
+ * @param {object=} options
+ * @returns {string}
+ */
+function readHermesWebappSessionToken(options = {}) {
+  const store =
+    options.sessionStorage !== undefined
+      ? options.sessionStorage
+      : typeof globalThis.sessionStorage !== "undefined"
+        ? globalThis.sessionStorage
+        : null;
+  if (!store || typeof store.length !== "number") return "";
+  try {
+    for (let i = 0; i < store.length; i += 1) {
+      const key = store.key(i);
+      if (typeof key === "string" && key.startsWith(WEBAPP_SESSION_KEY_PREFIX)) {
+        const value = store.getItem(key);
+        if (typeof value === "string" && value.trim()) return value.trim();
+      }
+    }
+  } catch (_err) {
+    return "";
+  }
+  return "";
+}
+
+/**
+ * @param {object=} options
+ * @returns {Record of string to string}
+ */
+function hermesHostAuthHeaders(options = {}) {
+  const token = readHermesWebappSessionToken(options);
+  if (!token) return {};
+  return { [HERMES_SESSION_HEADER]: token };
+}
+
+  return { "HERMES_SESSION_HEADER": HERMES_SESSION_HEADER, "WEBAPP_SESSION_KEY_PREFIX": WEBAPP_SESSION_KEY_PREFIX, "readHermesWebappSessionToken": readHermesWebappSessionToken, "hermesHostAuthHeaders": hermesHostAuthHeaders };
+})();
+
+// desktop/src/ui/logic/authedAssets.js
+const __m5 = (function () {
+  const hermesHostAuthHeaders = __m4["hermesHostAuthHeaders"];
 /**
  * Resolve plugin asset URLs through authenticated fetch into blob:/data: URLs.
  *
  * Hermes dashboard/webapp auth puts the session on fetch headers (or cookies),
- * but bare img tag / CSS background-image requests omit those headers and
- * 401. Fetching via the same window.fetch the pane already patches, then
- * swapping in an object URL, keeps non-secret art loading without weakening
- * the host auth gate.
+ * but bare img tags / CSS background-image requests omit those headers and
+ * 401. Fetching via the same window.fetch the pane already uses, attaching
+ * the Hermes webapp host session header when present, then swapping in an
+ * object URL, keeps non-secret art loading without weakening the host auth
+ * gate.
  */
+
 
 const cache = new Map();
 
@@ -1142,7 +1200,7 @@ function fetchImpl() {
 
 /**
  * @param {string} url
- * @param {{ fetchImpl?: typeof fetch }=} options
+ * @param {object=} options
  * @returns {Promise of string}
  */
 function resolveAuthedAssetUrl(url, options = {}) {
@@ -1167,6 +1225,9 @@ function resolveAuthedAssetUrl(url, options = {}) {
         method: "GET",
         credentials: "same-origin",
         cache: "force-cache",
+        headers: hermesHostAuthHeaders({
+          sessionStorage: options.sessionStorage,
+        }),
       })
     )
     .then((response) => {
@@ -1216,11 +1277,11 @@ function authedAssetCacheSize() {
 })();
 
 // desktop/src/ui/components/AuthedImg.js
-const __m5 = (function () {
+const __m6 = (function () {
   const useEffect = __ext2;
   const useState = __ext3;
   const jsx = __ext0;
-  const resolveAuthedAssetUrl = __m4["resolveAuthedAssetUrl"];
+  const resolveAuthedAssetUrl = __m5["resolveAuthedAssetUrl"];
 
 /**
  * Hook: resolve a plugin asset URL through authenticated fetch → blob/data URL.
@@ -1305,13 +1366,13 @@ function AuthedImg(props = {}) {
 })();
 
 // desktop/src/ui/components/NpcHostBanner.js
-const __m6 = (function () {
+const __m7 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
   const npcHostLine = __m0["npcHostLine"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const npcPortraitPath = __m3["npcPortraitPath"];
-  const AuthedImg = __m5["AuthedImg"];
+  const AuthedImg = __m6["AuthedImg"];
 
 const PORTRAIT_PX = Object.freeze({
   featured: 180,
@@ -1389,7 +1450,7 @@ function NpcHostBanner(props = {}) {
 })();
 
 // desktop/src/ui/components/LobbyRail.js
-const __m7 = (function () {
+const __m8 = (function () {
   const useEffect = __ext2;
   const useRef = __ext4;
   const useState = __ext3;
@@ -1427,7 +1488,7 @@ const __m7 = (function () {
   const tauntSummary = __m2["tauntSummary"];
   const validateChatDraft = __m2["validateChatDraft"];
   const validateDmTarget = __m2["validateDmTarget"];
-  const NpcHostBanner = __m6["NpcHostBanner"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
 
 function emptyInbox() {
   return { items: [], unreadCount: 0, total: 0, dms: [], mentions: [] };
@@ -2193,7 +2254,7 @@ function LobbyRail(props = {}) {
 })();
 
 // desktop/src/ui/logic/connection.js
-const __m8 = (function () {
+const __m9 = (function () {
 /**
  * Pure connection/pairing status helpers.
  *
@@ -2460,7 +2521,7 @@ function resolveConnectionUiState(connection = {}) {
 })();
 
 // desktop/src/ui/logic/compose.js
-const __m9 = (function () {
+const __m10 = (function () {
 /**
  * Pure cosmetic composition math for the Hermagotchi desktop preview.
  *
@@ -2659,11 +2720,11 @@ const composeLayer = composeItem;
 })();
 
 // desktop/src/ui/logic/shop.js
-const __m10 = (function () {
+const __m11 = (function () {
   const joinAssetUrl = __m3["joinAssetUrl"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const composeItem = __m9["composeItem"];
-  const DEFAULT_NATIVE_SIZE = __m9["DEFAULT_NATIVE_SIZE"];
+  const composeItem = __m10["composeItem"];
+  const DEFAULT_NATIVE_SIZE = __m10["DEFAULT_NATIVE_SIZE"];
 /**
  * Pure Shop helpers. Catalog data always comes from the server response; item
  * ids are never hardcoded here so new cosmetics show up automatically.
@@ -3066,7 +3127,7 @@ function itemAvailability(options = {}) {
 })();
 
 // desktop/src/anim/petAnimContract.json
-const __m11 = (function () {
+const __m12 = (function () {
 const __json = {
   "schema": "hermagotchi-pet-anim-contract-v1",
   "native_size": 32,
@@ -3110,8 +3171,8 @@ const __json = {
 })();
 
 // desktop/src/anim/petAnimPlayer.js
-const __m12 = (function () {
-  const contract = __m11["default"];
+const __m13 = (function () {
+  const contract = __m12["default"];
 /**
  * Standalone pet animation helper for Hermagotchi desktop.
  * Pane UI imports this; do not put React/UI here.
@@ -3197,21 +3258,21 @@ function createPlayer(clip) {
 })();
 
 // desktop/src/ui/components/PetPreview.js
-const __m13 = (function () {
+const __m14 = (function () {
   const useEffect = __ext2;
   const useRef = __ext4;
   const useState = __ext3;
   const jsx = __ext0;
-  const buildPreviewLayers = __m10["buildPreviewLayers"];
+  const buildPreviewLayers = __m11["buildPreviewLayers"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const resolveAnimPalette = __m3["resolveAnimPalette"];
   const speciesBodyPath = __m3["speciesBodyPath"];
-  const AuthedImg = __m5["AuthedImg"];
-  const useAuthedAssetUrl = __m5["useAuthedAssetUrl"];
-  const contract = __m12["contract"];
-  const createPlayer = __m12["createPlayer"];
-  const findClip = __m12["findClip"];
-  const resolveAnimState = __m12["resolveAnimState"];
+  const AuthedImg = __m6["AuthedImg"];
+  const useAuthedAssetUrl = __m6["useAuthedAssetUrl"];
+  const contract = __m13["contract"];
+  const createPlayer = __m13["createPlayer"];
+  const findClip = __m13["findClip"];
+  const resolveAnimState = __m13["resolveAnimState"];
 
 function layerStyle(layer) {
   const scale = Number(layer.scale) > 0 ? Number(layer.scale) : 1;
@@ -3550,7 +3611,7 @@ function PetPreview(props = {}) {
 })();
 
 // desktop/src/ui/logic/battle.js
-const __m14 = (function () {
+const __m15 = (function () {
 /**
  * Pure battle presentation helpers for the Desktop Battle tab.
  *
@@ -3994,10 +4055,10 @@ function battleTauntContext(match = {}, summary = {}) {
 })();
 
 // desktop/src/ui/components/TurnLog.js
-const __m15 = (function () {
+const __m16 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
-  const formatTurnLog = __m14["formatTurnLog"];
+  const formatTurnLog = __m15["formatTurnLog"];
 
 function TypeChip(props) {
   const type = props.type;
@@ -4105,22 +4166,22 @@ function TurnLog(props = {}) {
 })();
 
 // desktop/src/ui/tabs/BattleTab.js
-const __m16 = (function () {
+const __m17 = (function () {
   const useEffect = __ext2;
   const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m6["NpcHostBanner"];
-  const PetPreview = __m13["PetPreview"];
-  const TurnLog = __m15["TurnLog"];
-  const battleParticipantsFromMatch = __m14["battleParticipantsFromMatch"];
-  const battleSummary = __m14["battleSummary"];
-  const battleTauntContext = __m14["battleTauntContext"];
-  const battleTaunts = __m14["battleTaunts"];
-  const rewardCapNotice = __m14["rewardCapNotice"];
-  const rewardCapReason = __m14["rewardCapReason"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const PetPreview = __m14["PetPreview"];
+  const TurnLog = __m16["TurnLog"];
+  const battleParticipantsFromMatch = __m15["battleParticipantsFromMatch"];
+  const battleSummary = __m15["battleSummary"];
+  const battleTauntContext = __m15["battleTauntContext"];
+  const battleTaunts = __m15["battleTaunts"];
+  const rewardCapNotice = __m15["rewardCapNotice"];
+  const rewardCapReason = __m15["rewardCapReason"];
   const CHAT_TAUNT_MAX_CHARS = __m2["CHAT_TAUNT_MAX_CHARS"];
   const CHAT_TAUNTS_PATH = __m2["CHAT_TAUNTS_PATH"];
   const chatNoticeFromEnvelope = __m2["chatNoticeFromEnvelope"];
@@ -4739,7 +4800,7 @@ function BattleTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/friends.js
-const __m17 = (function () {
+const __m18 = (function () {
 /** Pure friend roster and request helpers for the Desktop social hub. */
 
 const FRIENDS_PATH = "/friends";
@@ -4951,7 +5012,7 @@ function friendRemovePath(friendId) {
 })();
 
 // desktop/src/ui/logic/social_hub.js
-const __m18 = (function () {
+const __m19 = (function () {
   const normalizeInbox = __m2["normalizeInbox"];
   const tauntSummary = __m2["tauntSummary"];
 /** Pure social-hub helpers shared by the Desktop Chat tab and its tests. */
@@ -5283,12 +5344,12 @@ function replayPath(matchId) {
 })();
 
 // desktop/src/ui/tabs/ChatTab.js
-const __m19 = (function () {
+const __m20 = (function () {
   const useEffect = __ext2;
   const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const NpcHostBanner = __m6["NpcHostBanner"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
   const npcHostLine = __m0["npcHostLine"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
@@ -5316,30 +5377,30 @@ const __m19 = (function () {
   const validateDmTarget = __m2["validateDmTarget"];
   const displayActorLabel = __m2["displayActorLabel"];
   const formatRelativeTime = __m2["formatRelativeTime"];
-  const FRIENDS_PATH = __m17["FRIENDS_PATH"];
-  const FRIEND_REQUESTS_PATH = __m17["FRIEND_REQUESTS_PATH"];
-  const filterFriends = __m17["filterFriends"];
-  const friendPresenceCounts = __m17["friendPresenceCounts"];
-  const friendRemovePath = __m17["friendRemovePath"];
-  const friendRequestPayload = __m17["friendRequestPayload"];
-  const friendRequestRespondPath = __m17["friendRequestRespondPath"];
-  const friendRequestResponsePayload = __m17["friendRequestResponsePayload"];
-  const normalizeFriends = __m17["normalizeFriends"];
-  const validateFriendTarget = __m17["validateFriendTarget"];
-  const CHALLENGES_PATH = __m18["CHALLENGES_PATH"];
-  const CHALLENGE_INBOX_PATH = __m18["CHALLENGE_INBOX_PATH"];
-  const SOCIAL_HUB_SECTIONS = __m18["SOCIAL_HUB_SECTIONS"];
-  const challengeCreatePayload = __m18["challengeCreatePayload"];
-  const challengeRespondPath = __m18["challengeRespondPath"];
-  const challengeResponsePayload = __m18["challengeResponsePayload"];
-  const filterHistory = __m18["filterHistory"];
-  const historyFilterCounts = __m18["historyFilterCounts"];
-  const normalizeChallengeInbox = __m18["normalizeChallengeInbox"];
-  const normalizeHistory = __m18["normalizeHistory"];
-  const normalizeThreads = __m18["normalizeThreads"];
-  const replayHref = __m18["replayHref"];
-  const socialHubHost = __m18["socialHubHost"];
-  const threadMessagePath = __m18["threadMessagePath"];
+  const FRIENDS_PATH = __m18["FRIENDS_PATH"];
+  const FRIEND_REQUESTS_PATH = __m18["FRIEND_REQUESTS_PATH"];
+  const filterFriends = __m18["filterFriends"];
+  const friendPresenceCounts = __m18["friendPresenceCounts"];
+  const friendRemovePath = __m18["friendRemovePath"];
+  const friendRequestPayload = __m18["friendRequestPayload"];
+  const friendRequestRespondPath = __m18["friendRequestRespondPath"];
+  const friendRequestResponsePayload = __m18["friendRequestResponsePayload"];
+  const normalizeFriends = __m18["normalizeFriends"];
+  const validateFriendTarget = __m18["validateFriendTarget"];
+  const CHALLENGES_PATH = __m19["CHALLENGES_PATH"];
+  const CHALLENGE_INBOX_PATH = __m19["CHALLENGE_INBOX_PATH"];
+  const SOCIAL_HUB_SECTIONS = __m19["SOCIAL_HUB_SECTIONS"];
+  const challengeCreatePayload = __m19["challengeCreatePayload"];
+  const challengeRespondPath = __m19["challengeRespondPath"];
+  const challengeResponsePayload = __m19["challengeResponsePayload"];
+  const filterHistory = __m19["filterHistory"];
+  const historyFilterCounts = __m19["historyFilterCounts"];
+  const normalizeChallengeInbox = __m19["normalizeChallengeInbox"];
+  const normalizeHistory = __m19["normalizeHistory"];
+  const normalizeThreads = __m19["normalizeThreads"];
+  const replayHref = __m19["replayHref"];
+  const socialHubHost = __m19["socialHubHost"];
+  const threadMessagePath = __m19["threadMessagePath"];
 
 const HISTORY_FILTERS = Object.freeze([
   Object.freeze({ id: "all", label: "All" }),
@@ -6701,7 +6762,7 @@ function ChatTab(props = {}) {
 })();
 
 // desktop/src/ui/components/CareMeter.js
-const __m20 = (function () {
+const __m21 = (function () {
   const jsx = __ext0;
   const jsxs = __ext1;
 
@@ -6744,7 +6805,7 @@ function CareMeter(props = {}) {
 })();
 
 // desktop/src/ui/logic/habitat.js
-const __m21 = (function () {
+const __m22 = (function () {
 /**
  * Pure Habitat helpers. No React, network or DOM access so the same rules can
  * be exercised directly with `node --test`.
@@ -6940,31 +7001,31 @@ function petFromCareResponse(data, previous) {
 })();
 
 // desktop/src/ui/tabs/HabitatTab.js
-const __m22 = (function () {
+const __m23 = (function () {
   const useEffect = __ext2;
   const useRef = __ext4;
   const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const CareMeter = __m20["CareMeter"];
-  const NpcHostBanner = __m6["NpcHostBanner"];
-  const AuthedImg = __m5["AuthedImg"];
-  const PetPreview = __m13["PetPreview"];
+  const CareMeter = __m21["CareMeter"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const AuthedImg = __m6["AuthedImg"];
+  const PetPreview = __m14["PetPreview"];
   const joinAssetUrl = __m3["joinAssetUrl"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const CARE_ACTIONS = __m21["CARE_ACTIONS"];
-  const CARE_LABELS = __m21["CARE_LABELS"];
-  const MODES = __m21["MODES"];
-  const MODE_LABELS = __m21["MODE_LABELS"];
-  const SPECIES = __m21["SPECIES"];
-  const SPECIES_LABELS = __m21["SPECIES_LABELS"];
-  const buildAdoptRequest = __m21["buildAdoptRequest"];
-  const careMeters = __m21["careMeters"];
-  const extractPetId = __m21["extractPetId"];
-  const habitatView = __m21["habitatView"];
-  const petFromCareResponse = __m21["petFromCareResponse"];
-  const readEnvelope = __m21["readEnvelope"];
+  const CARE_ACTIONS = __m22["CARE_ACTIONS"];
+  const CARE_LABELS = __m22["CARE_LABELS"];
+  const MODES = __m22["MODES"];
+  const MODE_LABELS = __m22["MODE_LABELS"];
+  const SPECIES = __m22["SPECIES"];
+  const SPECIES_LABELS = __m22["SPECIES_LABELS"];
+  const buildAdoptRequest = __m22["buildAdoptRequest"];
+  const careMeters = __m22["careMeters"];
+  const extractPetId = __m22["extractPetId"];
+  const habitatView = __m22["habitatView"];
+  const petFromCareResponse = __m22["petFromCareResponse"];
+  const readEnvelope = __m22["readEnvelope"];
 
 const HABITAT_PLACEHOLDER = Object.freeze({
   name: "Not named yet",
@@ -7500,7 +7561,7 @@ function HabitatTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/leaderboard.js
-const __m23 = (function () {
+const __m24 = (function () {
 /**
  * Pure ranking and bounty presentation helpers for the Desktop Leaderboard tab.
  * No React, no network.
@@ -7639,18 +7700,18 @@ function mergeBountyClaim(bounties, bountyId, claim = {}) {
 })();
 
 // desktop/src/ui/tabs/LeaderboardTab.js
-const __m24 = (function () {
+const __m25 = (function () {
   const useEffect = __ext2;
   const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m6["NpcHostBanner"];
-  const bountyRows = __m23["bountyRows"];
-  const leaderboardRows = __m23["leaderboardRows"];
-  const mergeBountyClaim = __m23["mergeBountyClaim"];
-  const normalizeLeaderboard = __m23["normalizeLeaderboard"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const bountyRows = __m24["bountyRows"];
+  const leaderboardRows = __m24["leaderboardRows"];
+  const mergeBountyClaim = __m24["mergeBountyClaim"];
+  const normalizeLeaderboard = __m24["normalizeLeaderboard"];
 
 function envelopeMessage(envelope) {
   if (!envelope) return "The bridge did not return a response.";
@@ -7980,7 +8041,7 @@ function LeaderboardTab(props = {}) {
 })();
 
 // desktop/src/ui/logic/session.js
-const __m25 = (function () {
+const __m26 = (function () {
 /**
  * Pure pairing/session view-model helpers.
  *
@@ -8371,7 +8432,7 @@ const createPairingViewModel = buildPairingViewModel;
 })();
 
 // desktop/src/ui/tabs/SettingsTab.js
-const __m26 = (function () {
+const __m27 = (function () {
   const useCallback = __ext5;
   const useEffect = __ext2;
   const useState = __ext3;
@@ -8379,21 +8440,21 @@ const __m26 = (function () {
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m6["NpcHostBanner"];
-  const connectionRows = __m8["connectionRows"];
-  const deriveConnectionStatus = __m8["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m8["resolveConnectionUiState"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const connectionRows = __m9["connectionRows"];
+  const deriveConnectionStatus = __m9["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m9["resolveConnectionUiState"];
   const CHAT_SETTINGS_PATH = __m2["CHAT_SETTINGS_PATH"];
   const chatEnabledFromEnvelope = __m2["chatEnabledFromEnvelope"];
   const updateChatSetting = __m2["updateChatSetting"];
-  const PAIRING_STATES = __m25["PAIRING_STATES"];
-  const SIGNUP_ERROR_MESSAGES = __m25["SIGNUP_ERROR_MESSAGES"];
-  const deviceRowsFromEnvelope = __m25["deviceRowsFromEnvelope"];
-  const emptyPairingState = __m25["emptyPairingState"];
-  const formatCountdown = __m25["formatCountdown"];
-  const pairingStateFromPoll = __m25["pairingStateFromPoll"];
-  const pairingStateFromStart = __m25["pairingStateFromStart"];
-  const secondsRemaining = __m25["secondsRemaining"];
+  const PAIRING_STATES = __m26["PAIRING_STATES"];
+  const SIGNUP_ERROR_MESSAGES = __m26["SIGNUP_ERROR_MESSAGES"];
+  const deviceRowsFromEnvelope = __m26["deviceRowsFromEnvelope"];
+  const emptyPairingState = __m26["emptyPairingState"];
+  const formatCountdown = __m26["formatCountdown"];
+  const pairingStateFromPoll = __m26["pairingStateFromPoll"];
+  const pairingStateFromStart = __m26["pairingStateFromStart"];
+  const secondsRemaining = __m26["secondsRemaining"];
 
 const SETTINGS_PLACEHOLDER = Object.freeze([
   { key: "backend", label: "Python backend", value: "Disabled" },
@@ -9099,25 +9160,25 @@ function SettingsTab(props = {}) {
 })();
 
 // desktop/src/ui/tabs/ShopTab.js
-const __m27 = (function () {
+const __m28 = (function () {
   const useEffect = __ext2;
   const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const NpcHostBanner = __m6["NpcHostBanner"];
-  const useAuthedAssetUrl = __m5["useAuthedAssetUrl"];
-  const PetPreview = __m13["PetPreview"];
-  const extractPetId = __m21["extractPetId"];
-  const compareItemsByPrice = __m10["compareItemsByPrice"];
-  const groupCatalogBySlot = __m10["groupCatalogBySlot"];
-  const itemAvailability = __m10["itemAvailability"];
-  const itemThumbUrl = __m10["itemThumbUrl"];
-  const manifestFromCatalog = __m10["manifestFromCatalog"];
-  const normaliseWallet = __m10["normaliseWallet"];
-  const RARITY_LABELS = __m10["RARITY_LABELS"];
-  const readEnvelope = __m10["readEnvelope"];
+  const NpcHostBanner = __m7["NpcHostBanner"];
+  const useAuthedAssetUrl = __m6["useAuthedAssetUrl"];
+  const PetPreview = __m14["PetPreview"];
+  const extractPetId = __m22["extractPetId"];
+  const compareItemsByPrice = __m11["compareItemsByPrice"];
+  const groupCatalogBySlot = __m11["groupCatalogBySlot"];
+  const itemAvailability = __m11["itemAvailability"];
+  const itemThumbUrl = __m11["itemThumbUrl"];
+  const manifestFromCatalog = __m11["manifestFromCatalog"];
+  const normaliseWallet = __m11["normaliseWallet"];
+  const RARITY_LABELS = __m11["RARITY_LABELS"];
+  const readEnvelope = __m11["readEnvelope"];
 
 const SLOT_MARKS = Object.freeze({
   head: "HAT",
@@ -9807,7 +9868,7 @@ function ShopTab(props = {}) {
 })();
 
 // desktop/src/ui/wordmark.js
-const __m28 = (function () {
+const __m29 = (function () {
 // Generated by scripts/make_wordmark.py — do not edit by hand.
 const WORDMARK_WIDTH = 207;
 const WORDMARK_HEIGHT = 33;
@@ -9818,32 +9879,32 @@ const WORDMARK_SRC_2X = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZ4AAABCC
 })();
 
 // desktop/src/ui/pane.js
-const __m29 = (function () {
+const __m30 = (function () {
   const useEffect = __ext2;
   const useRef = __ext4;
   const useState = __ext3;
   const jsx = __ext0;
   const jsxs = __ext1;
-  const LobbyRail = __m7["LobbyRail"];
-  const deriveConnectionStatus = __m8["deriveConnectionStatus"];
-  const resolveConnectionUiState = __m8["resolveConnectionUiState"];
+  const LobbyRail = __m8["LobbyRail"];
+  const deriveConnectionStatus = __m9["deriveConnectionStatus"];
+  const resolveConnectionUiState = __m9["resolveConnectionUiState"];
   const LOBBY_RAIL_COLLAPSED_KEY = __m2["LOBBY_RAIL_COLLAPSED_KEY"];
   const LOBBY_RAIL_WIDTH_KEY = __m2["LOBBY_RAIL_WIDTH_KEY"];
   const clampLobbyRailWidth = __m2["clampLobbyRailWidth"];
   const defaultLobbyRailWidth = __m2["defaultLobbyRailWidth"];
   const lobbyRailAutoCollapsed = __m2["lobbyRailAutoCollapsed"];
-  const BattleTab = __m16["BattleTab"];
-  const ChatTab = __m19["ChatTab"];
-  const HabitatTab = __m22["HabitatTab"];
-  const LeaderboardTab = __m24["LeaderboardTab"];
-  const SettingsTab = __m26["SettingsTab"];
-  const ShopTab = __m27["ShopTab"];
+  const BattleTab = __m17["BattleTab"];
+  const ChatTab = __m20["ChatTab"];
+  const HabitatTab = __m23["HabitatTab"];
+  const LeaderboardTab = __m25["LeaderboardTab"];
+  const SettingsTab = __m27["SettingsTab"];
+  const ShopTab = __m28["ShopTab"];
   const StateNotice = __m1["StateNotice"];
   const UI_STATES = __m1["UI_STATES"];
-  const WORDMARK_HEIGHT = __m28["WORDMARK_HEIGHT"];
-  const WORDMARK_SRC = __m28["WORDMARK_SRC"];
-  const WORDMARK_SRC_2X = __m28["WORDMARK_SRC_2X"];
-  const WORDMARK_WIDTH = __m28["WORDMARK_WIDTH"];
+  const WORDMARK_HEIGHT = __m29["WORDMARK_HEIGHT"];
+  const WORDMARK_SRC = __m29["WORDMARK_SRC"];
+  const WORDMARK_SRC_2X = __m29["WORDMARK_SRC_2X"];
+  const WORDMARK_WIDTH = __m29["WORDMARK_WIDTH"];
 
 const TAB_IDS = Object.freeze(["habitat", "battle", "shop", "leaderboard", "chat", "settings"]);
 
@@ -10217,13 +10278,18 @@ function HermagotchiPane(props = {}) {
 })();
 
 // desktop/src/ui/api.js
-const __m30 = (function () {
+const __m31 = (function () {
+  const hermesHostAuthHeaders = __m4["hermesHostAuthHeaders"];
+
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
- * The browser/Desktop layer never sees a session token. Every call goes to the
- * local Hermes bridge, which adds the Bearer header server-side. All methods
- * resolve to the bridge envelope and never reject.
+ * The browser/Desktop layer never sees the *game* session token. Every call
+ * goes to the local Hermes bridge, which adds the Bearer header server-side.
+ * On the Hermes webapp the host still gates `/api/plugins/...` with
+ * `X-Hermes-Session-Token` (launch-link grant in sessionStorage); we attach
+ * that host header when present. All methods resolve to the bridge envelope
+ * and never reject.
  */
 
 const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
@@ -10387,14 +10453,18 @@ function createApiClient(options) {
     if (typeof fetchImpl !== "function") {
       return offlineEnvelope();
     }
-    const headers = {};
+    const headers = Object.assign({}, hermesHostAuthHeaders());
     if (opts.hasBody) {
       headers["Content-Type"] = "application/json";
     }
     if (opts.idempotencyKey) {
       headers["Idempotency-Key"] = opts.idempotencyKey;
     }
-    const init = { method: method, headers: headers };
+    const init = {
+      method: method,
+      headers: headers,
+      credentials: "same-origin",
+    };
     if (opts.hasBody) {
       init.body = JSON.stringify(
         opts.body === undefined || opts.body === null ? {} : opts.body
@@ -10613,10 +10683,10 @@ function uiStateFromEnvelope(envelope) {
 })();
 
 // desktop/src/ui/register.js
-const __m31 = (function () {
+const __m32 = (function () {
   const jsx = __ext0;
-  const HermagotchiPane = __m29["HermagotchiPane"];
-  const createApiClient = __m30["createApiClient"];
+  const HermagotchiPane = __m30["HermagotchiPane"];
+  const createApiClient = __m31["createApiClient"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
@@ -10657,13 +10727,13 @@ function createDesktopPlugin() {
 })();
 
 // desktop/src/ui/index.js
-const __m32 = (function () {
+const __m33 = (function () {
 
 
 
 
 
-  return { "HermagotchiPane": __m29["HermagotchiPane"], "TAB_IDS": __m29["TAB_IDS"], "TAB_LABELS": __m29["TAB_LABELS"], "TAB_COMPONENTS": __m29["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m31["PANE_ID"], "PANE_TITLE": __m31["PANE_TITLE"], "createPaneContribution": __m31["createPaneContribution"], "registerHermagotchiPane": __m31["registerHermagotchiPane"], "createDesktopPlugin": __m31["createDesktopPlugin"], "HabitatTab": __m22["HabitatTab"], "HABITAT_PLACEHOLDER": __m22["HABITAT_PLACEHOLDER"], "BattleTab": __m16["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m16["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m27["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m27["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m24["LeaderboardTab"], "ChatTab": __m19["ChatTab"], "SettingsTab": __m26["SettingsTab"], "SETTINGS_PLACEHOLDER": __m26["SETTINGS_PLACEHOLDER"], "CareMeter": __m20["CareMeter"], "NpcHostBanner": __m6["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
+  return { "HermagotchiPane": __m30["HermagotchiPane"], "TAB_IDS": __m30["TAB_IDS"], "TAB_LABELS": __m30["TAB_LABELS"], "TAB_COMPONENTS": __m30["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m32["PANE_ID"], "PANE_TITLE": __m32["PANE_TITLE"], "createPaneContribution": __m32["createPaneContribution"], "registerHermagotchiPane": __m32["registerHermagotchiPane"], "createDesktopPlugin": __m32["createDesktopPlugin"], "HabitatTab": __m23["HabitatTab"], "HABITAT_PLACEHOLDER": __m23["HABITAT_PLACEHOLDER"], "BattleTab": __m17["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m17["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m28["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m28["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m25["LeaderboardTab"], "ChatTab": __m20["ChatTab"], "SettingsTab": __m27["SettingsTab"], "SETTINGS_PLACEHOLDER": __m27["SETTINGS_PLACEHOLDER"], "CareMeter": __m21["CareMeter"], "NpcHostBanner": __m7["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
@@ -10682,8 +10752,8 @@ function injectHermagotchiStyles() {
   return true;
 }
 
-const __hgCreatePlugin = __m32["createDesktopPlugin"];
-const __hgRegisterPane = __m32["registerHermagotchiPane"];
+const __hgCreatePlugin = __m33["createDesktopPlugin"];
+const __hgRegisterPane = __m33["registerHermagotchiPane"];
 const __hgPlugin = typeof __hgCreatePlugin === "function"
   ? __hgCreatePlugin()
   : { id: "hermagotchi", name: "Hermagotchi", defaultEnabled: false, register: __hgRegisterPane };
@@ -10701,34 +10771,34 @@ export function register(ctx) {
 
 __hgPlugin.register = register;
 
-export const BattleTab = __m32["BattleTab"];
-export const CHALLENGE_INBOX_PLACEHOLDER = __m32["CHALLENGE_INBOX_PLACEHOLDER"];
-export const CareMeter = __m32["CareMeter"];
-export const ChatTab = __m32["ChatTab"];
-export const HABITAT_PLACEHOLDER = __m32["HABITAT_PLACEHOLDER"];
-export const HabitatTab = __m32["HabitatTab"];
-export const HermagotchiPane = __m32["HermagotchiPane"];
-export const LeaderboardTab = __m32["LeaderboardTab"];
-export const NPC_HOST_DEFAULTS = __m32["NPC_HOST_DEFAULTS"];
-export const NPC_NAMES = __m32["NPC_NAMES"];
-export const NpcHostBanner = __m32["NpcHostBanner"];
-export const PANE_ID = __m32["PANE_ID"];
-export const PANE_TITLE = __m32["PANE_TITLE"];
-export const SETTINGS_PLACEHOLDER = __m32["SETTINGS_PLACEHOLDER"];
-export const SHOP_PLACEHOLDER_ITEMS = __m32["SHOP_PLACEHOLDER_ITEMS"];
-export const SettingsTab = __m32["SettingsTab"];
-export const ShopTab = __m32["ShopTab"];
-export const StateNotice = __m32["StateNotice"];
-export const TAB_COMPONENTS = __m32["TAB_COMPONENTS"];
-export const TAB_IDS = __m32["TAB_IDS"];
-export const TAB_LABELS = __m32["TAB_LABELS"];
-export const UI_STATES = __m32["UI_STATES"];
-export const UI_STATE_COPY = __m32["UI_STATE_COPY"];
-export const createDesktopPlugin = __m32["createDesktopPlugin"];
-export const createPaneContribution = __m32["createPaneContribution"];
-export const npcHostLine = __m32["npcHostLine"];
-export const registerHermagotchiPane = __m32["registerHermagotchiPane"];
-export const resolveUiState = __m32["resolveUiState"];
+export const BattleTab = __m33["BattleTab"];
+export const CHALLENGE_INBOX_PLACEHOLDER = __m33["CHALLENGE_INBOX_PLACEHOLDER"];
+export const CareMeter = __m33["CareMeter"];
+export const ChatTab = __m33["ChatTab"];
+export const HABITAT_PLACEHOLDER = __m33["HABITAT_PLACEHOLDER"];
+export const HabitatTab = __m33["HabitatTab"];
+export const HermagotchiPane = __m33["HermagotchiPane"];
+export const LeaderboardTab = __m33["LeaderboardTab"];
+export const NPC_HOST_DEFAULTS = __m33["NPC_HOST_DEFAULTS"];
+export const NPC_NAMES = __m33["NPC_NAMES"];
+export const NpcHostBanner = __m33["NpcHostBanner"];
+export const PANE_ID = __m33["PANE_ID"];
+export const PANE_TITLE = __m33["PANE_TITLE"];
+export const SETTINGS_PLACEHOLDER = __m33["SETTINGS_PLACEHOLDER"];
+export const SHOP_PLACEHOLDER_ITEMS = __m33["SHOP_PLACEHOLDER_ITEMS"];
+export const SettingsTab = __m33["SettingsTab"];
+export const ShopTab = __m33["ShopTab"];
+export const StateNotice = __m33["StateNotice"];
+export const TAB_COMPONENTS = __m33["TAB_COMPONENTS"];
+export const TAB_IDS = __m33["TAB_IDS"];
+export const TAB_LABELS = __m33["TAB_LABELS"];
+export const UI_STATES = __m33["UI_STATES"];
+export const UI_STATE_COPY = __m33["UI_STATE_COPY"];
+export const createDesktopPlugin = __m33["createDesktopPlugin"];
+export const createPaneContribution = __m33["createPaneContribution"];
+export const npcHostLine = __m33["npcHostLine"];
+export const registerHermagotchiPane = __m33["registerHermagotchiPane"];
+export const resolveUiState = __m33["resolveUiState"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;

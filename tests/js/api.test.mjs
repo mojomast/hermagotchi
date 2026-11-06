@@ -197,3 +197,34 @@ test("uiStateFromEnvelope maps bridge failures onto existing UI states", () => {
     "service_unavailable"
   );
 });
+
+test("createApiClient attaches Hermes webapp host session header when present", async () => {
+  const previous = globalThis.sessionStorage;
+  const store = new Map([
+    ['hermes.webapp.session.v1:["http://127.0.0.1:9120",""]', "tok_host"],
+  ]);
+  Object.defineProperty(globalThis, "sessionStorage", {
+    configurable: true,
+    value: {
+      get length() { return store.size; },
+      key(i) { return [...store.keys()][i] ?? null; },
+      getItem(k) { return store.has(k) ? store.get(k) : null; },
+    },
+  });
+  try {
+    const rec = recorder({ ok: true });
+    const client = createApiClient({ fetchImpl: rec.fetchImpl });
+    await client.health();
+    assert.equal(rec.calls[0].init.headers["X-Hermes-Session-Token"], "tok_host");
+    assert.equal(rec.calls[0].init.credentials, "same-origin");
+  } finally {
+    if (previous === undefined) {
+      delete globalThis.sessionStorage;
+    } else {
+      Object.defineProperty(globalThis, "sessionStorage", {
+        configurable: true,
+        value: previous,
+      });
+    }
+  }
+});
