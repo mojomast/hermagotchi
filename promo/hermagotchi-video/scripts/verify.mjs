@@ -17,7 +17,7 @@ for(const pet of cast){
 }
 const expected=['SHOT_PANE_HOME.png','CLIP_SHOP_GRID.mp4','CLIP_BATTLE_LIVE.mp4','SHOT_BATTLE_RESULT.png','SHOT_LEADERBOARD.png','SHOT_CHAT.png','VO_MAIN.wav','MUSIC_BED.wav','TEXT_CTA.json'];
 for(const f of expected)assert.ok(fs.statSync('slots/'+f).size>0);
-assert.ok(copy.items['hat.binary_crown'].price===2000);
+assert.ok(copy.items['hat.binary_crown'].price===25000);
 const previews=fs.readdirSync('previews');
 assert.ok(previews.includes('hermagotchi-draft-720p.mp4'),'Render the draft first');
 assert.equal(previews.filter(f=>f.endsWith('.png')).length,8);

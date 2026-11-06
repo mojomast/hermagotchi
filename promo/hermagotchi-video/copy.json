@@ -16,7 +16,7 @@
     "title": "PET FORECAST",
     "kicker": "10 SPECIES. STRONG PERSONALITIES.",
     "lower": "A NEW COMPANION IS MOVING IN.",
-    "note": "ALL TEN SPECIES · TONIGHT'S LINEUP",
+    "note": "ALL TEN SPECIES \u00b7 TONIGHT'S LINEUP",
     "regions": [
       "CACHE COAST",
       "STACK VALLEY",
@@ -50,12 +50,12 @@
       "ENERGY / REST"
     ],
     "stats": [
-      "PRACTICE · 50 BITS × 3 / DAY",
+      "PRACTICE \u00b7 50 BITS \u00d7 3 / DAY",
       "WEEKLY TRAINING CAP"
     ],
     "label": "HOME MOVIES / HABITAT PANE",
     "date": "NOV. 06 1996",
-    "battery": "BATTERY ▰▰▰"
+    "battery": "BATTERY \u25b0\u25b0\u25b0"
   },
   "shop": {
     "title": "DON PIEDRO'S",
@@ -67,7 +67,7 @@
     "loadout": "MANIFEST-FITTED MAKEOVER",
     "priceUnit": "BITS",
     "priceNote": "LEGENDARY / BINARY CROWN",
-    "ticker": "HATS  •  FACE  •  BACK  •  FRONT  •  AURAS  •  EMOTES  •  HABITATS  •  TITLES  •  LEGENDARIES 12K–25K  •  FOUR MYTHICS ~50K",
+    "ticker": "HATS  \u2022  FACE  \u2022  BACK  \u2022  FRONT  \u2022  AURAS  \u2022  EMOTES  \u2022  HABITATS  \u2022  TITLES  \u2022  LEGENDARIES 12K\u201325K  \u2022  FOUR MYTHICS ~50K",
     "host": "DON PIEDRO / SHOPKEEPER"
   },
   "arena": {
@@ -75,13 +75,13 @@
     "kicker": "THE TALE OF THE TAPE",
     "versus": "VS",
     "round": "EXHIBITION BOUT",
-    "replay": "INSTANT REPLAY / ¼ SPEED",
+    "replay": "INSTANT REPLAY / \u00bc SPEED",
     "telestrator": "WATCH THE COUNTER!",
     "ko": "K.O.",
     "koNote": "ILLUSTRATED FINISH",
     "hp": "HP",
-    "ticker": "DETERMINISTIC BATTLES  •  REPLAYS  •  TACTICS  •  PRACTICE PAYS 50 BITS  •  PRACTICE DOES NOT CHANGE RATING",
-    "status": "CASUAL RATED · hermagotchi.rizz.click",
+    "ticker": "DETERMINISTIC BATTLES  \u2022  REPLAYS  \u2022  TACTICS  \u2022  PRACTICE PAYS 50 BITS  \u2022  PRACTICE DOES NOT CHANGE RATING",
+    "status": "CASUAL RATED \u00b7 hermagotchi.rizz.click",
     "host": "SOUTHPAW / RINGSIDE"
   },
   "lobby": {
@@ -94,12 +94,13 @@
       "CALLER 03 / PRACTICE FIRST. THEN RATED."
     ],
     "standings": "TONIGHT'S STANDINGS",
-    "ticker": "LEADERBOARD + RATINGS  •  CHAT IS OPT-IN  •  LOCAL-FIRST  •  hermagotchi.rizz.click",
+    "ticker": "LEADERBOARD + RATINGS  \u2022  CHAT IS OPT-IN  \u2022  LOCAL-FIRST  \u2022  hermagotchi.rizz.click",
     "tip": "TEKNIUM / PRACTICE TIP",
     "host": "NOUS GIRL / YOUR HOST",
     "rows": [
-      "01  FIREWYRM     1023",
-      "02  PATCHFOX      977"
+      "01  MOLTCORE     1187",
+      "02  GLITCHFOX    1117",
+      "03  NULLRUNNER  1098"
     ]
   },
   "how": {
@@ -128,11 +129,11 @@
   "slots": {
     "SHOT_PANE_HOME": {
       "label": "HABITAT",
-      "detail": "CARE · FEED · TRAIN"
+      "detail": "CARE \u00b7 FEED \u00b7 TRAIN"
     },
     "CLIP_SHOP_GRID": {
       "label": "THE DRIP",
-      "detail": "BUY · EQUIP · FLEX"
+      "detail": "BUY \u00b7 EQUIP \u00b7 FLEX"
     },
     "CLIP_BATTLE_LIVE": {
       "label": "LIVE MATCH",
@@ -148,7 +149,7 @@
     },
     "SHOT_CHAT": {
       "label": "LOBBY CHAT",
-      "detail": "OPT-IN · BE COOL"
+      "detail": "OPT-IN \u00b7 BE COOL"
     }
   },
   "npcs": {
