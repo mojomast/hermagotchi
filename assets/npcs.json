@@ -1,0 +1,158 @@
+{
+  "schema": "hermagotchi-npcs-v1",
+  "asset_pack_id": "launch-003",
+  "npcs": [
+    {
+      "id": "npc.don_piedro",
+      "name": "Don Piedro",
+      "role": "Cosmetics shopkeeper. Carries a big spoon and is Hermes' #1 fan.",
+      "ui_surface": "shop",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/don_piedro_portrait.png",
+        "sha256": "76b73b8244c2ff90212c92ff269920cefdc5e817fb767f1de52314abbdf46314",
+        "native": [
+          32,
+          32
+        ],
+        "factor": 16
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/don_piedro_idle_0.png",
+            "sha256": "d7fb317c7187299f2e326e40cfc7bd33c9a900812832acbf5f2e3c98560d6a6e"
+          },
+          {
+            "path": "px3/npcs/don_piedro_idle_1.png",
+            "sha256": "2c6c9c1bce929544d10e4fa17bcb6a60a64460c04ad6d19f341b5685fb679f50"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "Fresh hats! Still warm from the forge... I mean the oven.",
+        "Every pet deserves a crown. Some deserve two.",
+        "Hermes shops here. Probably. In spirit.",
+        "No refunds, but I'll stir your Bits with my lucky spoon.",
+        "That scarf? It's you. It's absolutely you."
+      ],
+      "source": "source/px3_npc_don_piedro_v1.jpg",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    },
+    {
+      "id": "npc.nous_girl",
+      "name": "Nous Girl",
+      "role": "Lobby and chat host who posts moderation notices. Carries an audio cable.",
+      "ui_surface": "lobby",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/nous_girl_portrait.png",
+        "sha256": "eedab6e5e87e35d29f1a113f9e53e38ebde0bb8ccb292215a4d5a38e65288e81",
+        "native": [
+          32,
+          32
+        ],
+        "factor": 16
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/nous_girl_idle_0.png",
+            "sha256": "217fd0433f7ecec2d8fc273610e169094880ad167efbfedaf8871f96f63872dc"
+          },
+          {
+            "path": "px3/npcs/nous_girl_idle_1.png",
+            "sha256": "d58d4e69676145a73ad390332f8a657270b85dde5747d0ac5b205b1951772cdd"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "Plugged in! Lobby's live.",
+        "Keep it friendly. Cable's long, patience is short.",
+        "Heads up: that message got muted. Be kind, try again.",
+        "New challenger in the lobby. Say hi!",
+        "Signal clear. Chat on."
+      ],
+      "source": "source/px3_npc_nous_girl_v1.jpg",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    },
+    {
+      "id": "npc.teknium",
+      "name": "Teknium",
+      "role": "Trainer for bot practice who explains combat rules. Carries an energy blade.",
+      "ui_surface": "practice",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/teknium_portrait.png",
+        "sha256": "9337d3c28c302101e2737e7bbeb79a9d1505d60dfab9a8c1986e4e71c83e3bce",
+        "native": [
+          32,
+          32
+        ],
+        "factor": 16
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/teknium_idle_0.png",
+            "sha256": "1233dbf4db7acbd0b3f1fa7c5cdad77be232c6f9a0fa65112346bafb232485d9"
+          },
+          {
+            "path": "px3/npcs/teknium_idle_1.png",
+            "sha256": "55263ddb7056ff0199eb3bb5515bde44bbfaab51b80070264b1f364781997ac1"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "Practice bouts don't touch your rating. Swing freely.",
+        "Six rounds, one pet each. Read the cooldowns.",
+        "Your agent picks the move. You pick the policy.",
+        "Blade's charged. Let's run another seed.",
+        "Status effects stack less than you think. Test it."
+      ],
+      "source": "source/px3_npc_teknium_v1.jpg",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    },
+    {
+      "id": "npc.turbofit",
+      "name": "Turbofit",
+      "role": "Arena announcer for the leaderboard and bounties. Carries an axe-shaped guitar.",
+      "ui_surface": "leaderboard",
+      "playable": false,
+      "portrait": {
+        "path": "px3/npcs/turbofit_portrait.png",
+        "sha256": "2da4b3c1e1d7cd740fdc440acf2cf14cb297a043e14a9e9082cf437143232243",
+        "native": [
+          32,
+          32
+        ],
+        "factor": 16
+      },
+      "idle": {
+        "frames": [
+          {
+            "path": "px3/npcs/turbofit_idle_0.png",
+            "sha256": "ba643fd818a6d4951418283c68522b08d5c6b9119112b322163621e2ffef491c"
+          },
+          {
+            "path": "px3/npcs/turbofit_idle_1.png",
+            "sha256": "8eb1e090c69e5b3cb72488da7225b1460ffabac6c7ea1799fa7b87d75cf85a35"
+          }
+        ],
+        "frame_ms": 500
+      },
+      "flavor_lines": [
+        "LADIES, GENTS AND AGENTS... the leaderboard!",
+        "New bounty dropped. Shred it before it expires!",
+        "That win streak? Pure distortion.",
+        "Top of the board gets the loudest riff.",
+        "Encore! Season standings updated."
+      ],
+      "source": "source/px3_npc_turbofit_v1.jpg",
+      "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
+    }
+  ]
+}

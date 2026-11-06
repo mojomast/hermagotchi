@@ -24,3 +24,12 @@ Short notes on the practices this pipeline uses and why.
 - **Palette variants by colour-index swap.** We build a LUT over the sprite's unique colours. Protected entries never change: the outline, low-saturation and dark colours (eye blacks, whites, creams, Patchfox's patch, Byteblob's screen belly) and Nullgeist's cyan eye ramp. This fixes the launch-001 problem where eyes and the patch shifted hue.
 - **Occlusion.** Patchfox gets an ear-tip overlay at z=35, drawn only when a head item is equipped, so hats sit between the ears instead of covering them.
 - **Consistency.** Each pixel regeneration passed the matching approved launch-001 image as a reference, so concepts and proportions carry over between packs.
+
+## launch-003: low-res handheld pixel art (32×32 native)
+
+- **All new generations.** No launch-001 or launch-002 image was used as a reference or a conversion source. Prompts ask for an "8-bit handheld console pixel art sprite, about 32x32 pixels, huge visible square pixels, 1-pixel black outline, 4–6 colours, flat background".
+- **Palette-first mode downscale (`scripts/asset_px3.py`).** At 32px, box-averaging smeared small accents such as eyes, chest patches and antenna tips, and octree quantization then dropped them. So we quantize the full-resolution source to 8–12 flat colours first (3–5 for items). Each native cell then takes the most common colour among its source pixels. Alpha is binary (a cell is opaque if it is more than 50% covered), every dark colour becomes the shared outline #100e1c, and the silhouette gets a 1px 4-connected outline. Nearest-neighbour upscale ×16.
+- **Safe region.** At a factor of 16, the contract's safe box (x 65..447, y 75..450) works out to native columns and rows 5..27. Bodies are 22–23 native px tall, so we drew larger cosmetics small and enlarge them at render time with the manifest `scale` field (for example auras at ×1.25).
+- **Hand cleanup.** A tiny per-species fixup table restores eye pixels lost at 32px: Patchfox's eye dots and Nullgeist's magenta X eye. Hand-fixing pixels like this is normal pixel-art practice.
+- **Markings.** These are drawn sparsely (2–8 native px) so they don't turn into noise.
+- **NPCs.** Generated on a magenta background, because Teknium has green hair. We key on magenta dominance, then run the same mode downscale: a 32×32 portrait and a 20px bust with a 2-frame idle bob.

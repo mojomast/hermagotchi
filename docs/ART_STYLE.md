@@ -13,3 +13,10 @@
 - Palettes: 20–24 colours per species, 6–12 per item. One shared outline #141a33. Binary alpha only. No dithering gradients.
 - Variants: colour-index swaps only. Eyes, whites and creams, Patchfox's patch, Byteblob's belly and Nullgeist's cyan eyes are protected.
 - Files: `assets/px/**`, `assets/manifest.launch-002.json`, `assets/art_ext.launch-002.json`, `scripts/asset_pixel*.py`. launch-001 is kept unchanged.
+
+## launch-003 (current): chunky low-res handheld pixel art
+- Native 32×32 grid, upscaled ×16 with nearest neighbour. Bodies are 22–23 px tall, with the baseline at native row 28. Attach point is at native (16,16).
+- 8–12 colours per species and 3–5 per item. One shared outline colour, #100e1c. Binary alpha. Flat 2–3 tone shading.
+- New designs: Byteblob is a boxy visor-face robot-slime. Patchfox is a standing fox with giant ears and a blue chest patch. Nullgeist is a hooded zigzag-hem ghost with mismatched eyes.
+- Palette variants are colour-index swaps. Eyes, the visor, Patchfox's patch and Nullgeist's cyan and X eyes are locked.
+- Files: `assets/px3/**`, `assets/manifest.launch-003.json`, `assets/art_ext.launch-003.json`, `assets/npcs.json`, `scripts/asset_px3*.py`.

@@ -1,0 +1,390 @@
+{
+  "schema_version": 1,
+  "asset_pack_id": "launch-003",
+  "notes": "launch-003: low-res handheld pixel art (native 32x32 grid, x16 nearest upscale, binary alpha, 8-12 colours/species, 3-5/item). All fresh Grok Bot built-in generations 2026-11-05; see assets/PROVENANCE.md and assets/art_ext.launch-003.json.",
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "baseline_y": 448
+  },
+  "rigs": {
+    "small_front_v1": {
+      "anchors": {
+        "head": [
+          0.5,
+          0.23
+        ],
+        "face": [
+          0.5,
+          0.42
+        ],
+        "back": [
+          0.5,
+          0.47
+        ],
+        "front": [
+          0.5,
+          0.66
+        ],
+        "ground": [
+          0.5,
+          0.88
+        ]
+      }
+    }
+  },
+  "species": {
+    "byteblob": {
+      "rig": "small_front_v1",
+      "base": "px3/species/byteblob_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.3438
+        ],
+        "face": [
+          0.5,
+          0.5
+        ],
+        "back": [
+          0.5,
+          0.5312
+        ],
+        "front": [
+          0.5,
+          0.7188
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "face": [
+          "visor"
+        ],
+        "antenna": [
+          "bent"
+        ]
+      }
+    },
+    "patchfox": {
+      "rig": "small_front_v1",
+      "base": "px3/species/patchfox_body.png",
+      "overrides": {
+        "head": [
+          0.4688,
+          0.3438
+        ],
+        "face": [
+          0.4688,
+          0.4688
+        ],
+        "back": [
+          0.4688,
+          0.625
+        ],
+        "front": [
+          0.4688,
+          0.5625
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "ear_type": [
+          "giant"
+        ],
+        "tail_type": [
+          "brush"
+        ]
+      }
+    },
+    "nullgeist": {
+      "rig": "small_front_v1",
+      "base": "px3/species/nullgeist_body.png",
+      "overrides": {
+        "head": [
+          0.5,
+          0.2812
+        ],
+        "face": [
+          0.5,
+          0.4062
+        ],
+        "back": [
+          0.5,
+          0.5
+        ],
+        "front": [
+          0.5,
+          0.5938
+        ],
+        "ground": [
+          0.5,
+          0.875
+        ]
+      },
+      "features": {
+        "marking": [
+          "none",
+          "freckles",
+          "stripes",
+          "spot"
+        ],
+        "hood": [
+          "pointed"
+        ],
+        "eye_style": [
+          "mismatched"
+        ]
+      }
+    }
+  },
+  "assets": [
+    {
+      "id": "hat.binary_crown",
+      "slot": "head",
+      "path": "px3/items/binary_crown.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "occludes": [
+        "ear_base"
+      ],
+      "notes": "Chunky gold crown with a red gem. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "05c557a503702c9e3b020a3e23625e13ec47125ba9efda9f7e9b8efc120cf9f1"
+    },
+    {
+      "id": "hat.propeller_beanie",
+      "slot": "head",
+      "path": "px3/items/propeller_beanie.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "occludes": [
+        "ear_base"
+      ],
+      "notes": "Red/yellow propeller cap. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "7e297ad722a3b2aef2d1f2f9bbf9fd7aa8d4205d59b4e1bce2796690d17a8e9c"
+    },
+    {
+      "id": "hat.syntax_wizard",
+      "slot": "head",
+      "path": "px3/items/syntax_wizard.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 30,
+      "anchor": "head",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "occludes": [
+        "ear_base"
+      ],
+      "notes": "Blue wizard hat with star dots. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "b7331b5a510eb6af8331f08775842b201c59e50fbc987240488f833a37582b86"
+    },
+    {
+      "id": "face.pixel_shades",
+      "slot": "face",
+      "path": "px3/items/pixel_shades.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Black shades with glints. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "6da1b562a836ac67401e1c41259c9a09d189e41453c44cee9cdcb3ef188b4913"
+    },
+    {
+      "id": "face.gold_monocle",
+      "slot": "face",
+      "path": "px3/items/gold_monocle.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 20,
+      "anchor": "face",
+      "offset_px": [
+        48,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Gold monocle on a stalk. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "93f85ab46785c804d231850240aa641a7b3894ac0deedbbd13237ab11ef34b84"
+    },
+    {
+      "id": "back.circuit_wings",
+      "slot": "back",
+      "path": "px3/items/circuit_wings.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Blocky cyan robot wings. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "cf99f6554c78e68ba31718924ee67a7b45052b3c317b65dbe358ac337f105e53"
+    },
+    {
+      "id": "back.tiny_jetpack",
+      "slot": "back",
+      "path": "px3/items/tiny_jetpack.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -10,
+      "anchor": "back",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Wide twin-tank jetpack. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "0c93796ba5543dea12b35172fdab8ffdc0bbf6b5e5ad97cf08e2728282c3601c"
+    },
+    {
+      "id": "aura.ember_halo",
+      "slot": "aura",
+      "path": "px3/items/ember_halo.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "face",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Magenta pixel flame ring. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "4a694b890a20e3eab3776e04df67d12ec8f2afa47a2998c51c6f0378bcae6eb7"
+    },
+    {
+      "id": "aura.data_orbit",
+      "slot": "aura",
+      "path": "px3/items/data_orbit.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -30,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.25,
+      "notes": "Orbit of yellow/orange data bits. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "4fa9b77f84a0fc7604ce1eea16642334523571b796fba5bdc4528b312e8aab50"
+    },
+    {
+      "id": "front.cozy_scarf",
+      "slot": "front",
+      "path": "px3/items/cozy_scarf.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 40,
+      "anchor": "front",
+      "offset_px": [
+        0,
+        0
+      ],
+      "scale": 1.0,
+      "notes": "Red striped scarf. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "f5735888e1b700b36aeb6909ac7818de069f537fd33b09d9a32a95fddfce9f32"
+    },
+    {
+      "id": "emote.heart_bubble",
+      "slot": "emote",
+      "path": "px3/items/heart_bubble.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 50,
+      "anchor": "head",
+      "offset_px": [
+        128,
+        -48
+      ],
+      "scale": 1.0,
+      "notes": "Heart speech-bubble emote. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "c98d3a5d539b15cdee710103f34f9224445b55a200889cf9cd65d4e759cc9e8f"
+    },
+    {
+      "id": "habitat.plush_cushion",
+      "slot": "habitat",
+      "path": "px3/items/plush_cushion.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": -20,
+      "anchor": "ground",
+      "offset_px": [
+        0,
+        -16
+      ],
+      "scale": 1.0,
+      "notes": "Mustard floor cushion. 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "0197b93f17eb3dd2fbf6fd11f27d3f1418b96a8a6e0585762e94efaed2996bd7"
+    },
+    {
+      "id": "title.royal_ribbon",
+      "slot": "title",
+      "path": "px3/items/royal_ribbon.png",
+      "rig_families": [
+        "small_front_v1"
+      ],
+      "z": 50,
+      "anchor": "ground",
+      "offset_px": [
+        0,
+        32
+      ],
+      "scale": 1.0,
+      "notes": "Blank purple ribbon (client draws text). 32-grid pixel layer; attach point at canvas (256,256); offsets are multiples of 16px.",
+      "sha256": "4b7acf2ccb85a7acf25a983b22abae022c89a64f047414e9d6bef6a4fdca75fe"
+    }
+  ]
+}

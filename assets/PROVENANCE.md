@@ -43,3 +43,22 @@ Same tool (Grok Bot built-in image generation) and the same rights note as above
 | px/items/cozy_scarf.png | source/px_item_scarf_v1.jpg |
 | px/items/pixel_shades.png, data_orbit.png, heart_bubble.png, plush_cushion.png, royal_ribbon.png | the launch-001 sources, pixel-converted (no new generation) |
 | px/palettes, px/markings, px/overlays | procedural |
+
+## launch-003 (low-res handheld pixel art), 2026-11-05
+Kyle asked: "i want them to be more pixelated. regenerate them entirely please in a different style". The tool and rights note are the same as above. All sources are new generations with no reference images, except the NPCs (below). Conversion is done by `scripts/asset_px3_build.py`. Generations: 3 species and 13 items.
+
+| Output | Source |
+|---|---|
+| px3/species/{byteblob,patchfox,nullgeist}_body.png | source/px3_{byteblob,patchfox,nullgeist}_v1.jpg |
+| px3/items/binary_crown, propeller_beanie, syntax_wizard, pixel_shades, gold_monocle, circuit_wings, tiny_jetpack, ember_halo, data_orbit, cozy_scarf, heart_bubble, plush_cushion, royal_ribbon | source/px3_item_{crown,beanie,wizard,shades,monocle,wings,jetpack,aura_flame,aura_orbit,scarf,emote,cushion,ribbon}_v1.jpg |
+| px3/palettes, px3/markings, px3/overlays | procedural |
+
+### NPCs (launch-003)
+There are 4 generations. Each used Kyle's own Clawpocalypse portrait as a reference image (`/home/box/clawpocalypse-now/assets/heroes/portraits/{name}.png`, copied to a staging folder for the tool). Kyle requested these cameos. They are fictional game characters, and the flavor lines are playful and make no claims about any real person.
+
+| Output | Source |
+|---|---|
+| px3/npcs/don_piedro_portrait.png, don_piedro_idle_{0,1}.png | source/px3_npc_don_piedro_v1.jpg |
+| px3/npcs/nous_girl_* | source/px3_npc_nous_girl_v1.jpg |
+| px3/npcs/teknium_* | source/px3_npc_teknium_v1.jpg |
+| px3/npcs/turbofit_* | source/px3_npc_turbofit_v1.jpg |
