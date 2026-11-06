@@ -615,7 +615,11 @@ function main(argv = process.argv.slice(2)) {
 
   mkdirSync(path.dirname(outputFile), { recursive: true });
   writeFileSync(outputFile, output, "utf8");
+  const dashboardPane = path.join(root, "dashboard", "hermagotchi-pane.mjs");
+  mkdirSync(path.dirname(dashboardPane), { recursive: true });
+  writeFileSync(dashboardPane, output, "utf8");
   console.log(`wrote ${display}`);
+  console.log(`wrote ${relativeTo(root, dashboardPane)}`);
 }
 
 const invokedDirectly =
