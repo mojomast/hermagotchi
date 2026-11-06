@@ -1,4 +1,4 @@
-import {stripeBG,box,text,chrome,npc,lines,slot,ticker,cream,red,yellow,ease} from '../shared/draw.js';
+import {stripeBG,box,text,chrome,npc,lines,slot,ticker,cream,red,yellow,ease,lerpCrop} from '../shared/draw.js';
 import {pet} from '../shared/pets.js';
 export function draw(g,t,e){
   const c=e.copy.arena;stripeBG(g,'#281f30','#4b2032',-t*2);
@@ -23,7 +23,11 @@ export function draw(g,t,e){
       g.beginPath();g.moveTo(555,566);g.lineTo(760,526);g.lineTo(726,515);g.moveTo(760,526);g.lineTo(739,552);g.stroke();text(g,c.telestrator,654,915,36,yellow,'BroadcastMono','center');
     }
     if(ko){chrome(g,c.ko,654,650,190,'center');text(g,c.koNote,654,919,28,yellow,'BroadcastMono','center');}
-    slot(g,e,ko?'SHOT_BATTLE_RESULT':'CLIP_BATTLE_LIVE',1230,355,540,304);
+    // Zoom ~2.2× onto battle UI: result card → turn log / HP rows (onyx VO).
+    const battleCrop = ko
+      ? lerpCrop({sx:0.00,sy:0.10,sw:0.55,sh:0.55},{sx:0.00,sy:0.35,sw:0.58,sh:0.58}, Math.min(1,(t-15)/2.5))
+      : lerpCrop({sx:0.00,sy:0.08,sw:0.58,sh:0.52},{sx:0.00,sy:0.38,sw:0.62,sh:0.55}, Math.min(1,Math.max(0,(t-4)/8)));
+    slot(g,e,ko?'SHOT_BATTLE_RESULT':'CLIP_BATTLE_LIVE',1230,355,540,304,battleCrop);
     npc(g,e,'southpaw',1230,697,160);text(g,c.host,1407,726,30,yellow,'BroadcastMono');lines(g,e.copy.npcs.southpaw.quote,1407,771,365,36);
   }
   ticker(g,c.ticker,t);

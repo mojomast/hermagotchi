@@ -1,4 +1,4 @@
-import {stripeBG,box,text,chrome,npc,lines,star,slot,ticker,cream,ink,yellow,ease,image} from '../shared/draw.js';
+import {stripeBG,box,text,chrome,npc,lines,star,slot,ticker,cream,ink,yellow,ease,image,lerpCrop} from '../shared/draw.js';
 import {pet} from '../shared/pets.js';
 export function draw(g,t,e){
   const c=e.copy.shop;stripeBG(g,'#492451','#5b2d62',t);
@@ -29,7 +29,15 @@ export function draw(g,t,e){
     box(g,506,350,594,446,'#ecd6ad');box(g,802,350,5,446,'#722955');
     text(g,c.before,660,398,43,ink,'Broadcast','center');text(g,c.after,953,398,43,ink,'Broadcast','center');
     pet(g,e,0,526,440,256,t,{state:'happy',items:false});pet(g,e,0,815,440,256,t,{state:'happy'});
-    text(g,c.loadout,803,772,29,ink,'BroadcastMono','center');slot(g,e,'CLIP_SHOP_GRID',1150,423,600,338);
+    text(g,c.loadout,803,772,29,ink,'BroadcastMono','center');
+    // Film 42–46 uses source 12–16s; zoom from host/catalog into mythic prices (~2×).
+    const shopP=(t-12)/4;
+    const shopCrop=lerpCrop(
+      {sx:0.00,sy:0.08,sw:0.55,sh:0.55},
+      {sx:0.00,sy:0.42,sw:0.62,sh:0.55},
+      shopP
+    );
+    slot(g,e,'CLIP_SHOP_GRID',1150,423,600,338,shopCrop);
   }
   box(g,115,870,1680,93,yellow);text(g,c.call,955,939,63,ink,'Broadcast','center');ticker(g,c.ticker,t);
 }

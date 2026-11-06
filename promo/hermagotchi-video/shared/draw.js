@@ -41,7 +41,12 @@ export function title(g,headline,kicker,t,color=cream){
   const offset=Math.round((1-ease(t/0.65))*-130);
   text(g,headline,132+offset,235,92,color);text(g,kicker,137+offset,282,34,color,'BroadcastMono');
 }
-export function image(g,img,x,y,w,h){if(img)g.drawImage(img,Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+export function image(g,img,a,b,c,d,e,f,gw,gh){
+  if(!img)return;
+  if(e===undefined){g.drawImage(img,Math.round(a),Math.round(b),Math.round(c),Math.round(d));return;}
+  // sx,sy,sw,sh,dx,dy,dw,dh
+  g.drawImage(img,a,b,c,d,Math.round(e),Math.round(f),Math.round(gw),Math.round(gh));
+}
 export function bars(g){
   ['#d5d1be','#cebf3c','#4ab9b3','#46b257','#ba4d9a','#bc4b43','#4b55a6'].forEach((c,i)=>box(g,i*W/7,0,W/7+1,720,c));
   ['#4b55a6','#111','#ba4d9a','#111','#4ab9b3','#111','#d5d1be'].forEach((c,i)=>box(g,i*W/7,720,W/7+1,100,c));
@@ -50,10 +55,25 @@ export function bars(g){
 export function npc(g,env,name,x,y,size=256){
   box(g,x,y,size,size,'#e2c49c');image(g,env.images[`assets/px3/npcs/${name}_portrait.png`],x,y,size,size);
 }
-export function slot(g,env,id,x,y,w,h){
+/** Cover-draw a slot frame. Optional crop is {sx,sy,sw,sh} in 0–1 image fractions. */
+export function slot(g,env,id,x,y,w,h,crop){
   box(g,x-6,y-6,w+12,h+12,'#b9ae9a');box(g,x,y,w,h,'#161523');
-  const img=env.slotFrames[id];if(img){
+  const img=env.slotFrames[id];if(!img)return;
+  g.save();g.beginPath();g.rect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));g.clip();
+  g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+  if(crop&&crop.sw>0&&crop.sh>0){
+    const sx=clamp(crop.sx)*img.width,sy=clamp(crop.sy)*img.height;
+    const sw=Math.max(1,clamp(crop.sw)*img.width),sh=Math.max(1,clamp(crop.sh)*img.height);
+    const scale=Math.max(w/sw,h/sh);const dw=sw*scale,dh=sh*scale;
+    image(g,img,sx,sy,sw,sh,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
+  }else{
     const scale=Math.min(w/img.width,h/img.height);const iw=img.width*scale,ih=img.height*scale;
-    g.save();g.imageSmoothingEnabled=true;image(g,img,x+(w-iw)/2,y+(h-ih)/2,iw,ih);g.restore();
+    image(g,img,x+(w-iw)/2,y+(h-ih)/2,iw,ih);
   }
+  g.restore();
+}
+/** Lerp two fractional crops with the shared ease curve. */
+export function lerpCrop(a,b,p){
+  const e=ease(clamp(p));
+  return {sx:a.sx+(b.sx-a.sx)*e,sy:a.sy+(b.sy-a.sy)*e,sw:a.sw+(b.sw-a.sw)*e,sh:a.sh+(b.sh-a.sh)*e};
 }

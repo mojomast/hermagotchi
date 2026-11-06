@@ -5,7 +5,7 @@
   "width": 1920,
   "height": 1080,
   "duration": 92,
-  "voiceGain": 1,
+  "voiceGain": 0.92,
   "musicGain": 0.18,
-  "broadcastGain": 0.55
+  "broadcastGain": 0.28
 }
