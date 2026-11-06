@@ -10,22 +10,22 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/don_piedro_portrait.png",
-        "sha256": "76b73b8244c2ff90212c92ff269920cefdc5e817fb767f1de52314abbdf46314",
+        "sha256": "f28b0c912eb96f78e4465b9de2fb78213acaa0a30c71a62bbd5e6c41f33f97f7",
         "native": [
-          32,
-          32
+          48,
+          48
         ],
-        "factor": 16
+        "factor": 10
       },
       "idle": {
         "frames": [
           {
             "path": "px3/npcs/don_piedro_idle_0.png",
-            "sha256": "d7fb317c7187299f2e326e40cfc7bd33c9a900812832acbf5f2e3c98560d6a6e"
+            "sha256": "536e9e2dbaab1f35ef9dfebdc02c5ac3d60cd45fb5e314a87055bf4b638c0496"
           },
           {
             "path": "px3/npcs/don_piedro_idle_1.png",
-            "sha256": "2c6c9c1bce929544d10e4fa17bcb6a60a64460c04ad6d19f341b5685fb679f50"
+            "sha256": "976099ace55a5e590c5f24d38608d698decd507a0027c0a5684f796cc03efd23"
           }
         ],
         "frame_ms": 500
@@ -37,7 +37,8 @@
         "No refunds, but I'll stir your Bits with my lucky spoon.",
         "That scarf? It's you. It's absolutely you."
       ],
-      "source": "source/px3_npc_don_piedro_v1.jpg",
+      "source": "source/px3_npc_don_piedro_v3.jpg",
+      "reference": "Clawpocalypse title-screen cutout assets/cine/title/don_piedro.png (+ cinematic intro panel)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -48,22 +49,22 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/nous_girl_portrait.png",
-        "sha256": "eedab6e5e87e35d29f1a113f9e53e38ebde0bb8ccb292215a4d5a38e65288e81",
+        "sha256": "8618cdcffb4e3e6270f1c973343d2a966210159a48e3ba1df60ddb463930a5ba",
         "native": [
-          32,
-          32
+          48,
+          48
         ],
-        "factor": 16
+        "factor": 10
       },
       "idle": {
         "frames": [
           {
             "path": "px3/npcs/nous_girl_idle_0.png",
-            "sha256": "217fd0433f7ecec2d8fc273610e169094880ad167efbfedaf8871f96f63872dc"
+            "sha256": "ac082bd596cc5bafc5ca5964ce357904239b16a132f39b537903949d0040d1b5"
           },
           {
             "path": "px3/npcs/nous_girl_idle_1.png",
-            "sha256": "d58d4e69676145a73ad390332f8a657270b85dde5747d0ac5b205b1951772cdd"
+            "sha256": "3c9cfab0b0ccfa40166f3a7ad70fa7d958eeef6fc7d0d4c867481e926ad33173"
           }
         ],
         "frame_ms": 500
@@ -75,7 +76,8 @@
         "New challenger in the lobby. Say hi!",
         "Signal clear. Chat on."
       ],
-      "source": "source/px3_npc_nous_girl_v1.jpg",
+      "source": "source/px3_npc_nous_girl_v3.jpg",
+      "reference": "Clawpocalypse title-screen cutout assets/cine/title/nous_girl.png (+ cinematic intro panel)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -86,22 +88,22 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/teknium_portrait.png",
-        "sha256": "9337d3c28c302101e2737e7bbeb79a9d1505d60dfab9a8c1986e4e71c83e3bce",
+        "sha256": "2341cd527a88a19bdac439401babcc9ff9d235e3aafb974d553158641673f447",
         "native": [
-          32,
-          32
+          48,
+          48
         ],
-        "factor": 16
+        "factor": 10
       },
       "idle": {
         "frames": [
           {
             "path": "px3/npcs/teknium_idle_0.png",
-            "sha256": "1233dbf4db7acbd0b3f1fa7c5cdad77be232c6f9a0fa65112346bafb232485d9"
+            "sha256": "01c2b3d89afd81e47dcd4af2c9e4d868a51e988d2f5e7ea10af7acedb2735a2c"
           },
           {
             "path": "px3/npcs/teknium_idle_1.png",
-            "sha256": "55263ddb7056ff0199eb3bb5515bde44bbfaab51b80070264b1f364781997ac1"
+            "sha256": "6e60a136736ae15282f895c990734b25eeb18ff574945b8b2f908fdbc89a2cf3"
           }
         ],
         "frame_ms": 500
@@ -113,7 +115,8 @@
         "Blade's charged. Let's run another seed.",
         "Status effects stack less than you think. Test it."
       ],
-      "source": "source/px3_npc_teknium_v1.jpg",
+      "source": "source/px3_npc_teknium_v3.jpg",
+      "reference": "Clawpocalypse title-screen cutout assets/cine/title/teknium.png (+ cinematic intro panel)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     },
     {
@@ -124,22 +127,22 @@
       "playable": false,
       "portrait": {
         "path": "px3/npcs/southpaw_portrait.png",
-        "sha256": "2da4b3c1e1d7cd740fdc440acf2cf14cb297a043e14a9e9082cf437143232243",
+        "sha256": "c259af173ebbd39adc87c9b7ed96d23750269debdd0b7565c4cdd5577b499fc8",
         "native": [
-          32,
-          32
+          48,
+          48
         ],
-        "factor": 16
+        "factor": 10
       },
       "idle": {
         "frames": [
           {
             "path": "px3/npcs/southpaw_idle_0.png",
-            "sha256": "ba643fd818a6d4951418283c68522b08d5c6b9119112b322163621e2ffef491c"
+            "sha256": "7cbccf825f319fdafecf4487a65417fc7336702fff36e92645606d7438d8427a"
           },
           {
             "path": "px3/npcs/southpaw_idle_1.png",
-            "sha256": "8eb1e090c69e5b3cb72488da7225b1460ffabac6c7ea1799fa7b87d75cf85a35"
+            "sha256": "62ebf900074b14fdaa227b1ce4499498a19f9ea9e68255f9852df9e7b148a5aa"
           }
         ],
         "frame_ms": 500
@@ -151,7 +154,8 @@
         "Top of the board gets the loudest riff.",
         "Encore! Season standings updated."
       ],
-      "source": "source/px3_npc_southpaw_v1.jpg",
+      "source": "source/px3_npc_southpaw_v3.jpg",
+      "reference": "Clawpocalypse title-screen cutout assets/cine/title/turbofit.png (+ cinematic intro panel)",
       "rights_note": "Cameo of Kyle's Clawpocalypse hero characters, added at his request. Fictional game characters; the lines are playful in-game flavor and make no claims about any real person."
     }
   ]

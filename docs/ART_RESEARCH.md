@@ -32,4 +32,4 @@ Short notes on the practices this pipeline uses and why.
 - **Safe region.** At a factor of 16, the contract's safe box (x 65..447, y 75..450) works out to native columns and rows 5..27. Bodies are 22–23 native px tall, so we drew larger cosmetics small and enlarge them at render time with the manifest `scale` field (for example auras at ×1.25).
 - **Hand cleanup.** A tiny per-species fixup table restores eye pixels lost at 32px: Patchfox's eye dots and Nullgeist's magenta X eye. Hand-fixing pixels like this is normal pixel-art practice.
 - **Markings.** These are drawn sparsely (2–8 native px) so they don't turn into noise.
-- **NPCs.** Generated on a magenta background, because Teknium has green hair. We key on magenta dominance, then run the same mode downscale: a 32×32 portrait and a 20px bust with a 2-frame idle bob.
+- **NPCs.** Regenerated against Clawpocalypse **title-screen** cutouts (`assets/cine/title/…`, plus cinematic intro panels) — not hero sprites or select portraits. Flat green key (same as pets), palette-first mode downscale on a **48×48** native grid (factor 10), portrait ~24 colours / bust ~16, 2-frame idle bob. Pets stay on the 32 grid.
