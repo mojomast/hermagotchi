@@ -32,19 +32,62 @@ class SocialAPI:
 
     def send(
         self,
-        channel_id: str,
-        body: str,
+        channel_id: str | None = None,
+        body: str | None = None,
         *,
+        target: str | None = None,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
         method = getattr(self.client, "send_message", None)
         if callable(method):
+            if target is not None:
+                return method(
+                    body=body, target=target, idempotency_key=idempotency_key
+                )
             return method(channel_id, body, idempotency_key=idempotency_key)
+        if target is not None:
+            return self.client._request(
+                "POST",
+                "/chat/dm",
+                json_body={"target": target, "body": body},
+                action="social.send",
+                idempotency_key=idempotency_key,
+            )
         return self.client._request(
             "POST",
             f"/chat/channels/{channel_id}/messages",
             json_body={"body": body},
             action="social.send",
+            idempotency_key=idempotency_key,
+        )
+
+    def inbox(self) -> dict[str, Any]:
+        method = getattr(self.client, "inbox", None)
+        if callable(method):
+            return method()
+        return self.client._request("GET", "/chat/inbox")
+
+    def taunt(
+        self,
+        match_id: str,
+        body: str,
+        phase: str,
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        method = getattr(self.client, "taunt", None)
+        if callable(method):
+            return method(
+                match_id,
+                body,
+                phase,
+                idempotency_key=idempotency_key,
+            )
+        return self.client._request(
+            "POST",
+            "/chat/taunt",
+            json_body={"match_id": match_id, "body": body, "phase": phase},
+            action="social.taunt",
             idempotency_key=idempotency_key,
         )
 
@@ -113,13 +156,37 @@ def read_messages(
 
 def send_message(
     client: Any,
-    channel_id: str,
-    body: str,
+    channel_id: str | None = None,
+    body: str | None = None,
     *,
+    target: str | None = None,
     idempotency_key: str | None = None,
 ) -> dict[str, Any]:
     return SocialAPI(client).send(
-        channel_id, body, idempotency_key=idempotency_key
+        channel_id,
+        body,
+        target=target,
+        idempotency_key=idempotency_key,
+    )
+
+
+def inbox(client: Any) -> dict[str, Any]:
+    return SocialAPI(client).inbox()
+
+
+def taunt(
+    client: Any,
+    match_id: str,
+    body: str,
+    phase: str,
+    *,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    return SocialAPI(client).taunt(
+        match_id,
+        body,
+        phase,
+        idempotency_key=idempotency_key,
     )
 
 
@@ -154,8 +221,10 @@ def unblock_account(
 __all__ = [
     "SocialAPI",
     "block_account",
+    "inbox",
     "read_messages",
     "report_abuse",
     "send_message",
+    "taunt",
     "unblock_account",
 ]

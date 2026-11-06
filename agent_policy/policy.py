@@ -30,6 +30,7 @@ READ_ACTIONS = frozenset(
         "shop.catalog",
         "shop.inventory",
         "social.read",
+        "social.inbox",
         "meta.leaderboard",
         "meta.bounties",
     }
@@ -54,7 +55,9 @@ _READ_LEAVES = frozenset(
     }
 )
 
-CHAT_ACTIONS = frozenset({"social.send", "chat.send", "message.send"})
+CHAT_ACTIONS = frozenset(
+    {"social.send", "social.taunt", "chat.send", "chat.taunt", "message.send"}
+)
 NETWORK_ONLY_ACTIONS = frozenset(
     {"social.block", "social.report", "moderation.report"}
 )
@@ -111,6 +114,8 @@ _ACTION_ALIASES = {
     "set_mode": "pet.set_mode",
     "chat.send": "social.send",
     "message.send": "social.send",
+    "taunt": "social.taunt",
+    "chat.taunt": "social.taunt",
     "report": "social.report",
     "block": "social.block",
     "purchase": "shop.buy",
@@ -156,6 +161,8 @@ class Policy:
     agent_autonomy_enabled: bool = False
     agent_chat_enabled: bool = False
     agent_chat_send_per_day: int = 0
+    agent_chat_lobby_per_day: int = 20
+    agent_chat_dm_per_day: int = 10
     agent_challenges_per_day: int = 0
     agent_ranked_matches_per_day: int = 0
     agent_inference_decisions_per_day: int = 0
@@ -182,6 +189,8 @@ class Policy:
             object.__setattr__(self, name, _as_bool(getattr(self, name)))
         for name in (
             "agent_chat_send_per_day",
+            "agent_chat_lobby_per_day",
+            "agent_chat_dm_per_day",
             "agent_challenges_per_day",
             "agent_ranked_matches_per_day",
             "agent_inference_decisions_per_day",
@@ -237,6 +246,9 @@ class Policy:
             raw["agent_autonomy_enabled"] = raw["autonomy_enabled"]
         if "chat_enabled" in raw and "agent_chat_enabled" not in raw:
             raw["agent_chat_enabled"] = raw["chat_enabled"]
+        # ``agent_chat_send_per_day`` is the legacy lobby budget alias.
+        if "agent_chat_send_per_day" in raw and "agent_chat_lobby_per_day" not in raw:
+            raw["agent_chat_lobby_per_day"] = raw["agent_chat_send_per_day"]
         valid = {field.name for field in fields(cls)}
         return cls(**{key: val for key, val in raw.items() if key in valid})
 
@@ -279,7 +291,11 @@ def _is_read(action: str) -> bool:
 
 
 def _is_chat(action: str) -> bool:
-    return action in CHAT_ACTIONS or action.endswith(".send")
+    return (
+        action in CHAT_ACTIONS
+        or action.endswith(".send")
+        or action.endswith(".taunt")
+    )
 
 
 def _is_goal(action: str) -> bool:
@@ -350,7 +366,9 @@ def check_mutation(
 
 
 _BUDGET_FIELDS = {
-    "chat": "agent_chat_send_per_day",
+    "chat": "agent_chat_lobby_per_day",
+    "lobby": "agent_chat_lobby_per_day",
+    "dm": "agent_chat_dm_per_day",
     "challenges": "agent_challenges_per_day",
     "ranked": "agent_ranked_matches_per_day",
     "inference": "agent_inference_decisions_per_day",
@@ -360,13 +378,21 @@ _BUDGET_FIELDS = {
 def check_budget(
     policy: Policy | Mapping[str, Any] | None, kind: str, used: int
 ) -> str:
-    """Return ``"ok"`` or ``"budget_exhausted"`` for a per-day budget kind."""
+    """Return ``"ok"`` or ``"budget_exhausted"`` for a per-day budget kind.
+
+    ``chat`` is a legacy alias for the lobby budget. An explicit legacy
+    ``agent_chat_send_per_day`` value overrides the lobby default.
+    """
 
     active = _coerce_policy(policy)
     field_name = _BUDGET_FIELDS.get(str(kind).strip().lower())
     if field_name is None:
         return "unknown_budget"
     limit = int(getattr(active, field_name))
+    if field_name == "agent_chat_lobby_per_day":
+        legacy = int(active.agent_chat_send_per_day)
+        if legacy > 0 and legacy != limit:
+            limit = legacy
     return "budget_exhausted" if int(used) >= limit else "ok"
 
 

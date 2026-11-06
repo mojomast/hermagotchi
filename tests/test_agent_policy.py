@@ -10,7 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from agent_policy import DEFAULT_POLICY, Goal, Policy, check_mutation  # noqa: E402
+from agent_policy import (  # noqa: E402
+    DEFAULT_POLICY,
+    Goal,
+    Policy,
+    check_budget,
+    check_mutation,
+)
 from agent_policy.goals import (  # noqa: E402
     ALLOWED_SUMMARY_KEYS,
     propose_goal,
@@ -26,6 +32,8 @@ def test_default_policy_matches_contract_defaults() -> None:
     assert DEFAULT_POLICY.agent_autonomy_enabled is False
     assert DEFAULT_POLICY.agent_chat_enabled is False
     assert DEFAULT_POLICY.agent_chat_send_per_day == 0
+    assert DEFAULT_POLICY.agent_chat_lobby_per_day == 20
+    assert DEFAULT_POLICY.agent_chat_dm_per_day == 10
     assert DEFAULT_POLICY.agent_challenges_per_day == 0
     assert DEFAULT_POLICY.agent_ranked_matches_per_day == 0
     assert DEFAULT_POLICY.agent_inference_decisions_per_day == 0
@@ -93,6 +101,31 @@ def test_chat_and_cosmetic_purchase_permissions_are_separate() -> None:
     )
     assert check_mutation(allowed, "social.send") == "ok"
     assert check_mutation(allowed, "shop.buy") == "ok"
+
+
+def test_taunt_is_chat_and_inbox_is_a_read() -> None:
+    online = Policy(network_enabled=True, agent_autonomy_enabled=True)
+
+    assert check_mutation(online, "social.taunt") == "chat_disabled"
+    assert check_mutation(DEFAULT_POLICY, "social.inbox") == "ok"
+
+    allowed = Policy(network_enabled=True, agent_chat_enabled=True)
+    assert check_mutation(allowed, "social.taunt") == "ok"
+    assert check_mutation(allowed, "social.send") == "ok"
+
+
+def test_chat_budgets_cover_chat_lobby_and_dm_kinds() -> None:
+    assert check_budget(DEFAULT_POLICY, "chat", 19) == "ok"
+    assert check_budget(DEFAULT_POLICY, "chat", 20) == "budget_exhausted"
+    assert check_budget(DEFAULT_POLICY, "lobby", 19) == "ok"
+    assert check_budget(DEFAULT_POLICY, "lobby", 20) == "budget_exhausted"
+    assert check_budget(DEFAULT_POLICY, "dm", 9) == "ok"
+    assert check_budget(DEFAULT_POLICY, "dm", 10) == "budget_exhausted"
+
+    legacy = Policy.from_mapping({"agent_chat_send_per_day": 3})
+    assert legacy.agent_chat_lobby_per_day == 3
+    assert check_budget(legacy, "chat", 2) == "ok"
+    assert check_budget(legacy, "chat", 3) == "budget_exhausted"
 
 
 def test_goal_selection_and_ranked_approval_are_enforced() -> None:

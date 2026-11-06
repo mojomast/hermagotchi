@@ -28,7 +28,7 @@ except ImportError:  # Imported as ``game_client.policy`` from a checkout.
         check_mutation as _check_mutation,
     )
 
-#: Full contracts-v1 owner policy defaults (12 fields).
+#: Full contracts-v1 owner policy defaults (14 fields).
 DEFAULT_POLICY: dict[str, Any] = dict(_AGENT_DEFAULT_POLICY.as_dict())
 
 #: Minimal defaults kept for the existing four-switch transport gate.
@@ -39,7 +39,9 @@ _GATE_DEFAULTS: dict[str, Any] = {
     "chat_enabled": False,
 }
 
-CHAT_MUTATIONS = frozenset({"social.send", "chat.send"})
+CHAT_MUTATIONS = frozenset(
+    {"social.send", "chat.send", "social.taunt", "chat.taunt"}
+)
 AUTONOMY_MUTATIONS = frozenset(
     {
         "autonomy.battle",

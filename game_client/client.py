@@ -396,16 +396,48 @@ class GameClient:
 
     def send_message(
         self,
-        channel_id: str,
-        body: str,
+        channel_id: str | None = None,
+        body: str | None = None,
         *,
+        target: str | None = None,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
+        if target is not None:
+            return self._request(
+                "POST",
+                "/chat/dm",
+                json_body={"target": target, "body": body},
+                action="social.send",
+                idempotency_key=idempotency_key,
+            )
         return self._request(
             "POST",
             f"/chat/channels/{channel_id}/messages",
             json_body={"body": body},
             action="social.send",
+            idempotency_key=idempotency_key,
+        )
+
+    def inbox(self) -> dict[str, Any]:
+        return self._request("GET", "/chat/inbox")
+
+    def taunt(
+        self,
+        match_id: str,
+        body: str,
+        phase: str,
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            "/chat/taunt",
+            json_body={
+                "match_id": match_id,
+                "body": body,
+                "phase": phase,
+            },
+            action="social.taunt",
             idempotency_key=idempotency_key,
         )
 
@@ -447,3 +479,6 @@ class GameClient:
     challenge_respond = respond_challenge
     bounties = list_bounties
     get_match_state = get_match
+    chat_inbox = inbox
+    chat_taunt = taunt
+    send_dm = send_message
