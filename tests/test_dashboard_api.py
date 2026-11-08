@@ -157,7 +157,7 @@ def test_status_endpoint_uses_module_router_dependency_override():
     transport = httpx.MockTransport(handler)
     http_client = httpx.Client(transport=transport)
     game_client = GameClient(
-        base_url="http://testserver/v1",
+        base_url="https://testserver/v1",
         policy={"network_enabled": True},
         http_client=http_client,
         max_retries=0,

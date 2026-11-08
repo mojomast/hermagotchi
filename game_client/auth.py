@@ -19,7 +19,7 @@ from urllib.parse import quote
 
 import httpx
 
-from .client import DEFAULT_API_BASE_URL, _normalize_base_url
+from .client import DEFAULT_API_BASE_URL, _normalize_base_url, require_secure_url
 from .errors import GameClientError
 
 USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ23456789"
@@ -278,7 +278,7 @@ class PairingClient:
 
     def _url(self, path: str) -> str:
         if path.startswith("http://") or path.startswith("https://"):
-            return path
+            return require_secure_url(path)
         return f"{self.base_url}/{path.lstrip('/')}"
 
     def _send(

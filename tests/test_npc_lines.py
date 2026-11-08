@@ -208,4 +208,4 @@ def test_schema_token_budget_unchanged():
     total = 0
     for schema in TOOL_SCHEMAS.values():
         total += len(enc.encode(json.dumps(schema, ensure_ascii=False, sort_keys=True, separators=(",", ":"))))
-    assert total == 1047  # W14 friends+history ops; was 1005
+    assert total == 1110  # +63: offline-practice-sim disclosure (catalog review); was 1047

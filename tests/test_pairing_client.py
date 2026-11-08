@@ -54,7 +54,7 @@ def make_pair_client(handler, store: SessionStore, **kwargs) -> PairingClient:
     transport = httpx.MockTransport(handler)
     http_client = httpx.Client(transport=transport)
     return PairingClient(
-        "http://testserver/v1",
+        "https://testserver/v1",
         store=store,
         http_client=http_client,
         **kwargs,
@@ -367,7 +367,7 @@ def test_game_client_token_provider_sends_bearer_without_account_header() -> Non
     transport = httpx.MockTransport(handler)
     http_client = httpx.Client(transport=transport)
     client = GameClient(
-        "http://testserver/v1",
+        "https://testserver/v1",
         http_client=http_client,
         headers={"X-Account-Id": "stub-account"},
         token_provider=lambda: ACCESS,
@@ -391,7 +391,7 @@ def test_game_client_falls_back_to_account_header_without_session() -> None:
     transport = httpx.MockTransport(handler)
     http_client = httpx.Client(transport=transport)
     client = GameClient(
-        "http://testserver/v1",
+        "https://testserver/v1",
         http_client=http_client,
         headers={"X-Account-Id": "stub-account"},
         token_provider=lambda: None,

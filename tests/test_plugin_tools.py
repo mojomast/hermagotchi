@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import importlib.util
 import sys
 from pathlib import Path
@@ -124,7 +126,9 @@ def test_handlers_use_the_standard_envelope_and_fake_client() -> None:
     finally:
         sys.path.pop(0)
 
-    reply = tools.HANDLERS["hermagotchi_status"]({"op": "health"})
+    reply_raw = tools.HANDLERS["hermagotchi_status"]({"op": "health"})
+    assert isinstance(reply_raw, str)
+    reply = json.loads(reply_raw)
     assert set(reply) == {"ok", "data", "error_code", "correlation_id"}
     assert reply["ok"] is True
     assert reply["error_code"] is None
@@ -134,7 +138,9 @@ def test_handlers_use_the_standard_envelope_and_fake_client() -> None:
     assert reply["data"]["agent_autonomy_enabled"] is False
     assert reply["data"]["fake"] is True
 
-    missing_key = tools.HANDLERS["hermagotchi_pet"]({"op": "care", "action": "feed"})
+    missing_key_raw = tools.HANDLERS["hermagotchi_pet"]({"op": "care", "action": "feed"})
+    assert isinstance(missing_key_raw, str)
+    missing_key = json.loads(missing_key_raw)
     assert missing_key["ok"] is False
     assert missing_key["error_code"] == "missing_idempotency_key"
 
@@ -184,3 +190,31 @@ def test_offline_mutations_are_blocked_by_default_policy() -> None:
     )
     assert reply["ok"] is False
     assert reply["error_code"] == "network_disabled"
+
+
+def test_all_registered_handlers_return_json_strings() -> None:
+    sys.path.insert(0, str(ROOT))
+    try:
+        import tools
+        from schemas import TOOL_NAMES
+    finally:
+        sys.path.pop(0)
+
+    assert len(TOOL_NAMES) == 8
+    for name in TOOL_NAMES:
+        result = tools.HANDLERS[name]({"op": "__invalid__"})
+        assert isinstance(result, str), name
+        envelope = json.loads(result)
+        assert set(envelope) == {"ok", "data", "error_code", "correlation_id"}
+
+
+def test_health_discloses_offline_practice_simulation() -> None:
+    sys.path.insert(0, str(ROOT))
+    try:
+        import tools
+    finally:
+        sys.path.pop(0)
+
+    data = json.loads(tools.HANDLERS["hermagotchi_status"]({"op": "health"}))["data"]
+    assert data["simulation"] == "offline_practice"
+    assert data["persistent"] is False

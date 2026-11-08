@@ -4,6 +4,33 @@ All notable changes to Hermagotchi are recorded here. The `0.1.0` entry is the
 hackathon release candidate on `feat/hackathon`; it is not tagged and is not
 merged to `main`.
 
+## [Unreleased]
+
+Fixes for the Hermes plugin-catalog review of `3376b974`.
+
+### Security
+
+- Web dashboard tab now renders the pane directly from `dashboard/dist/index.js`
+  with the dashboard SDK's React and `SDK.authedFetch`. Removed
+  `dashboard/pane.html` (esm.sh React import map, parent-window session-token
+  read, `window.fetch` replacement) and `dashboard/hermagotchi-pane.mjs`.
+- Desktop pane routes every bridge call through the plugin SDK's `ctx.rest`
+  (Hermes >= 0.23.0), including art via the new JSON `/assets-data/{path}` route
+  and blob URLs. Removed the sessionStorage host-grant reader
+  (`hermesHostAuth.js`). `requires_hermes` is now `>=0.23.0`.
+- Game client rejects non-HTTPS API URLs except loopback (`insecure_base_url`).
+
+### Fixed
+
+- All eight tool handlers return `json.dumps(envelope)` strings, as Hermes
+  requires.
+
+### Changed
+
+- Agent tools are disclosed as an offline practice simulation (README,
+  plugin.yaml, skill, tool descriptions, `health` op). Schema o200k_base 1110
+  (+63).
+
 ## [0.1.0] - 2026-11-06
 
 First public release candidate. It keeps the frozen eight-tool contracts-v1

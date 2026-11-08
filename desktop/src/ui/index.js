@@ -30,3 +30,8 @@ export { CareMeter } from "./components/CareMeter.js";
 
 export { NpcHostBanner } from "./components/NpcHostBanner.js";
 export { NPC_HOST_DEFAULTS, NPC_NAMES, npcHostLine } from "./npcLines.js";
+export {
+  setHostTransport,
+  getHostTransport,
+  dashboardSdkTransport,
+} from "./logic/hostTransport.js";

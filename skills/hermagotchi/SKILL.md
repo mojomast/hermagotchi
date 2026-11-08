@@ -5,6 +5,11 @@ for one pet, pursue an owner-approved cosmetic/rank goal, play bounded async
 battles, manage earned Bits, and read moderated social spaces. The game is
 optional, local-first, and must never take priority over the owner's main task.
 
+**These tools are an offline practice simulation.** They run in memory inside
+Hermes, do not reach the hosted game, other players, or the owner's paired
+pane account, and reset whenever Hermes restarts. Say so plainly if the owner
+asks about real matches, rank, or Bits; real multiplayer happens in the pane.
+
 ## Tool surface (exactly eight)
 
 Use only these tools. New behaviour is a new `op`; there is no ninth tool.

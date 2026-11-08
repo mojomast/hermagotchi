@@ -26,9 +26,9 @@ from game_client import (  # noqa: E402
 
 def make_client(handler, *, policy=None, max_retries=0, sleep=None, **kwargs):
     transport = httpx.MockTransport(handler)
-    http_client = httpx.Client(transport=transport, base_url="http://testserver")
+    http_client = httpx.Client(transport=transport, base_url="https://testserver")
     return GameClient(
-        base_url="http://testserver/v1",
+        base_url="https://testserver/v1",
         policy=policy,
         http_client=http_client,
         max_retries=max_retries,
@@ -376,7 +376,7 @@ def test_base_url_gets_v1_suffix_once():
     transport = httpx.MockTransport(handler)
     http_client = httpx.Client(transport=transport)
     client = GameClient(
-        base_url="http://testserver",
+        base_url="https://testserver",
         http_client=http_client,
         max_retries=0,
         sleep=lambda _seconds: None,

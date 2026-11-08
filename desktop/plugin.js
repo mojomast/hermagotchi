@@ -1117,75 +1117,126 @@ function animStripPath(species, palette, state) {
   return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
 })();
 
-// desktop/src/ui/logic/hermesHostAuth.js
+// desktop/src/ui/logic/hostTransport.js
 const __m4 = (function () {
 /**
- * Hermes host (gateway) credentials for same-origin bridge calls.
+ * Host transport for Hermagotchi UI calls.
  *
- * The Hermagotchi bridge itself adds the game Bearer server-side; the pane
- * never sees that. But the Hermes webapp gates `/api/plugins/...` behind a
- * host session: the SPA stores a launch-link grant in sessionStorage and
- * sends it as `X-Hermes-Session-Token`. Bare fetch / img tags omit that
- * header and 401. Electron injects the same header at the network layer, so
- * this helper is a no-op there when sessionStorage has no webapp grant.
+ * The pane never reads, stores, or attaches a Hermes host credential itself.
+ * It routes every bridge call through a host-sanctioned door instead:
+ *
+ * - Desktop / Webapp pane: `ctx.rest(path, opts)` from the Desktop plugin SDK
+ *   (Hermes >= 0.23.0). Paths are relative to `/api/plugins/hermagotchi`; the
+ *   host attaches its own grant. Responses are parsed JSON.
+ * - Web dashboard tab: `SDK.authedFetch(url, init)` from
+ *   `window.__HERMES_PLUGIN_SDK__`, which handles host auth in both modes.
+ *
+ * With neither installed (unit tests, a bare browser), calls fall back to a
+ * plain `fetch` with no host credential attached.
  */
 
-const HERMES_SESSION_HEADER = "X-Hermes-Session-Token";
-const WEBAPP_SESSION_KEY_PREFIX = "hermes.webapp.session.v1:";
+let current = null;
 
-/**
- * @param {object=} options
- * @returns {string}
- */
-function readHermesWebappSessionToken(options = {}) {
-  const store =
-    options.sessionStorage !== undefined
-      ? options.sessionStorage
-      : typeof globalThis.sessionStorage !== "undefined"
-        ? globalThis.sessionStorage
-        : null;
-  if (!store || typeof store.length !== "number") return "";
-  try {
-    for (let i = 0; i < store.length; i += 1) {
-      const key = store.key(i);
-      if (typeof key === "string" && key.startsWith(WEBAPP_SESSION_KEY_PREFIX)) {
-        const value = store.getItem(key);
-        if (typeof value === "string" && value.trim()) return value.trim();
-      }
-    }
-  } catch (_err) {
-    return "";
+/** @param {{ rest?: Function, authedFetch?: Function } | null} transport */
+function setHostTransport(transport) {
+  if (!transport || typeof transport !== "object") {
+    current = null;
+    return;
   }
-  return "";
+  const next = {};
+  if (typeof transport.rest === "function") next.rest = transport.rest;
+  if (typeof transport.authedFetch === "function") {
+    next.authedFetch = transport.authedFetch;
+  }
+  current = next.rest || next.authedFetch ? next : null;
 }
 
-/**
- * @param {object=} options
- * @returns {Record of string to string}
- */
-function hermesHostAuthHeaders(options = {}) {
-  const token = readHermesWebappSessionToken(options);
-  if (!token) return {};
-  return { [HERMES_SESSION_HEADER]: token };
+function getHostTransport() {
+  return current;
 }
 
-  return { "HERMES_SESSION_HEADER": HERMES_SESSION_HEADER, "WEBAPP_SESSION_KEY_PREFIX": WEBAPP_SESSION_KEY_PREFIX, "readHermesWebappSessionToken": readHermesWebappSessionToken, "hermesHostAuthHeaders": hermesHostAuthHeaders };
+/** Dashboard SDK door, if this code runs inside the Hermes web dashboard. */
+function dashboardSdkTransport(sdk) {
+  const source =
+    sdk !== undefined
+      ? sdk
+      : typeof globalThis !== "undefined"
+        ? globalThis.__HERMES_PLUGIN_SDK__
+        : undefined;
+  if (source && typeof source.authedFetch === "function") {
+    return { authedFetch: source.authedFetch };
+  }
+  return null;
+}
+
+/** Decode base64 into bytes without touching any host state. */
+function base64ToBytes(b64) {
+  const text = typeof b64 === "string" ? b64 : "";
+  if (typeof atob === "function") {
+    const bin = atob(text);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  if (typeof Buffer !== "undefined") {
+    return Uint8Array.from(Buffer.from(text, "base64"));
+  }
+  return new Uint8Array(0);
+}
+
+  return { "setHostTransport": setHostTransport, "getHostTransport": getHostTransport, "dashboardSdkTransport": dashboardSdkTransport, "base64ToBytes": base64ToBytes };
 })();
 
 // desktop/src/ui/logic/authedAssets.js
 const __m5 = (function () {
-  const hermesHostAuthHeaders = __m4["hermesHostAuthHeaders"];
+  const base64ToBytes = __m4["base64ToBytes"];
+  const getHostTransport = __m4["getHostTransport"];
 /**
- * Resolve plugin asset URLs through authenticated fetch into blob:/data: URLs.
+ * Resolve plugin asset URLs into blob:/data: URLs through the host's own door.
  *
- * Hermes dashboard/webapp auth puts the session on fetch headers (or cookies),
- * but bare img tags / CSS background-image requests omit those headers and
- * 401. Fetching via the same window.fetch the pane already uses, attaching
- * the Hermes webapp host session header when present, then swapping in an
- * object URL, keeps non-secret art loading without weakening the host auth
- * gate.
+ * Bare img tags / CSS background-image requests carry no host auth and 401.
+ * Instead of reading any host token, we load art through:
+ * - Desktop: `ctx.rest('/assets-data/{path}')` (JSON `{mime, data_b64}`),
+ * - Dashboard: the SDK's `authedFetch(url)`,
+ * then swap in an object URL. Nothing here sees a credential.
  */
 
+
+const ASSET_MARKER = "/assets/";
+
+/** Relative asset path for the bridge's `/assets-data/` route. */
+function assetDataPath(url) {
+  const at = url.indexOf(ASSET_MARKER);
+  if (at === -1) return "";
+  const rel = url.slice(at + ASSET_MARKER.length).split(/[?#]/, 1)[0];
+  if (!rel || rel.split("/").includes("..")) return "";
+  return "/assets-data/" + rel;
+}
+
+function loadViaRest(rest, url) {
+  const path = assetDataPath(url);
+  if (!path) return Promise.reject(new Error("asset_path_invalid"));
+  return Promise.resolve(rest(path, { method: "GET" })).then((payload) => {
+    if (!payload || payload.ok !== true || typeof payload.data_b64 !== "string") {
+      throw new Error("asset_fetch_failed:rest");
+    }
+    return new Blob([base64ToBytes(payload.data_b64)], {
+      type: payload.mime || "application/octet-stream",
+    });
+  });
+}
+
+function loadViaFetch(fetchFn, url) {
+  return Promise.resolve(
+    fetchFn(url, { method: "GET", credentials: "same-origin", cache: "force-cache" })
+  ).then((response) => {
+    if (!response || !response.ok) {
+      const status = response && response.status;
+      throw new Error("asset_fetch_failed:" + String(status || "network"));
+    }
+    return response.blob();
+  });
+}
 
 const cache = new Map();
 
@@ -1212,31 +1263,21 @@ function resolveAuthedAssetUrl(url, options = {}) {
   const existing = cache.get(trimmed);
   if (existing) return existing.promise;
 
-  const fetchFn = options.fetchImpl || fetchImpl();
-  if (!fetchFn) {
+  const host = getHostTransport();
+  const rest = options.rest || (!options.fetchImpl && host && host.rest) || null;
+  const fetchFn =
+    options.fetchImpl ||
+    options.authedFetch ||
+    (host && host.authedFetch) ||
+    fetchImpl();
+  if (!rest && !fetchFn) {
     // No fetch available (SSR / node without polyfill): keep the raw URL.
     return Promise.resolve(trimmed);
   }
 
   const entry = { objectUrl: null, promise: null };
   entry.promise = Promise.resolve()
-    .then(() =>
-      fetchFn(trimmed, {
-        method: "GET",
-        credentials: "same-origin",
-        cache: "force-cache",
-        headers: hermesHostAuthHeaders({
-          sessionStorage: options.sessionStorage,
-        }),
-      })
-    )
-    .then((response) => {
-      if (!response || !response.ok) {
-        const status = response && response.status;
-        throw new Error("asset_fetch_failed:" + String(status || "network"));
-      }
-      return response.blob();
-    })
+    .then(() => (rest ? loadViaRest(rest, trimmed) : loadViaFetch(fetchFn, trimmed)))
     .then((blob) => {
       if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
         entry.objectUrl = URL.createObjectURL(blob);
@@ -1273,7 +1314,7 @@ function authedAssetCacheSize() {
   return cache.size;
 }
 
-  return { "resolveAuthedAssetUrl": resolveAuthedAssetUrl, "clearAuthedAssetCache": clearAuthedAssetCache, "authedAssetCacheSize": authedAssetCacheSize };
+  return { "assetDataPath": assetDataPath, "resolveAuthedAssetUrl": resolveAuthedAssetUrl, "clearAuthedAssetCache": clearAuthedAssetCache, "authedAssetCacheSize": authedAssetCacheSize };
 })();
 
 // desktop/src/ui/components/AuthedImg.js
@@ -10279,17 +10320,17 @@ function HermagotchiPane(props = {}) {
 
 // desktop/src/ui/api.js
 const __m31 = (function () {
-  const hermesHostAuthHeaders = __m4["hermesHostAuthHeaders"];
+  const getHostTransport = __m4["getHostTransport"];
 
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
  * The browser/Desktop layer never sees the *game* session token. Every call
  * goes to the local Hermes bridge, which adds the Bearer header server-side.
- * On the Hermes webapp the host still gates `/api/plugins/...` with
- * `X-Hermes-Session-Token` (launch-link grant in sessionStorage); we attach
- * that host header when present. All methods resolve to the bridge envelope
- * and never reject.
+ * Host auth is never handled here: on Desktop every call goes through
+ * `ctx.rest` (Desktop plugin SDK), on the web dashboard through the SDK's
+ * `authedFetch`. The pane never reads or attaches a host token. All methods
+ * resolve to the bridge envelope and never reject.
  */
 
 const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
@@ -10442,18 +10483,72 @@ function revokeId(input) {
 function createApiClient(options) {
   const config = options || {};
   const basePath = normalizeBasePath(config.basePath);
-  const fetchImpl =
-    config.fetchImpl ||
-    (typeof globalThis.fetch === "function"
-      ? globalThis.fetch.bind(globalThis)
-      : null);
+  const explicitFetch =
+    typeof config.fetchImpl === "function" ? config.fetchImpl : null;
+
+  function pickTransport() {
+    if (typeof config.rest === "function") return { rest: config.rest };
+    if (typeof config.authedFetch === "function") {
+      return { authedFetch: config.authedFetch };
+    }
+    if (explicitFetch) return { fetch: explicitFetch };
+    const host = getHostTransport();
+    if (host && host.rest) return { rest: host.rest };
+    if (host && host.authedFetch) return { authedFetch: host.authedFetch };
+    if (typeof globalThis.fetch === "function") {
+      return { fetch: globalThis.fetch.bind(globalThis) };
+    }
+    return null;
+  }
+
+  function namespaceSuffix(url) {
+    // ctx.rest paths are relative to /api/plugins/{id}.
+    if (basePath && url.startsWith(basePath)) {
+      const rest = url.slice(basePath.length);
+      return rest.startsWith("/") ? rest : "/" + rest;
+    }
+    return url;
+  }
+
+  function withIdempotencyQuery(path, key) {
+    if (!key) return path;
+    const sep = path.includes("?") ? "&" : "?";
+    return path + sep + "idempotency_key=" + encodeURIComponent(key);
+  }
+
+  async function viaRest(rest, method, url, opts) {
+    // ctx.rest carries no custom headers, so the idempotency key rides as a
+    // query param the bridge reads and strips before forwarding.
+    const path = withIdempotencyQuery(namespaceSuffix(url), opts.idempotencyKey);
+    const restOpts = { method: method };
+    if (opts.hasBody) {
+      restOpts.body =
+        opts.body === undefined || opts.body === null ? {} : opts.body;
+    }
+    let parsed;
+    try {
+      parsed = await rest(path, restOpts);
+    } catch (_error) {
+      return errorEnvelope(
+        "http_error",
+        "http_error",
+        "The bridge returned an unexpected response."
+      );
+    }
+    return asEnvelope(parsed, { ok: true });
+  }
 
   async function request(method, url, requestOptions) {
     const opts = requestOptions || {};
-    if (typeof fetchImpl !== "function") {
+    const transport = pickTransport();
+    if (!transport) {
       return offlineEnvelope();
     }
-    const headers = Object.assign({}, hermesHostAuthHeaders());
+    if (transport.rest) {
+      return viaRest(transport.rest, method, url, opts);
+    }
+    const fetchFn = transport.authedFetch || transport.fetch;
+    const headers = {};
     if (opts.hasBody) {
       headers["Content-Type"] = "application/json";
     }
@@ -10473,7 +10568,7 @@ function createApiClient(options) {
 
     let response;
     try {
-      response = await fetchImpl(url, init);
+      response = await fetchFn(url, init);
     } catch (_error) {
       return offlineEnvelope();
     }
@@ -10687,11 +10782,13 @@ const __m32 = (function () {
   const jsx = __ext0;
   const HermagotchiPane = __m30["HermagotchiPane"];
   const createApiClient = __m31["createApiClient"];
+  const setHostTransport = __m4["setHostTransport"];
 
 const PANE_ID = "hermagotchi";
 const PANE_TITLE = "Hermagotchi";
 
-function createPaneContribution() {
+function createPaneContribution(options) {
+  const transport = options || {};
   return {
     id: PANE_ID,
     title: PANE_TITLE,
@@ -10699,18 +10796,33 @@ function createPaneContribution() {
     render: function renderPane(props) {
       const p = Object.assign({}, props || {});
       if (!p.api && p.live !== false) {
-        p.api = createApiClient({ basePath: p.apiBasePath });
+        p.api = createApiClient({
+          basePath: p.apiBasePath,
+          rest: transport.rest,
+          authedFetch: transport.authedFetch,
+        });
       }
       return jsx(HermagotchiPane, p);
     },
   };
 }
 
+/**
+ * Desktop entry. Every bridge call (JSON and art) goes through `ctx.rest`
+ * (Desktop plugin SDK, Hermes >= 0.23.0); the pane never touches a host token.
+ */
 function registerHermagotchiPane(ctx) {
   if (!ctx || typeof ctx.register !== "function") {
     return false;
   }
-  ctx.register(createPaneContribution());
+  const rest =
+    typeof ctx.rest === "function"
+      ? function hermagotchiRest(path, opts) {
+          return ctx.rest(path, opts);
+        }
+      : undefined;
+  setHostTransport(rest ? { rest: rest } : null);
+  ctx.register(createPaneContribution({ rest: rest }));
   return true;
 }
 
@@ -10733,7 +10845,7 @@ const __m33 = (function () {
 
 
 
-  return { "HermagotchiPane": __m30["HermagotchiPane"], "TAB_IDS": __m30["TAB_IDS"], "TAB_LABELS": __m30["TAB_LABELS"], "TAB_COMPONENTS": __m30["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m32["PANE_ID"], "PANE_TITLE": __m32["PANE_TITLE"], "createPaneContribution": __m32["createPaneContribution"], "registerHermagotchiPane": __m32["registerHermagotchiPane"], "createDesktopPlugin": __m32["createDesktopPlugin"], "HabitatTab": __m23["HabitatTab"], "HABITAT_PLACEHOLDER": __m23["HABITAT_PLACEHOLDER"], "BattleTab": __m17["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m17["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m28["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m28["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m25["LeaderboardTab"], "ChatTab": __m20["ChatTab"], "SettingsTab": __m27["SettingsTab"], "SETTINGS_PLACEHOLDER": __m27["SETTINGS_PLACEHOLDER"], "CareMeter": __m21["CareMeter"], "NpcHostBanner": __m7["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"] };
+  return { "HermagotchiPane": __m30["HermagotchiPane"], "TAB_IDS": __m30["TAB_IDS"], "TAB_LABELS": __m30["TAB_LABELS"], "TAB_COMPONENTS": __m30["TAB_COMPONENTS"], "UI_STATES": __m1["UI_STATES"], "UI_STATE_COPY": __m1["UI_STATE_COPY"], "StateNotice": __m1["StateNotice"], "resolveUiState": __m1["resolveUiState"], "PANE_ID": __m32["PANE_ID"], "PANE_TITLE": __m32["PANE_TITLE"], "createPaneContribution": __m32["createPaneContribution"], "registerHermagotchiPane": __m32["registerHermagotchiPane"], "createDesktopPlugin": __m32["createDesktopPlugin"], "HabitatTab": __m23["HabitatTab"], "HABITAT_PLACEHOLDER": __m23["HABITAT_PLACEHOLDER"], "BattleTab": __m17["BattleTab"], "CHALLENGE_INBOX_PLACEHOLDER": __m17["CHALLENGE_INBOX_PLACEHOLDER"], "ShopTab": __m28["ShopTab"], "SHOP_PLACEHOLDER_ITEMS": __m28["SHOP_PLACEHOLDER_ITEMS"], "LeaderboardTab": __m25["LeaderboardTab"], "ChatTab": __m20["ChatTab"], "SettingsTab": __m27["SettingsTab"], "SETTINGS_PLACEHOLDER": __m27["SETTINGS_PLACEHOLDER"], "CareMeter": __m21["CareMeter"], "NpcHostBanner": __m7["NpcHostBanner"], "NPC_HOST_DEFAULTS": __m0["NPC_HOST_DEFAULTS"], "NPC_NAMES": __m0["NPC_NAMES"], "npcHostLine": __m0["npcHostLine"], "setHostTransport": __m4["setHostTransport"], "getHostTransport": __m4["getHostTransport"], "dashboardSdkTransport": __m4["dashboardSdkTransport"] };
 })();
 
 const HERMAGOTCHI_STYLE_ID = "hermagotchi-desktop-styles";
@@ -10796,9 +10908,12 @@ export const UI_STATES = __m33["UI_STATES"];
 export const UI_STATE_COPY = __m33["UI_STATE_COPY"];
 export const createDesktopPlugin = __m33["createDesktopPlugin"];
 export const createPaneContribution = __m33["createPaneContribution"];
+export const dashboardSdkTransport = __m33["dashboardSdkTransport"];
+export const getHostTransport = __m33["getHostTransport"];
 export const npcHostLine = __m33["npcHostLine"];
 export const registerHermagotchiPane = __m33["registerHermagotchiPane"];
 export const resolveUiState = __m33["resolveUiState"];
+export const setHostTransport = __m33["setHostTransport"];
 
 export { injectHermagotchiStyles as injectStyles };
 export default __hgPlugin;

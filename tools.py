@@ -1,12 +1,16 @@
-"""Hermagotchi tool handlers backed by an in-memory fake game client.
+"""Hermagotchi tool handlers backed by an in-memory offline practice simulation.
 
-This slice intentionally performs no network I/O. Every handler returns the
+The eight agent tools run against ``FakeGameClient``: a local, in-memory
+practice simulation. They do NOT talk to the hosted game, other players, or
+the dashboard/Desktop pane's paired account, and all state resets when Hermes
+restarts. This slice intentionally performs no network I/O. Every handler returns the
 contracts-v1 envelope ``{ok, data, error_code, correlation_id}`` so the fake can
 later be replaced by the hosted HTTP client without changing the tool surface.
 """
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -375,7 +379,7 @@ class FakeGameClient:
 
     # -- status -----------------------------------------------------------
     def _status_me(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
-        return _ok({**self._policy_view(), "fake": True}, cid)
+        return _ok({**self._policy_view(), "fake": True, "simulation": "offline_practice", "persistent": False}, cid)
 
     def _status_pet(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         return _ok({"adopted": self.pet is not None, "pet": self.pet}, cid)
@@ -406,6 +410,8 @@ class FakeGameClient:
             {
                 "status": "ok",
                 "fake": True,
+                "simulation": "offline_practice",
+                "persistent": False,
                 **self._policy_view(),
                 "checked_at": _now(),
             },
@@ -1228,22 +1234,24 @@ def handle_tool(
     return active.execute(tool_name, arguments)
 
 
-def _make_handler(tool_name: str) -> Callable[..., dict[str, Any]]:
+def _make_handler(tool_name: str) -> Callable[..., str]:
     def handler(
         arguments: dict[str, Any] | None = None,
         context: Any = None,
         *,
         client: FakeGameClient | None = None,
         **_: Any,
-    ) -> dict[str, Any]:
-        return handle_tool(tool_name, arguments, client=client, context=context)
+    ) -> str:
+        # Hermes requires tool handlers to return strings.
+        envelope = handle_tool(tool_name, arguments, client=client, context=context)
+        return json.dumps(envelope, ensure_ascii=False, default=str)
 
     handler.__name__ = f"handle_{tool_name}"
-    handler.__doc__ = f"Handle the {tool_name} tool and return the contracts-v1 envelope."
+    handler.__doc__ = f"Handle the {tool_name} tool and return the contracts-v1 envelope as a JSON string."
     return handler
 
 
-HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
+HANDLERS: dict[str, Callable[..., str]] = {
     name: _make_handler(name) for name in TOOL_SCHEMAS
 }
 TOOLS = HANDLERS

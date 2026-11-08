@@ -1,14 +1,14 @@
-import { hermesHostAuthHeaders } from "./logic/hermesHostAuth.js";
+import { getHostTransport } from "./logic/hostTransport.js";
 
 /**
  * Local dashboard bridge client for the Hermagotchi Desktop UI.
  *
  * The browser/Desktop layer never sees the *game* session token. Every call
  * goes to the local Hermes bridge, which adds the Bearer header server-side.
- * On the Hermes webapp the host still gates `/api/plugins/...` with
- * `X-Hermes-Session-Token` (launch-link grant in sessionStorage); we attach
- * that host header when present. All methods resolve to the bridge envelope
- * and never reject.
+ * Host auth is never handled here: on Desktop every call goes through
+ * `ctx.rest` (Desktop plugin SDK), on the web dashboard through the SDK's
+ * `authedFetch`. The pane never reads or attaches a host token. All methods
+ * resolve to the bridge envelope and never reject.
  */
 
 export const DEFAULT_BASE_PATH = "/api/plugins/hermagotchi";
@@ -161,18 +161,72 @@ function revokeId(input) {
 export function createApiClient(options) {
   const config = options || {};
   const basePath = normalizeBasePath(config.basePath);
-  const fetchImpl =
-    config.fetchImpl ||
-    (typeof globalThis.fetch === "function"
-      ? globalThis.fetch.bind(globalThis)
-      : null);
+  const explicitFetch =
+    typeof config.fetchImpl === "function" ? config.fetchImpl : null;
+
+  function pickTransport() {
+    if (typeof config.rest === "function") return { rest: config.rest };
+    if (typeof config.authedFetch === "function") {
+      return { authedFetch: config.authedFetch };
+    }
+    if (explicitFetch) return { fetch: explicitFetch };
+    const host = getHostTransport();
+    if (host && host.rest) return { rest: host.rest };
+    if (host && host.authedFetch) return { authedFetch: host.authedFetch };
+    if (typeof globalThis.fetch === "function") {
+      return { fetch: globalThis.fetch.bind(globalThis) };
+    }
+    return null;
+  }
+
+  function namespaceSuffix(url) {
+    // ctx.rest paths are relative to /api/plugins/{id}.
+    if (basePath && url.startsWith(basePath)) {
+      const rest = url.slice(basePath.length);
+      return rest.startsWith("/") ? rest : "/" + rest;
+    }
+    return url;
+  }
+
+  function withIdempotencyQuery(path, key) {
+    if (!key) return path;
+    const sep = path.includes("?") ? "&" : "?";
+    return path + sep + "idempotency_key=" + encodeURIComponent(key);
+  }
+
+  async function viaRest(rest, method, url, opts) {
+    // ctx.rest carries no custom headers, so the idempotency key rides as a
+    // query param the bridge reads and strips before forwarding.
+    const path = withIdempotencyQuery(namespaceSuffix(url), opts.idempotencyKey);
+    const restOpts = { method: method };
+    if (opts.hasBody) {
+      restOpts.body =
+        opts.body === undefined || opts.body === null ? {} : opts.body;
+    }
+    let parsed;
+    try {
+      parsed = await rest(path, restOpts);
+    } catch (_error) {
+      return errorEnvelope(
+        "http_error",
+        "http_error",
+        "The bridge returned an unexpected response."
+      );
+    }
+    return asEnvelope(parsed, { ok: true });
+  }
 
   async function request(method, url, requestOptions) {
     const opts = requestOptions || {};
-    if (typeof fetchImpl !== "function") {
+    const transport = pickTransport();
+    if (!transport) {
       return offlineEnvelope();
     }
-    const headers = Object.assign({}, hermesHostAuthHeaders());
+    if (transport.rest) {
+      return viaRest(transport.rest, method, url, opts);
+    }
+    const fetchFn = transport.authedFetch || transport.fetch;
+    const headers = {};
     if (opts.hasBody) {
       headers["Content-Type"] = "application/json";
     }
@@ -192,7 +246,7 @@ export function createApiClient(options) {
 
     let response;
     try {
-      response = await fetchImpl(url, init);
+      response = await fetchFn(url, init);
     } catch (_error) {
       return offlineEnvelope();
     }

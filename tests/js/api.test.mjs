@@ -198,33 +198,46 @@ test("uiStateFromEnvelope maps bridge failures onto existing UI states", () => {
   );
 });
 
-test("createApiClient attaches Hermes webapp host session header when present", async () => {
-  const previous = globalThis.sessionStorage;
-  const store = new Map([
-    ['hermes.webapp.session.v1:["http://127.0.0.1:9120",""]', "tok_host"],
-  ]);
-  Object.defineProperty(globalThis, "sessionStorage", {
-    configurable: true,
-    value: {
-      get length() { return store.size; },
-      key(i) { return [...store.keys()][i] ?? null; },
-      getItem(k) { return store.has(k) ? store.get(k) : null; },
-    },
-  });
-  try {
-    const rec = recorder({ ok: true });
-    const client = createApiClient({ fetchImpl: rec.fetchImpl });
-    await client.health();
-    assert.equal(rec.calls[0].init.headers["X-Hermes-Session-Token"], "tok_host");
-    assert.equal(rec.calls[0].init.credentials, "same-origin");
-  } finally {
-    if (previous === undefined) {
-      delete globalThis.sessionStorage;
-    } else {
-      Object.defineProperty(globalThis, "sessionStorage", {
-        configurable: true,
-        value: previous,
-      });
-    }
-  }
+test("createApiClient never attaches a host session header", async () => {
+  const rec = recorder({ ok: true });
+  const client = createApiClient({ fetchImpl: rec.fetchImpl });
+  await client.health();
+  assert.equal(rec.calls[0].init.headers["X-Hermes-Session-Token"], undefined);
+  assert.equal(rec.calls[0].init.credentials, "same-origin");
+});
+
+test("Desktop transport routes every call through ctx.rest with namespace paths", async () => {
+  const calls = [];
+  const rest = async (path, opts) => {
+    calls.push({ path, opts });
+    return { ok: true, status: "ok", data: { path } };
+  };
+  const client = createApiClient({ rest });
+  const got = await client.get("/wallet");
+  assert.equal(got.ok, true);
+  await client.post("/pets", { name: "x" }, { idempotencyKey: "k1" });
+  await client.status();
+  await client.pair.poll();
+  assert.equal(calls[0].path, "/proxy/v1/wallet");
+  assert.equal(calls[0].opts.method, "GET");
+  assert.equal(calls[1].path, "/proxy/v1/pets?idempotency_key=k1");
+  assert.deepEqual(calls[1].opts.body, { name: "x" });
+  assert.equal(calls[2].path, "/status");
+  assert.equal(calls[3].path, "/pair/poll");
+});
+
+test("ctx.rest failures resolve to an error envelope", async () => {
+  const client = createApiClient({ rest: async () => { throw new Error("500"); } });
+  const env = await client.get("/wallet");
+  assert.equal(env.ok, false);
+  assert.equal(env.status, "http_error");
+});
+
+test("dashboard transport uses SDK.authedFetch with full plugin URLs", async () => {
+  const rec = recorder({ ok: true, status: "ok", data: 1 });
+  const client = createApiClient({ authedFetch: rec.fetchImpl });
+  await client.post("/pets", {}, { idempotencyKey: "k2" });
+  assert.equal(rec.calls[0].url, "/api/plugins/hermagotchi/proxy/v1/pets");
+  assert.equal(rec.calls[0].init.headers["Idempotency-Key"], "k2");
+  assert.equal(rec.calls[0].init.headers["X-Hermes-Session-Token"], undefined);
 });

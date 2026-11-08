@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ipaddress
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -16,8 +18,43 @@ DEFAULT_API_BASE_URL = "http://127.0.0.1:8000/v1"
 RETRYABLE_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    if not host:
+        return False
+    host = host.strip("[]").lower()
+    if host in _LOOPBACK_HOSTS or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def require_secure_url(url: str) -> str:
+    """Reject game API URLs that are not HTTPS, except plain-HTTP loopback.
+
+    The README promises HTTPS to the hosted game; plaintext HTTP is only
+    accepted for a local dev server on loopback (127.0.0.0/8, ::1, localhost).
+    """
+
+    parts = urlsplit(url)
+    scheme = (parts.scheme or "").lower()
+    if scheme == "https" and parts.hostname:
+        return url
+    if scheme == "http" and _is_loopback_host(parts.hostname):
+        return url
+    raise GameClientError(
+        "insecure_base_url",
+        "Game API URL must use https:// (plain http:// is only allowed for loopback).",
+    )
+
+
 def _normalize_base_url(base_url: str | None) -> str:
     value = (base_url or DEFAULT_API_BASE_URL).strip().rstrip("/")
+    require_secure_url(value)
     if not value.endswith("/v1"):
         value = f"{value}/v1"
     return value
@@ -72,7 +109,7 @@ class GameClient:
 
     def _url(self, path: str) -> str:
         if path.startswith("http://") or path.startswith("https://"):
-            return path
+            return require_secure_url(path)
         return f"{self.base_url}/{path.lstrip('/')}"
 
     def _request_headers(self) -> dict[str, str]:

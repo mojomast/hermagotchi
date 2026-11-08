@@ -51,9 +51,9 @@ def _friend(client, action, key="w14-friend", **arguments):
 
 def _make_live_client(handler, policy: dict) -> GameClient:
     transport = httpx.MockTransport(handler)
-    http_client = httpx.Client(transport=transport, base_url="http://testserver")
+    http_client = httpx.Client(transport=transport, base_url="https://testserver")
     return GameClient(
-        base_url="http://testserver/v1",
+        base_url="https://testserver/v1",
         policy=policy,
         http_client=http_client,
         max_retries=0,

@@ -33,6 +33,11 @@ _SLOT = {
 }
 
 
+# Honest disclosure: every agent tool runs against an in-memory offline
+# practice simulation (``tools.FakeGameClient``), not the hosted game.
+SIMULATION_NOTE = "Offline practice sim; resets on restart. "
+
+
 def _schema(
     description: str,
     ops: list[str],
@@ -46,7 +51,7 @@ def _schema(
         props["idempotency_key"] = _IDEMPOTENCY
     return {
         "type": "object",
-        "description": description,
+        "description": SIMULATION_NOTE + description,
         "properties": props,
         "required": ["op"],
         "additionalProperties": False,

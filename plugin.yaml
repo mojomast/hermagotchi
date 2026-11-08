@@ -3,12 +3,15 @@ id: hermagotchi
 version: 0.1.0
 description: >-
   Co-op virtual pets with deterministic async battles, earned Bits, cosmetics,
-  goals, leaderboards and moderated social play. Network and autonomy are off
-  by default.
+  goals, leaderboards and moderated social play in the dashboard/Desktop pane.
+  The eight agent tools are an offline practice simulation (in-memory, reset on
+  Hermes restart; they do not reach the hosted game or your paired account).
+  Network and autonomy are off by default; game API URLs must be HTTPS except
+  loopback.
 author: Hermagotchi contributors
 license: MIT
 entrypoint: __init__.py
-requires_hermes: ">=0.21.0"
+requires_hermes: ">=0.23.0"
 default_enabled: false
 
 provides_tools:
