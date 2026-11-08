@@ -141,3 +141,22 @@ def test_status_advertises_the_relative_asset_suffix_without_tokens() -> None:
     assert body["asset_base_path"] == "assets"
     assert "hga_" not in response.text
     assert "hgr_" not in response.text
+
+
+def test_assets_data_route_returns_base64_for_ctx_rest() -> None:
+    import base64
+
+    client = TestClient(build_app())
+    response = client.get(f"{PREFIX}/assets-data/px3/species/byteblob_body.png")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["mime"].startswith("image/png")
+    assert base64.b64decode(body["data_b64"]).startswith(b"\x89PNG\r\n\x1a\n")
+
+
+@pytest.mark.parametrize("bad", ["../plugin.yaml", "px3/../../plugin.yaml", "nope.png"])
+def test_assets_data_route_rejects_traversal_and_missing(bad: str) -> None:
+    client = TestClient(build_app())
+    response = client.get(f"{PREFIX}/assets-data/{bad}")
+    assert response.status_code == 404

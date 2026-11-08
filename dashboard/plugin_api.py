@@ -9,6 +9,7 @@ sanitized JSON envelopes.
 
 from __future__ import annotations
 
+import base64
 import json
 import mimetypes
 import os
@@ -18,6 +19,7 @@ import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, Depends, Request
@@ -170,7 +172,9 @@ def get_pairing_client() -> PairingClient:
 def get_client() -> GameClient:
     """Build a client from non-secret runtime configuration."""
 
-    return GameClient(base_url=_base_url())
+    store = get_session_store()
+    # /status reads /me with the paired device session (never returned).
+    return GameClient(base_url=_base_url(), token_provider=lambda: store.access_token)
 
 
 def _policy_dict(client: Any) -> dict[str, Any]:
@@ -570,6 +574,39 @@ def create_router(
             )
         return Response(content=payload, media_type=_asset_media_type(candidate))
 
+    @router.get("/assets-data/{path:path}")
+    def assets_data(path: str) -> Any:
+        """JSON/base64 twin of ``/assets/`` for Desktop ``ctx.rest`` (JSON-only).
+
+        The pane turns ``data_b64`` into a Blob URL; no host token is involved.
+        """
+        candidate = _resolve_asset_path(path)
+        payload: bytes | None = None
+        if candidate is not None:
+            try:
+                payload = candidate.read_bytes()
+            except OSError:
+                payload = None
+        if payload is None:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "ok": False,
+                    "status": "not_found",
+                    "error": {
+                        "code": "asset_not_found",
+                        "message": "No asset exists for that path.",
+                        "retry_after_s": 0,
+                    },
+                },
+            )
+        return {
+            "ok": True,
+            "status": "ok",
+            "mime": _asset_media_type(candidate),
+            "data_b64": base64.b64encode(payload).decode("ascii"),
+        }
+
     @router.post("/pair/start")
     async def pair_start(
         request: Request,
@@ -763,8 +800,17 @@ def create_router(
 
         method = request.method.upper()
         body = await _json_body(request) if method != "GET" else None
+        # Desktop ctx.rest cannot set custom headers, so the key may also ride
+        # as ``?idempotency_key=``; it is stripped before forwarding upstream.
         header_key = request.headers.get("Idempotency-Key")
-        idempotency_key = header_key.strip() if header_key else None
+        query_key = request.query_params.get("idempotency_key")
+        raw_key = header_key or query_key
+        idempotency_key = raw_key.strip() if raw_key else None
+        forward_query = "&".join(
+            f"{quote(k, safe='')}={quote(v, safe='')}"
+            for k, v in request.query_params.multi_items()
+            if k != "idempotency_key"
+        )
         if method != "GET" and not idempotency_key:
             idempotency_key = new_idempotency_key()
         try:
@@ -774,7 +820,7 @@ def create_router(
                 matched,
                 body=body,
                 idempotency_key=idempotency_key,
-                query=request.url.query,
+                query=forward_query,
             )
         except GameClientError as exc:
             return _proxy_error(exc)

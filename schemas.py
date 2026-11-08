@@ -33,6 +33,11 @@ _SLOT = {
 }
 
 
+# Honest disclosure: tools use the in-memory offline practice simulation by
+# default and the real game server only when the owner sets network_enabled.
+SIMULATION_NOTE = "Offline practice sim unless owner enables network (live game). "
+
+
 def _schema(
     description: str,
     ops: list[str],
@@ -46,7 +51,7 @@ def _schema(
         props["idempotency_key"] = _IDEMPOTENCY
     return {
         "type": "object",
-        "description": description,
+        "description": SIMULATION_NOTE + description,
         "properties": props,
         "required": ["op"],
         "additionalProperties": False,

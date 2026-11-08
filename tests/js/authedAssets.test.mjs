@@ -4,6 +4,7 @@ import {
   clearAuthedAssetCache,
   resolveAuthedAssetUrl,
   authedAssetCacheSize,
+  assetDataPath,
 } from "../../desktop/src/ui/logic/authedAssets.js";
 
 test("resolveAuthedAssetUrl passes through data and blob URLs", async () => {
@@ -13,36 +14,21 @@ test("resolveAuthedAssetUrl passes through data and blob URLs", async () => {
   assert.equal(authedAssetCacheSize(), 0);
 });
 
-test("resolveAuthedAssetUrl fetches with credentials and returns an object URL", async () => {
+test("resolveAuthedAssetUrl fetches without any host token and returns an object URL", async () => {
   clearAuthedAssetCache();
   const calls = [];
   const blob = new Blob([Uint8Array.from([1, 2, 3])], { type: "image/png" });
-  const fakeSession = {
-    length: 1,
-    key(i) { return i === 0 ? 'hermes.webapp.session.v1:["http://127.0.0.1:9120",""]' : null; },
-    getItem(k) { return k.startsWith("hermes.webapp.session.v1:") ? "tok_webapp" : null; },
-  };
   const url = await resolveAuthedAssetUrl("/api/plugins/hermagotchi/assets/px3/npcs/don_piedro_portrait.png", {
-    sessionStorage: fakeSession,
     fetchImpl: async (input, init) => {
       calls.push({ input, init });
-      return {
-        ok: true,
-        status: 200,
-        async blob() {
-          return blob;
-        },
-      };
+      return { ok: true, status: 200, async blob() { return blob; } };
     },
   });
   assert.match(url, /^blob:/);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].input, "/api/plugins/hermagotchi/assets/px3/npcs/don_piedro_portrait.png");
-  assert.equal(calls[0].init.credentials, "same-origin");
   assert.equal(calls[0].init.method, "GET");
-  assert.equal(calls[0].init.headers["X-Hermes-Session-Token"], "tok_webapp");
+  assert.equal(calls[0].init.headers, undefined);
   assert.equal(authedAssetCacheSize(), 1);
-  // Second call hits cache (no extra fetch)
   const again = await resolveAuthedAssetUrl("/api/plugins/hermagotchi/assets/px3/npcs/don_piedro_portrait.png", {
     fetchImpl: async () => {
       throw new Error("should not fetch again");
@@ -50,6 +36,26 @@ test("resolveAuthedAssetUrl fetches with credentials and returns an object URL",
   });
   assert.equal(again, url);
   clearAuthedAssetCache();
+});
+
+test("Desktop assets load through ctx.rest /assets-data and become blob URLs", async () => {
+  clearAuthedAssetCache();
+  const calls = [];
+  const rest = async (path, opts) => {
+    calls.push({ path, opts });
+    return { ok: true, status: "ok", mime: "image/png", data_b64: "AQID" };
+  };
+  const url = await resolveAuthedAssetUrl("/api/plugins/hermagotchi/assets/px3/x.png", { rest });
+  assert.match(url, /^blob:/);
+  assert.equal(calls[0].path, "/assets-data/px3/x.png");
+  assert.equal(calls[0].opts.method, "GET");
+  clearAuthedAssetCache();
+});
+
+test("assetDataPath refuses traversal", () => {
+  assert.equal(assetDataPath("/api/plugins/hermagotchi/assets/../secret"), "");
+  assert.equal(assetDataPath("/nope"), "");
+  assert.equal(assetDataPath("/api/plugins/hermagotchi/assets/a/b.png?x=1"), "/assets-data/a/b.png");
 });
 
 test("resolveAuthedAssetUrl returns empty string on 401 and does not keep a bad cache entry", async () => {

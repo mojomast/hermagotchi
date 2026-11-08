@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import importlib.util
 import re
 import sys
@@ -120,7 +122,9 @@ def test_default_policy_is_fail_closed_and_matches_contract_defaults() -> None:
 def test_offline_tool_calls_stay_read_only_and_block_remote_mutations() -> None:
     from tools import HANDLERS, handle_tool
 
-    health = HANDLERS["hermagotchi_status"]({"op": "health"})
+    health_raw = HANDLERS["hermagotchi_status"]({"op": "health"})
+    assert isinstance(health_raw, str)
+    health = json.loads(health_raw)
     assert health["ok"] is True
     assert health["data"]["network_enabled"] is False
     assert health["data"]["agent_autonomy_enabled"] is False

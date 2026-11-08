@@ -140,3 +140,17 @@ test("unknown imports fail the build instead of leaking into plugin.js", () => {
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test("dashboard bundle uses SDK React and never touches host tokens or remote code", async () => {
+  const { readFileSync } = await import("node:fs");
+  const text = readFileSync(new URL("../../dashboard/dist/index.js", import.meta.url), "utf8");
+  assert.match(text, /SDK\.React/);
+  assert.match(text, /authedFetch/);
+  for (const bad of ["esm.sh", "__HERMES_SESSION_TOKEN__", "sessionStorage", "window.fetch =", "importmap", "iframe"]) {
+    assert.equal(text.includes(bad), false, bad);
+  }
+  const desktop = readFileSync(new URL("../../desktop/plugin.js", import.meta.url), "utf8");
+  for (const bad of ["__HERMES_SESSION_TOKEN__", "sessionStorage", "hermes.webapp.session"]) {
+    assert.equal(desktop.includes(bad), false, bad);
+  }
+});

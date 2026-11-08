@@ -48,7 +48,7 @@ def make_store(tmp_path: Path) -> SessionStore:
 
 def make_pair_client(handler, store: SessionStore) -> PairingClient:
     return PairingClient(
-        "http://testserver/v1",
+        "https://testserver/v1",
         store=store,
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
@@ -612,3 +612,36 @@ def test_bridge_forwards_patch_chat_settings(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert response.json()["ok"] is True
     assert seen == {"method": "PATCH", "path": "/v1/me/chat-settings"}
+
+
+def test_query_idempotency_key_is_used_and_stripped(tmp_path: Path) -> None:
+    """Desktop ctx.rest has no custom headers; the key rides as a query param."""
+    store = make_store(tmp_path)
+    store.save(token_payload())
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["key"] = request.headers.get("Idempotency-Key")
+        seen["query"] = request.url.query.decode() if isinstance(request.url.query, bytes) else str(request.url.query)
+        return httpx.Response(200, json={"ok": True})
+
+    client = TestClient(build_app(make_pair_client(handler, store), store))
+    client.post(
+        f"{PREFIX}/proxy/v1/goals/clear?idempotency_key=idem-q&keep=1",
+        json={},
+    )
+
+    assert seen["key"] == "idem-q"
+    assert "idempotency_key" not in str(seen["query"])
+    assert "keep=1" in str(seen["query"])
+
+
+def test_default_status_client_uses_paired_session(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("HERMES_PLUGIN_DATA_DIR", str(tmp_path))
+    store = plugin_api.get_session_store()
+    store.save(token_payload())
+    client = plugin_api.get_client()
+    try:
+        assert client._request_headers().get("Authorization", "").startswith("Bearer ")
+    finally:
+        client.close()

@@ -5,6 +5,13 @@ for one pet, pursue an owner-approved cosmetic/rank goal, play bounded async
 battles, manage earned Bits, and read moderated social spaces. The game is
 optional, local-first, and must never take priority over the owner's main task.
 
+**Check which backend is active** with `hermagotchi_status` `health`: 
+`backend: offline_practice` is an in-memory practice sim that resets on
+restart (say so if asked about real rank or Bits); `backend: online` acts on
+the owner's real paired account on the shared game server. Online, if `paired`
+is false, ask the owner to pair in the Hermagotchi pane. `unsupported_online`
+means that op only exists in the sim.
+
 ## Tool surface (exactly eight)
 
 Use only these tools. New behaviour is a new `op`; there is no ninth tool.

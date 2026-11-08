@@ -29,6 +29,14 @@ SKILL_PATH = _ROOT / "skills" / "hermagotchi" / "SKILL.md"
 def register(ctx: Any) -> str:
     """Register the Hermagotchi skill and its eight tools with Hermes."""
 
+    getter = getattr(ctx, "get_config", None)
+    if callable(getter):
+        try:
+            from . import online_client as _online
+        except ImportError:
+            import online_client as _online
+        _online.install_settings_getter(lambda key, default=None: getter(key, default))
+
     for name in TOOL_NAMES:
         ctx.register_tool(
             name=name,

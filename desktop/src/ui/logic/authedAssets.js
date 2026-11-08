@@ -1,15 +1,50 @@
 /**
- * Resolve plugin asset URLs through authenticated fetch into blob:/data: URLs.
+ * Resolve plugin asset URLs into blob:/data: URLs through the host's own door.
  *
- * Hermes dashboard/webapp auth puts the session on fetch headers (or cookies),
- * but bare img tags / CSS background-image requests omit those headers and
- * 401. Fetching via the same window.fetch the pane already uses, attaching
- * the Hermes webapp host session header when present, then swapping in an
- * object URL, keeps non-secret art loading without weakening the host auth
- * gate.
+ * Bare img tags / CSS background-image requests carry no host auth and 401.
+ * Instead of reading any host token, we load art through:
+ * - Desktop: `ctx.rest('/assets-data/{path}')` (JSON `{mime, data_b64}`),
+ * - Dashboard: the SDK's `authedFetch(url)`,
+ * then swap in an object URL. Nothing here sees a credential.
  */
 
-import { hermesHostAuthHeaders } from "./hermesHostAuth.js";
+import { base64ToBytes, getHostTransport } from "./hostTransport.js";
+
+const ASSET_MARKER = "/assets/";
+
+/** Relative asset path for the bridge's `/assets-data/` route. */
+export function assetDataPath(url) {
+  const at = url.indexOf(ASSET_MARKER);
+  if (at === -1) return "";
+  const rel = url.slice(at + ASSET_MARKER.length).split(/[?#]/, 1)[0];
+  if (!rel || rel.split("/").includes("..")) return "";
+  return "/assets-data/" + rel;
+}
+
+function loadViaRest(rest, url) {
+  const path = assetDataPath(url);
+  if (!path) return Promise.reject(new Error("asset_path_invalid"));
+  return Promise.resolve(rest(path, { method: "GET" })).then((payload) => {
+    if (!payload || payload.ok !== true || typeof payload.data_b64 !== "string") {
+      throw new Error("asset_fetch_failed:rest");
+    }
+    return new Blob([base64ToBytes(payload.data_b64)], {
+      type: payload.mime || "application/octet-stream",
+    });
+  });
+}
+
+function loadViaFetch(fetchFn, url) {
+  return Promise.resolve(
+    fetchFn(url, { method: "GET", credentials: "same-origin", cache: "force-cache" })
+  ).then((response) => {
+    if (!response || !response.ok) {
+      const status = response && response.status;
+      throw new Error("asset_fetch_failed:" + String(status || "network"));
+    }
+    return response.blob();
+  });
+}
 
 const cache = new Map();
 
@@ -36,31 +71,21 @@ export function resolveAuthedAssetUrl(url, options = {}) {
   const existing = cache.get(trimmed);
   if (existing) return existing.promise;
 
-  const fetchFn = options.fetchImpl || fetchImpl();
-  if (!fetchFn) {
+  const host = getHostTransport();
+  const rest = options.rest || (!options.fetchImpl && host && host.rest) || null;
+  const fetchFn =
+    options.fetchImpl ||
+    options.authedFetch ||
+    (host && host.authedFetch) ||
+    fetchImpl();
+  if (!rest && !fetchFn) {
     // No fetch available (SSR / node without polyfill): keep the raw URL.
     return Promise.resolve(trimmed);
   }
 
   const entry = { objectUrl: null, promise: null };
   entry.promise = Promise.resolve()
-    .then(() =>
-      fetchFn(trimmed, {
-        method: "GET",
-        credentials: "same-origin",
-        cache: "force-cache",
-        headers: hermesHostAuthHeaders({
-          sessionStorage: options.sessionStorage,
-        }),
-      })
-    )
-    .then((response) => {
-      if (!response || !response.ok) {
-        const status = response && response.status;
-        throw new Error("asset_fetch_failed:" + String(status || "network"));
-      }
-      return response.blob();
-    })
+    .then(() => (rest ? loadViaRest(rest, trimmed) : loadViaFetch(fetchFn, trimmed)))
     .then((blob) => {
       if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
         entry.objectUrl = URL.createObjectURL(blob);
