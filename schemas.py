@@ -33,9 +33,9 @@ _SLOT = {
 }
 
 
-# Honest disclosure: every agent tool runs against an in-memory offline
-# practice simulation (``tools.FakeGameClient``), not the hosted game.
-SIMULATION_NOTE = "Offline practice sim; resets on restart. "
+# Honest disclosure: tools use the in-memory offline practice simulation by
+# default and the real game server only when the owner sets network_enabled.
+SIMULATION_NOTE = "Offline practice sim unless owner enables network (live game). "
 
 
 def _schema(

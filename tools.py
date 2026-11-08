@@ -34,6 +34,11 @@ except ImportError:  # Imported from a checkout with the plugin root on sys.path
     )
 
 try:  # Imported as part of a plugin package.
+    from . import online_client as _online
+except ImportError:  # Imported from a checkout with the plugin root on sys.path.
+    import online_client as _online
+
+try:  # Imported as part of a plugin package.
     from .npc_lines import host_payload as _npc_host_payload
 except ImportError:  # Imported from a checkout with the plugin root on sys.path.
     from npc_lines import host_payload as _npc_host_payload
@@ -379,7 +384,7 @@ class FakeGameClient:
 
     # -- status -----------------------------------------------------------
     def _status_me(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
-        return _ok({**self._policy_view(), "fake": True, "simulation": "offline_practice", "persistent": False}, cid)
+        return _ok({**self._policy_view(), "fake": True, "simulation": "offline_practice", "persistent": False, "backend": "offline_practice"}, cid)
 
     def _status_pet(self, args: dict[str, Any], cid: str) -> dict[str, Any]:
         return _ok({"adopted": self.pet is not None, "pet": self.pet}, cid)
@@ -412,6 +417,7 @@ class FakeGameClient:
                 "fake": True,
                 "simulation": "offline_practice",
                 "persistent": False,
+                "backend": "offline_practice",
                 **self._policy_view(),
                 "checked_at": _now(),
             },
@@ -1201,10 +1207,76 @@ class FakeGameClient:
         )
 
 
+class OnlineGameClient(FakeGameClient):
+    """Same op/idempotency/policy frame as the simulator, backed by the real
+    game server through the pane's paired session. Server state persists."""
+
+    MODE = "online"
+
+    def __init__(self, transport: Any = None, policy: dict[str, Any] | None = None) -> None:
+        merged = {"network_enabled": True}
+        merged.update(policy or {})
+        super().__init__(merged)
+        if transport is None:
+            transport = _online.OnlineTransport.from_environment()
+        self.transport = transport
+        self._online_handlers = _online.build_online_handlers(self, transport)
+
+    @staticmethod
+    def _ok(data: Any, cid: str) -> dict[str, Any]:
+        return _ok(data, cid)
+
+    @staticmethod
+    def _err(code: str, cid: str) -> dict[str, Any]:
+        return _error(code, cid)
+
+    def _handlers(self):  # type: ignore[override]
+        return self._online_handlers
+
+    def mode_view(self) -> dict[str, Any]:
+        return {
+            "backend": "online",
+            "simulation": None,
+            "persistent": True,
+            "paired": bool(self.transport.paired),
+            "fake": False,
+        }
+
+    def execute(self, tool: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+        result = super().execute(tool, arguments)
+        if (
+            result.get("ok")
+            and tool == "hermagotchi_status"
+            and (arguments or {}).get("op") in {"me", "health"}
+            and isinstance(result.get("data"), dict)
+        ):
+            result = dict(result)
+            result["data"] = {**result["data"], **self._policy_view(), **self.mode_view()}
+        return result
+
+
+def _offline_mode_view() -> dict[str, Any]:
+    return {"backend": "offline_practice", "simulation": "offline_practice",
+            "persistent": False, "fake": True}
+
+
 _DEFAULT_CLIENT = FakeGameClient()
+_ONLINE_CLIENT: OnlineGameClient | None = None
 
 
 def get_default_client() -> FakeGameClient:
+    """Online client when the owner enabled network, else the offline sim."""
+    global _ONLINE_CLIENT
+    if _online.network_enabled():
+        policy = {
+            "agent_chat_enabled": _online.agent_chat_enabled(),
+            "agent_autonomy_enabled": _online.agent_autonomy_enabled(),
+        }
+        if _ONLINE_CLIENT is None or any(
+            _ONLINE_CLIENT.policy.get(k) != v for k, v in policy.items()
+        ):
+            _ONLINE_CLIENT = OnlineGameClient(policy=policy)
+        return _ONLINE_CLIENT
     return _DEFAULT_CLIENT
 
 
@@ -1215,7 +1287,7 @@ def reset_default_client(client: FakeGameClient | None = None) -> FakeGameClient
 
 
 def _client_from(context: Any) -> FakeGameClient | None:
-    if context is None:
+    if context is None or isinstance(context, dict):
         return None
     if isinstance(context, FakeGameClient):
         return context

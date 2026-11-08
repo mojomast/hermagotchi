@@ -27,9 +27,12 @@ Fixes for the Hermes plugin-catalog review of `3376b974`.
 
 ### Changed
 
-- Agent tools are disclosed as an offline practice simulation (README,
-  plugin.yaml, skill, tool descriptions, `health` op). Schema o200k_base 1110
-  (+63).
+- Agent tools gain an **online backend**: with the `network_enabled` setting
+  they act on the real game server via the pane's paired session
+  (`online_client.py`, `tools.OnlineGameClient`); offline practice sim stays
+  the default. `health`/`me` report `backend`. New settings
+  `agent_autonomy_enabled`, `agent_chat_enabled`. Version 0.1.1. Schema
+  o200k_base 1134 (+87).
 
 ## [0.1.0] - 2026-11-06
 

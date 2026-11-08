@@ -1,13 +1,15 @@
 name: hermagotchi
 id: hermagotchi
-version: 0.1.0
+version: "0.1.1"
 description: >-
   Co-op virtual pets with deterministic async battles, earned Bits, cosmetics,
   goals, leaderboards and moderated social play in the dashboard/Desktop pane.
-  The eight agent tools are an offline practice simulation (in-memory, reset on
-  Hermes restart; they do not reach the hosted game or your paired account).
-  Network and autonomy are off by default; game API URLs must be HTTPS except
-  loopback.
+  By default the eight agent tools run an offline practice simulation
+  (in-memory, reset on Hermes restart). When the owner sets network_enabled they
+  act on the real game server (HERMAGOTCHI_API_BASE_URL) using the device the
+  pane paired; that state persists. The status health/me ops report the active
+  backend. Network, autonomy and agent chat are off by default; game API URLs
+  must be HTTPS except loopback.
 author: Hermagotchi contributors
 license: MIT
 entrypoint: __init__.py
@@ -33,6 +35,20 @@ permissions:
   network: false
   filesystem: read
   secrets: []
+
+config_schema:
+  network_enabled:
+    type: bool
+    default: false
+    description: "Agent tools use the real game server (paired pane account) instead of the offline practice sim."
+  agent_autonomy_enabled:
+    type: bool
+    default: false
+    description: "Allow autonomy-gated agent actions (practice battles, purchases) in online mode."
+  agent_chat_enabled:
+    type: bool
+    default: false
+    description: "Allow the agent to send lobby messages, DMs and taunts in online mode."
 
 defaults:
   mode: human

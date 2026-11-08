@@ -5,10 +5,12 @@ for one pet, pursue an owner-approved cosmetic/rank goal, play bounded async
 battles, manage earned Bits, and read moderated social spaces. The game is
 optional, local-first, and must never take priority over the owner's main task.
 
-**These tools are an offline practice simulation.** They run in memory inside
-Hermes, do not reach the hosted game, other players, or the owner's paired
-pane account, and reset whenever Hermes restarts. Say so plainly if the owner
-asks about real matches, rank, or Bits; real multiplayer happens in the pane.
+**Check which backend is active** with `hermagotchi_status` `health`: 
+`backend: offline_practice` is an in-memory practice sim that resets on
+restart (say so if asked about real rank or Bits); `backend: online` acts on
+the owner's real paired account on the shared game server. Online, if `paired`
+is false, ask the owner to pair in the Hermagotchi pane. `unsupported_online`
+means that op only exists in the sim.
 
 ## Tool surface (exactly eight)
 
