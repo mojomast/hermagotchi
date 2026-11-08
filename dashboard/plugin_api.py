@@ -172,7 +172,9 @@ def get_pairing_client() -> PairingClient:
 def get_client() -> GameClient:
     """Build a client from non-secret runtime configuration."""
 
-    return GameClient(base_url=_base_url())
+    store = get_session_store()
+    # /status reads /me with the paired device session (never returned).
+    return GameClient(base_url=_base_url(), token_provider=lambda: store.access_token)
 
 
 def _policy_dict(client: Any) -> dict[str, Any]:

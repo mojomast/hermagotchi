@@ -634,3 +634,14 @@ def test_query_idempotency_key_is_used_and_stripped(tmp_path: Path) -> None:
     assert seen["key"] == "idem-q"
     assert "idempotency_key" not in str(seen["query"])
     assert "keep=1" in str(seen["query"])
+
+
+def test_default_status_client_uses_paired_session(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("HERMES_PLUGIN_DATA_DIR", str(tmp_path))
+    store = plugin_api.get_session_store()
+    store.save(token_payload())
+    client = plugin_api.get_client()
+    try:
+        assert client._request_headers().get("Authorization", "").startswith("Bearer ")
+    finally:
+        client.close()

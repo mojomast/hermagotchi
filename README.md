@@ -134,7 +134,7 @@ hermes plugins validate hermagotchi
 hermes plugins doctor hermagotchi
 ```
 
-On this branch: **559** Python tests passing (2 pre-existing failures also on `main`: an NPC art fringe check and a server taunt route test), **168** JS tests passing.
+On this branch: **560** Python tests passing (2 pre-existing failures also on `main`: an NPC art fringe check and a server taunt route test), **168** JS tests passing.
 
 ## Disclosures
 
