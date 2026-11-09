@@ -212,13 +212,17 @@ def build_online_handlers(client: Any, transport: OnlineTransport) -> dict:
         return {"server": data, "paired": transport.paired}
 
     def status_pair(a):
-        if a.get("revoke_device_id"):
-            return transport.pair.revoke(str(a["revoke_device_id"]))
-        if a.get("user_code"):
-            return transport.pair.approve(str(a["user_code"]))
+        # Approve/revoke must stay a human pane action. The agent also reads
+        # lobby messages and DMs, so a stranger could talk it into pairing
+        # their device to this account (maps to social.block, no owner gate).
+        if a.get("revoke_device_id") or a.get("user_code"):
+            raise OnlineError("unsupported_online")
         if not transport.paired:
             raise OnlineError("pair_via_pane")
-        devices = transport.pair.list_devices()
+        listed = transport.pair.list_devices()
+        devices = listed.get("devices") if isinstance(listed, dict) else listed
+        if not isinstance(devices, list):
+            devices = []
         return {"paired": True, "devices": devices}
 
     def pet_adopt(a):

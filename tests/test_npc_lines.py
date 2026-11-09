@@ -208,4 +208,4 @@ def test_schema_token_budget_unchanged():
     total = 0
     for schema in TOOL_SCHEMAS.values():
         total += len(enc.encode(json.dumps(schema, ensure_ascii=False, sort_keys=True, separators=(",", ":"))))
-    assert total == 1134  # +87 vs 1047: offline-sim / online-mode disclosure (catalog review)
+    assert total == 1196  # +62 vs 1134: pair approve/revoke pane-only disclosure (catalog review)

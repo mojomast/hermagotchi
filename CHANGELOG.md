@@ -6,7 +6,15 @@ merged to `main`.
 
 ## [Unreleased]
 
+### Security
+
+- Online `hermagotchi_status op=pair` no longer accepts `user_code` or
+  `revoke_device_id` (returns `unsupported_online`). Approving or revoking a
+  pairing stays a human action in the pane so lobby/DM prompt injection cannot
+  attach a stranger's device to the owner's account. Version 0.1.2.
+
 Fixes for the Hermes plugin-catalog review of `3376b974`.
+
 
 ### Security
 

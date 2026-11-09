@@ -144,3 +144,71 @@ def test_online_refuses_plain_http_remote(monkeypatch) -> None:
     monkeypatch.setenv(online_client.ENV_API_BASE_URL, "http://api.example.com/v1")
     with pytest.raises(GameClientError):
         online_client.OnlineTransport.from_environment()
+
+
+def test_online_pair_approve_via_tool_is_unsupported(server, store, monkeypatch) -> None:
+    """teknium1 catalog review: agent must not approve pairings online."""
+    pair_new_account(server, store)
+    c = online(server, store)
+    called = {"approve": 0}
+
+    def boom(code: str):
+        called["approve"] += 1
+        raise AssertionError(f"approve must not run online via tool ({code!r})")
+
+    monkeypatch.setattr(c.transport.pair, "approve", boom)
+    out = c.execute(
+        "hermagotchi_status",
+        {"op": "pair", "user_code": "BCDF-GHJK", "idempotency_key": key()},
+    )
+    assert out["ok"] is False
+    assert out["error_code"] == "unsupported_online"
+    assert called["approve"] == 0
+
+
+def test_online_pair_revoke_via_tool_is_unsupported(server, store, monkeypatch) -> None:
+    """teknium1 catalog review: agent must not revoke devices online."""
+    pair_new_account(server, store)
+    c = online(server, store)
+    status = c.execute("hermagotchi_status", {"op": "pair"})
+    assert status["ok"] is True
+    device_id = status["data"]["devices"][0]["device_id"]
+    called = {"revoke": 0}
+
+    def boom(device_id: str):
+        called["revoke"] += 1
+        raise AssertionError(f"revoke must not run online via tool ({device_id!r})")
+
+    monkeypatch.setattr(c.transport.pair, "revoke", boom)
+    out = c.execute(
+        "hermagotchi_status",
+        {"op": "pair", "revoke_device_id": device_id, "idempotency_key": key()},
+    )
+    assert out["ok"] is False
+    assert out["error_code"] == "unsupported_online"
+    assert called["revoke"] == 0
+
+
+def test_online_pair_status_read_still_works(server, store) -> None:
+    pair_new_account(server, store)
+    c = online(server, store)
+    out = c.execute("hermagotchi_status", {"op": "pair"})
+    assert out["ok"] is True
+    assert out["data"]["paired"] is True
+    assert isinstance(out["data"]["devices"], list)
+    assert out["data"]["devices"]
+
+
+def test_online_pair_unpaired_without_code_is_pair_via_pane(server, store) -> None:
+    c = online(server, store)
+    out = c.execute("hermagotchi_status", {"op": "pair"})
+    assert out["ok"] is False
+    assert out["error_code"] == "pair_via_pane"
+
+
+def test_tools_module_docstring_mentions_online_backend() -> None:
+    doc = tools.__doc__ or ""
+    assert "network_enabled" in doc
+    assert "OnlineGameClient" in doc or "online" in doc.lower()
+    assert "do NOT talk to the hosted game" not in doc
+    assert "unsupported_online" in doc

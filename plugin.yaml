@@ -1,6 +1,6 @@
 name: hermagotchi
 id: hermagotchi
-version: "0.1.1"
+version: "0.1.2"
 description: >-
   Co-op virtual pets with deterministic async battles, earned Bits, cosmetics,
   goals, leaderboards and moderated social play in the dashboard/Desktop pane.
