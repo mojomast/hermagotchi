@@ -6,7 +6,7 @@ maintainer: mojomast
 tier: community
 category: games
 requires_hermes: ">=0.23.0"
-version: "0.1.1"
+version: "0.1.2"
 capabilities:
   provides_tools:
     - hermagotchi_status

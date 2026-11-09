@@ -1,11 +1,16 @@
-"""Hermagotchi tool handlers backed by an in-memory offline practice simulation.
+"""Hermagotchi tool handlers: offline practice sim by default, optional online.
 
-The eight agent tools run against ``FakeGameClient``: a local, in-memory
-practice simulation. They do NOT talk to the hosted game, other players, or
-the dashboard/Desktop pane's paired account, and all state resets when Hermes
-restarts. This slice intentionally performs no network I/O. Every handler returns the
-contracts-v1 envelope ``{ok, data, error_code, correlation_id}`` so the fake can
-later be replaced by the hosted HTTP client without changing the tool surface.
+By default the eight agent tools run against ``FakeGameClient``, a local
+in-memory practice simulation with no network I/O; state resets when Hermes
+restarts. When the owner sets the ``network_enabled`` plugin setting (or
+``HERMAGOTCHI_NETWORK_ENABLED``), ``get_default_client`` switches to
+``OnlineGameClient``, which talks to the real game server through the pane's
+paired device session (see ``online_client``). Online mode never approves or
+revokes pairings via the agent tool: ``hermagotchi_status op=pair`` with
+``user_code`` or ``revoke_device_id`` returns ``unsupported_online`` so those
+actions stay manual in the pane. Every handler returns the contracts-v1
+envelope ``{ok, data, error_code, correlation_id}`` (serialized to a JSON
+string by the Hermes handlers).
 """
 
 from __future__ import annotations

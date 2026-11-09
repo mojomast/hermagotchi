@@ -60,13 +60,22 @@ def _schema(
 
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "hermagotchi_status": _schema(
-        "Read account, pet, wallet, goal, inbox, health, pairing.",
+        "Read account, pet, wallet, goal, inbox, health, pairing status. "
+        "Online: pair approve/revoke via user_code/revoke_device_id is pane-only "
+        "(tool returns unsupported_online); read-only device list still works.",
         ["me", "pet", "wallet", "goal", "inbox", "health", "pair"],
         {
-            "user_code": {"type": "string", "maxLength": 9},
+            "user_code": {
+                "type": "string",
+                "maxLength": 9,
+                "description": "Offline sim only. Online returns unsupported_online; approve in the pane.",
+            },
             "device_name": {"type": "string", "maxLength": 64},
             "new_account": {"type": "boolean"},
-            "revoke_device_id": {"type": "string"},
+            "revoke_device_id": {
+                "type": "string",
+                "description": "Offline sim only. Online returns unsupported_online; revoke in the pane.",
+            },
         },
     ),
     "hermagotchi_pet": _schema(
