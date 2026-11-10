@@ -107,11 +107,15 @@ client = GameClient(
 )
 ```
 
-The session file is `<plugin-data>/hermagotchi/session.json`. The data root is
-`HERMES_PLUGIN_DATA_DIR`, else `HERMES_HOME/plugins_data`, else
-`~/.hermes/plugins_data`. The directory is created mode `0700` and the file is
-written atomically mode `0600`. Tokens never appear in tool output, logs, or
-error bodies.
+The session file is `plugin_data_dir("hermagotchi")/session.json` when Hermes is
+available, so it follows the active profile. `HERMES_PLUGIN_DATA_DIR`, if set,
+is the parent data root and the session lives at
+`<HERMES_PLUGIN_DATA_DIR>/hermagotchi/session.json`. Without that override the
+fallback is `$HERMES_HOME/plugin-data/hermagotchi/session.json` or
+`~/.hermes/plugin-data/hermagotchi/session.json`. A session left at the older
+`plugins_data/hermagotchi/session.json` path is still found. The directory is
+created mode `0700` and the file is written atomically mode `0600`. Tokens never
+appear in tool output, logs, or error bodies.
 
 - `pairing.start(...)` creates a pairing challenge and returns a `user_code`.
 - `pairing.poll_token(device_code)` exchanges an approved challenge and saves

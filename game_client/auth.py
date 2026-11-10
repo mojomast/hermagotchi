@@ -53,21 +53,57 @@ _TOKEN_RE = re.compile(r"hg[adr]_[A-Za-z0-9_-]{8,}")
 _USER_CODE_SEPARATORS = re.compile(r"[\s-]+")
 
 
+def _hermes_plugin_data_dir() -> Path | None:
+    """Return ``plugin_data_dir("hermagotchi")`` when the Hermes API is importable."""
+
+    try:
+        from plugins.plugin_storage import plugin_data_dir
+
+        return plugin_data_dir("hermagotchi")
+    except Exception:
+        return None
+
+
 def data_dir(environ: Mapping[str, str] | None = None) -> Path:
-    """Return the Hermes plugin data root for this installation."""
+    """Return the Hermagotchi plugin data directory (contains ``session.json``).
+
+    Prefer ``plugins.plugin_storage.plugin_data_dir("hermagotchi")`` so the path
+    follows the active Hermes profile. ``HERMES_PLUGIN_DATA_DIR`` remains an
+    explicit override used by tests and live-smoke scripts; it is treated as
+    the parent data root, so the session lives at
+    ``<HERMES_PLUGIN_DATA_DIR>/hermagotchi/session.json``.
+    """
 
     env = os.environ if environ is None else environ
     configured = str(env.get("HERMES_PLUGIN_DATA_DIR") or "").strip()
     if configured:
-        return Path(configured).expanduser()
+        return Path(configured).expanduser() / "hermagotchi"
+    hosted = _hermes_plugin_data_dir()
+    if hosted is not None:
+        return hosted
     home = str(env.get("HERMES_HOME") or "").strip()
-    if home:
-        return Path(home).expanduser() / "plugins_data"
-    return Path.home() / ".hermes" / "plugins_data"
+    root = Path(home).expanduser() if home else Path.home() / ".hermes"
+    return root / "plugin-data" / "hermagotchi"
 
 
 def default_session_path(environ: Mapping[str, str] | None = None) -> Path:
-    return data_dir(environ) / "hermagotchi" / "session.json"
+    preferred = data_dir(environ) / "session.json"
+    if preferred.is_file():
+        return preferred
+    env = os.environ if environ is None else environ
+    # Older builds stored the session under HERMES_HOME/plugins_data.
+    # Only consult that location when Hermes plugin_data_dir is unavailable,
+    # so a leftover default-profile file cannot override the active profile.
+    if str(env.get("HERMES_PLUGIN_DATA_DIR") or "").strip():
+        return preferred
+    if _hermes_plugin_data_dir() is not None:
+        return preferred
+    home = str(env.get("HERMES_HOME") or "").strip()
+    root = Path(home).expanduser() if home else Path.home() / ".hermes"
+    legacy = root / "plugins_data" / "hermagotchi" / "session.json"
+    if legacy.is_file():
+        return legacy
+    return preferred
 
 
 def normalise_user_code(value: Any) -> str:

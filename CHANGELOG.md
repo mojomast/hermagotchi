@@ -8,6 +8,18 @@ merged to `main`.
 
 ### Security
 
+- Dashboard asset loading no longer passes absolute `http(s):` URLs to
+  `SDK.authedFetch`. Only relative paths under the plugin assets route, plus
+  `data:` and `blob:` URLs, are accepted, so a game-server `asset_url` cannot
+  send the Hermes session token to another host. Rebuilt `dashboard/dist` and
+  `desktop/plugin.js`.
+- Online lobby messages, DMs and history/taunt text in tool results are wrapped
+  as `{third_party_text: true, quoted: ...}` with control characters stripped.
+- Session storage prefers `plugin_data_dir("hermagotchi")` so it follows the
+  active Hermes profile. `HERMES_PLUGIN_DATA_DIR` is still an explicit override;
+  a session left at the older `plugins_data/hermagotchi/session.json` path is
+  still found.
+
 - Online `hermagotchi_status op=pair` no longer accepts `user_code` or
   `revoke_device_id` (returns `unsupported_online`). Approving or revoking a
   pairing stays a human action in the pane so lobby/DM prompt injection cannot

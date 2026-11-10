@@ -154,10 +154,10 @@ test("normaliseWallet never lets a negative balance leak into the UI", () => {
   assert.equal(normaliseWallet({ balance: "350" }).balance, 350);
 });
 
-test("joinAssetUrl builds public asset URLs without changing absolute ones", () => {
-  assert.equal(joinAssetUrl("https://cdn.example/assets", "items/a.png"), "https://cdn.example/assets/items/a.png");
-  assert.equal(joinAssetUrl("https://cdn.example/assets/", "/items/a.png"), "https://cdn.example/assets/items/a.png");
-  assert.equal(joinAssetUrl("https://cdn.example/assets", "https://other.example/a.png"), "https://other.example/a.png");
+test("joinAssetUrl builds same-origin asset URLs and drops absolute ones", () => {
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "items/a.png"), "/api/plugins/hermagotchi/assets/items/a.png");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets/", "/items/a.png"), "/api/plugins/hermagotchi/assets/items/a.png");
+  assert.equal(joinAssetUrl("https://cdn.example/assets", "https://other.example/a.png"), "");
   assert.equal(joinAssetUrl("", "items/a.png"), "items/a.png");
 });
 
@@ -171,20 +171,44 @@ test("buildPreviewLayers composes base plus equipped layers ordered by manifest 
     },
     catalog: CATALOG,
     manifest: MANIFEST,
-    assetBaseUrl: "https://cdn.example/assets",
+    assetBaseUrl: "/api/plugins/hermagotchi/assets",
   });
 
   assert.deepEqual(
     layers.map((layer) => layer.kind + ":" + layer.id),
     ["item:aura.custom_glow", "base:species.patchfox", "item:hat.brand_new", "item:emote.wave"]
   );
-  assert.equal(layers[1].url, "https://cdn.example/assets/species/patchfox.png");
-  assert.equal(layers[0].url, "https://cdn.example/assets/items/custom_glow.png");
+  assert.equal(layers[1].url, "/api/plugins/hermagotchi/assets/species/patchfox.png");
+  assert.equal(layers[0].url, "/api/plugins/hermagotchi/assets/items/custom_glow.png");
   assert.equal(layers[0].scale, 1.25);
   assert.equal(layers[0].z, -30);
 });
 
-test("buildPreviewLayers uses an item asset_url even without a manifest entry", () => {
+test("buildPreviewLayers uses a relative item asset_url even without a manifest entry", () => {
+  const layers = buildPreviewLayers({
+    pet: { id: "pet-1", species: "byteblob" },
+    loadout: { front: "front.direct" },
+    catalog: {
+      items: [
+        {
+          id: "front.direct",
+          name: "Direct",
+          slot: "front",
+          asset_id: "front.direct",
+          asset_url: "px3/items/direct.png",
+        },
+      ],
+    },
+    manifest: { species: {}, assets: [] },
+    assetBaseUrl: "/api/plugins/hermagotchi/assets",
+  });
+
+  const itemLayer = layers.find((layer) => layer.kind === "item");
+  assert.equal(itemLayer.url, "/api/plugins/hermagotchi/assets/px3/items/direct.png");
+  assert.equal(itemLayer.z, 40);
+});
+
+test("buildPreviewLayers drops an absolute item asset_url so authedFetch never sees it", () => {
   const layers = buildPreviewLayers({
     pet: { id: "pet-1", species: "byteblob" },
     loadout: { front: "front.direct" },
@@ -200,11 +224,11 @@ test("buildPreviewLayers uses an item asset_url even without a manifest entry", 
       ],
     },
     manifest: { species: {}, assets: [] },
+    assetBaseUrl: "/api/plugins/hermagotchi/assets",
   });
 
-  assert.equal(layers.length, 1);
-  assert.equal(layers[0].url, "https://cdn.example/direct.png");
-  assert.equal(layers[0].z, 40);
+  assert.equal(layers.some((layer) => layer.kind === "item"), false);
+  assert.ok(layers.every((layer) => !/^https?:/i.test(layer.url)));
 });
 
 test("manifestFromCatalog reads an embedded manifest when the server supplies one", () => {
@@ -293,8 +317,8 @@ test("itemThumbPath resolves a visible thumb for every launch-003 slot", () => {
     assert.ok(!seen.has(thumbPath), "duplicate thumb path " + thumbPath);
     seen.add(thumbPath);
 
-    const url = itemThumbUrl("https://cdn.example/assets", item, LAUNCH_MANIFEST);
-    assert.equal(url, "https://cdn.example/assets/" + thumbPath);
+    const url = itemThumbUrl("/api/plugins/hermagotchi/assets", item, LAUNCH_MANIFEST);
+    assert.equal(url, "/api/plugins/hermagotchi/assets/" + thumbPath);
     assert.match(url, /\/px3\/thumbs\/[a-z0-9_]+_thumb\.png$/);
   }
 });
@@ -312,7 +336,8 @@ test("itemThumbPath falls back to the id convention when the manifest is absent"
     "px3/thumbs/future_item_thumb.png"
   );
   assert.equal(itemThumbPath({}, null), "");
-  assert.equal(itemThumbUrl("https://cdn.example/assets", {}, null), "");
+  assert.equal(itemThumbUrl("/api/plugins/hermagotchi/assets", {}, null), "");
+  assert.equal(itemThumbUrl("https://cdn.example/assets", future, null), "");
 });
 
 test("ShopTab uses the shared thumb helper and a labelled image fallback", () => {

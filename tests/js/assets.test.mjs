@@ -7,10 +7,12 @@ import { fileURLToPath } from "node:url";
 import {
   ANIM_STRIP_TEMPLATE,
   animStripPath,
+  isRemoteAssetUrl,
   itemAssetPath,
   joinAssetUrl,
   npcPortraitPath,
   resolveAnimPalette,
+  safeRelativeAssetPath,
   speciesBodyPath,
 } from "../../desktop/src/ui/logic/assets.js";
 import { buildPreviewLayers } from "../../desktop/src/ui/logic/shop.js";
@@ -36,7 +38,22 @@ test("joinAssetUrl joins a bridge root without double slashes", () => {
   assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets/", "/px3/a.png"), "/api/plugins/hermagotchi/assets/px3/a.png");
   assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "./px3/a.png"), "/api/plugins/hermagotchi/assets/px3/a.png");
   assert.equal(joinAssetUrl("", "px3/a.png"), "px3/a.png");
-  assert.equal(joinAssetUrl("https://cdn.example/assets", "https://other.example/a.png"), "https://other.example/a.png");
+});
+
+test("joinAssetUrl accepts data and blob URLs and rejects remote ones", () => {
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "data:image/png;base64,aaa"), "data:image/png;base64,aaa");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "blob:http://localhost/1"), "blob:http://localhost/1");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "https://other.example/a.png"), "");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "http://other.example/a.png"), "");
+  assert.equal(joinAssetUrl("https://cdn.example/assets", "px3/a.png"), "");
+  assert.equal(joinAssetUrl("https://cdn.example/assets", "https://other.example/a.png"), "");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "//evil.example/a.png"), "");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "javascript:alert(1)"), "");
+  assert.equal(joinAssetUrl("/api/plugins/hermagotchi/assets", "../secret"), "");
+  assert.equal(safeRelativeAssetPath("https://cdn.example/x.png"), "");
+  assert.equal(safeRelativeAssetPath("px3/items/x.png"), "px3/items/x.png");
+  assert.equal(isRemoteAssetUrl("https://other.example/a.png"), true);
+  assert.equal(isRemoteAssetUrl("/api/plugins/hermagotchi/assets/px3/a.png"), false);
 });
 
 test("speciesBodyPath prefers the manifest base for every known species", () => {
@@ -90,7 +107,8 @@ test("itemAssetPath reads manifest assets and skips unknown ids", () => {
   assert.equal(itemAssetPath(manifest, { id: "hat.binary_crown" }), "px3/items/binary_crown.png");
   assert.equal(itemAssetPath(manifest, "hat.binary_crown"), "px3/items/binary_crown.png");
   assert.equal(itemAssetPath(null, { id: "aura.ping_pulse", asset_id: "aura.ping_pulse" }), "");
-  assert.equal(itemAssetPath(manifest, { assetUrl: "https://cdn.example/x.png", id: "x" }), "https://cdn.example/x.png");
+  assert.equal(itemAssetPath(manifest, { assetUrl: "https://cdn.example/x.png", id: "x" }), "");
+  assert.equal(itemAssetPath(manifest, { assetUrl: "px3/items/x.png", id: "x" }), "px3/items/x.png");
 });
 
 test("npcPortraitPath maps the four launch NPCs", () => {
