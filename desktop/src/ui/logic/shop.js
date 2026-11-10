@@ -3,7 +3,7 @@
  * ids are never hardcoded here so new cosmetics show up automatically.
  */
 
-import { joinAssetUrl, speciesBodyPath } from "./assets.js";
+import { joinAssetUrl, safeRelativeAssetPath, speciesBodyPath } from "./assets.js";
 import { composeItem, DEFAULT_NATIVE_SIZE } from "./compose.js";
 
 export { joinAssetUrl };
@@ -151,7 +151,7 @@ export function itemThumbPath(item, manifest) {
     return SHOP_THUMB_DIR + "/" + shortName + SHOP_THUMB_SUFFIX;
   }
   const fallback = item.assetUrl || item.asset_url || (asset && asset.path) || "";
-  return fallback ? String(fallback) : "";
+  return fallback ? safeRelativeAssetPath(fallback) : "";
 }
 
 export function itemThumbUrl(assetBase, item, manifest) {

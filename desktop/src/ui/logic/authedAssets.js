@@ -8,6 +8,7 @@
  * then swap in an object URL. Nothing here sees a credential.
  */
 
+import { isInlineAssetUrl, isRemoteAssetUrl } from "./assets.js";
 import { base64ToBytes, getHostTransport } from "./hostTransport.js";
 
 const ASSET_MARKER = "/assets/";
@@ -49,7 +50,22 @@ function loadViaFetch(fetchFn, url) {
 const cache = new Map();
 
 function isInlineUrl(value) {
-  return typeof value === "string" && /^(?:data:|blob:)/i.test(value);
+  return isInlineAssetUrl(value);
+}
+
+/**
+ * Dashboard authedFetch may only be pointed at a same-origin plugin assets
+ * route. Absolute http(s) URLs (and anything else with a scheme other than
+ * data:/blob:) are rejected so the Hermes session token cannot leave the host.
+ */
+export function isAuthedFetchSafeUrl(url) {
+  if (typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed || isInlineUrl(trimmed) || isRemoteAssetUrl(trimmed)) return false;
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return false;
+  if (trimmed.split("/").includes("..")) return false;
+  const path = trimmed.split(/[?#]/, 1)[0];
+  return /\/assets(?:-data)?(?:\/|$)/.test(path);
 }
 
 function fetchImpl() {
@@ -67,6 +83,8 @@ export function resolveAuthedAssetUrl(url, options = {}) {
   const trimmed = url.trim();
   if (!trimmed) return Promise.resolve("");
   if (isInlineUrl(trimmed)) return Promise.resolve(trimmed);
+  // Never hand an absolute or otherwise off-route URL to authedFetch.
+  if (!isAuthedFetchSafeUrl(trimmed)) return Promise.resolve("");
 
   const existing = cache.get(trimmed);
   if (existing) return existing.promise;
@@ -79,8 +97,10 @@ export function resolveAuthedAssetUrl(url, options = {}) {
     (host && host.authedFetch) ||
     fetchImpl();
   if (!rest && !fetchFn) {
-    // No fetch available (SSR / node without polyfill): keep the raw URL.
-    return Promise.resolve(trimmed);
+    // No fetch available (SSR / node without polyfill): do not return a
+    // remote URL that a later image tag could request unauthenticated, and do
+    // not invent a same-origin load. Callers retry when a transport exists.
+    return Promise.resolve("");
   }
 
   const entry = { objectUrl: null, promise: null };

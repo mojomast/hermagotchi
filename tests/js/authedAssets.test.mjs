@@ -5,6 +5,7 @@ import {
   resolveAuthedAssetUrl,
   authedAssetCacheSize,
   assetDataPath,
+  isAuthedFetchSafeUrl,
 } from "../../desktop/src/ui/logic/authedAssets.js";
 
 test("resolveAuthedAssetUrl passes through data and blob URLs", async () => {
@@ -65,4 +66,39 @@ test("resolveAuthedAssetUrl returns empty string on 401 and does not keep a bad 
   });
   assert.equal(url, "");
   assert.equal(authedAssetCacheSize(), 0);
+});
+
+test("isAuthedFetchSafeUrl allows only the plugin assets route", () => {
+  assert.equal(isAuthedFetchSafeUrl("/api/plugins/hermagotchi/assets/px3/x.png"), true);
+  assert.equal(isAuthedFetchSafeUrl("/api/plugins/hermagotchi/assets-data/px3/x.png"), true);
+  assert.equal(isAuthedFetchSafeUrl("/assets-data/px3/x.png"), true);
+  assert.equal(isAuthedFetchSafeUrl("https://other.host/x.png"), false);
+  assert.equal(isAuthedFetchSafeUrl("http://127.0.0.1/assets/x.png"), false);
+  assert.equal(isAuthedFetchSafeUrl("//evil.example/x.png"), false);
+  assert.equal(isAuthedFetchSafeUrl("javascript:alert(1)"), false);
+  assert.equal(isAuthedFetchSafeUrl("/api/plugins/hermagotchi/other/x.png"), false);
+  assert.equal(isAuthedFetchSafeUrl("px3/x.png"), false);
+  assert.equal(isAuthedFetchSafeUrl("data:image/png;base64,aaa"), false);
+});
+
+test("resolveAuthedAssetUrl never calls authedFetch with an absolute URL", async () => {
+  clearAuthedAssetCache();
+  const calls = [];
+  const fetchImpl = async (input) => {
+    calls.push(input);
+    return { ok: true, status: 200, async blob() { return new Blob([Uint8Array.from([1])]); } };
+  };
+  for (const url of [
+    "https://other.host/x.png",
+    "http://other.host/x.png",
+    "//other.host/x.png",
+    "javascript:alert(1)",
+    "/api/plugins/other/file.png",
+  ]) {
+    const resolved = await resolveAuthedAssetUrl(url, { fetchImpl, authedFetch: fetchImpl });
+    assert.equal(resolved, "", url);
+  }
+  assert.equal(calls.length, 0);
+  assert.equal(authedAssetCacheSize(), 0);
+  clearAuthedAssetCache();
 });

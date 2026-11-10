@@ -1005,14 +1005,66 @@ const NPC_PORTRAITS = Object.freeze({
   "npc.southpaw": "px3/npcs/southpaw_portrait.png",
 });
 
+const INLINE_ASSET = /^(?:data:|blob:)/i;
+const URL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+
+function isInlineAssetUrl(value) {
+  return typeof value === "string" && INLINE_ASSET.test(value.trim());
+}
+
+/** Absolute http(s), protocol-relative, or any other non-inline scheme. */
+function isRemoteAssetUrl(value) {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (!text || isInlineAssetUrl(text)) return false;
+  if (text.startsWith("//") || URL_SCHEME.test(text)) return true;
+  const stripped = text.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
+  return URL_SCHEME.test(stripped) || stripped.startsWith("//");
+}
+
+/**
+ * Relative path safe to join under the bridge assets route, or a data:/blob: URL.
+ * Remote and traversing paths return "".
+ */
+function safeRelativeAssetPath(path) {
+  if (!path) return "";
+  const value = String(path).trim();
+  if (!value) return "";
+  if (isInlineAssetUrl(value)) return value;
+  if (isRemoteAssetUrl(value)) return "";
+  const parts = [];
+  for (const part of value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "").split("/")) {
+    if (!part || part === ".") continue;
+    if (part === ".." || URL_SCHEME.test(part) || part.includes("\\") || part.includes("%")) {
+      return "";
+    }
+    parts.push(part);
+  }
+  return parts.join("/");
+}
+
+function safeAssetBase(baseUrl) {
+  if (typeof baseUrl !== "string") return "";
+  const base = baseUrl.trim().replace(/\/+$/, "");
+  if (!base) return "";
+  if (isRemoteAssetUrl(base) || isInlineAssetUrl(base)) return "";
+  if (base.split("/").includes("..")) return "";
+  return base;
+}
+
 function joinAssetUrl(baseUrl, path) {
   if (!path) return "";
-  const value = String(path);
-  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
-  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
-  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
-  if (!base) return relative;
-  if (!relative) return base;
+  const value = String(path).trim();
+  if (!value) return "";
+  if (isInlineAssetUrl(value)) return value;
+  const relative = safeRelativeAssetPath(value);
+  if (!relative) return "";
+  const base = safeAssetBase(baseUrl);
+  if (!base) {
+    // A remote base must not produce an absolute URL; a missing base may
+    // still return the relative path for later joining.
+    return isRemoteAssetUrl(String(baseUrl || "")) ? "" : relative;
+  }
   return base + "/" + relative;
 }
 
@@ -1092,7 +1144,7 @@ function itemAssetPath(manifest, itemOrId) {
   if (itemOrId && typeof itemOrId === "object") {
     const direct =
       itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
-    if (direct) return String(direct);
+    if (direct) return safeRelativeAssetPath(direct);
   }
   // Prefer a silent miss over a guessed path that 404s in the shop grid.
   return "";
@@ -1114,7 +1166,7 @@ function animStripPath(species, palette, state) {
     .replace("{state}", String(state || "idle"));
 }
 
-  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
+  return { "ANIM_STRIP_TEMPLATE": ANIM_STRIP_TEMPLATE, "SERVER_PALETTE_TO_ANIM": SERVER_PALETTE_TO_ANIM, "resolveAnimPalette": resolveAnimPalette, "NPC_PORTRAITS": NPC_PORTRAITS, "isInlineAssetUrl": isInlineAssetUrl, "isRemoteAssetUrl": isRemoteAssetUrl, "safeRelativeAssetPath": safeRelativeAssetPath, "joinAssetUrl": joinAssetUrl, "speciesBodyPath": speciesBodyPath, "itemAssetPath": itemAssetPath, "npcPortraitPath": npcPortraitPath, "animStripPath": animStripPath };
 })();
 
 // desktop/src/ui/logic/hostTransport.js
@@ -1189,6 +1241,8 @@ function base64ToBytes(b64) {
 
 // desktop/src/ui/logic/authedAssets.js
 const __m5 = (function () {
+  const isInlineAssetUrl = __m3["isInlineAssetUrl"];
+  const isRemoteAssetUrl = __m3["isRemoteAssetUrl"];
   const base64ToBytes = __m4["base64ToBytes"];
   const getHostTransport = __m4["getHostTransport"];
 /**
@@ -1241,7 +1295,22 @@ function loadViaFetch(fetchFn, url) {
 const cache = new Map();
 
 function isInlineUrl(value) {
-  return typeof value === "string" && /^(?:data:|blob:)/i.test(value);
+  return isInlineAssetUrl(value);
+}
+
+/**
+ * Dashboard authedFetch may only be pointed at a same-origin plugin assets
+ * route. Absolute http(s) URLs (and anything else with a scheme other than
+ * data:/blob:) are rejected so the Hermes session token cannot leave the host.
+ */
+function isAuthedFetchSafeUrl(url) {
+  if (typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed || isInlineUrl(trimmed) || isRemoteAssetUrl(trimmed)) return false;
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return false;
+  if (trimmed.split("/").includes("..")) return false;
+  const path = trimmed.split(/[?#]/, 1)[0];
+  return /\/assets(?:-data)?(?:\/|$)/.test(path);
 }
 
 function fetchImpl() {
@@ -1259,6 +1328,8 @@ function resolveAuthedAssetUrl(url, options = {}) {
   const trimmed = url.trim();
   if (!trimmed) return Promise.resolve("");
   if (isInlineUrl(trimmed)) return Promise.resolve(trimmed);
+  // Never hand an absolute or otherwise off-route URL to authedFetch.
+  if (!isAuthedFetchSafeUrl(trimmed)) return Promise.resolve("");
 
   const existing = cache.get(trimmed);
   if (existing) return existing.promise;
@@ -1271,8 +1342,10 @@ function resolveAuthedAssetUrl(url, options = {}) {
     (host && host.authedFetch) ||
     fetchImpl();
   if (!rest && !fetchFn) {
-    // No fetch available (SSR / node without polyfill): keep the raw URL.
-    return Promise.resolve(trimmed);
+    // No fetch available (SSR / node without polyfill): do not return a
+    // remote URL that a later image tag could request unauthenticated, and do
+    // not invent a same-origin load. Callers retry when a transport exists.
+    return Promise.resolve("");
   }
 
   const entry = { objectUrl: null, promise: null };
@@ -1314,7 +1387,7 @@ function authedAssetCacheSize() {
   return cache.size;
 }
 
-  return { "assetDataPath": assetDataPath, "resolveAuthedAssetUrl": resolveAuthedAssetUrl, "clearAuthedAssetCache": clearAuthedAssetCache, "authedAssetCacheSize": authedAssetCacheSize };
+  return { "assetDataPath": assetDataPath, "isAuthedFetchSafeUrl": isAuthedFetchSafeUrl, "resolveAuthedAssetUrl": resolveAuthedAssetUrl, "clearAuthedAssetCache": clearAuthedAssetCache, "authedAssetCacheSize": authedAssetCacheSize };
 })();
 
 // desktop/src/ui/components/AuthedImg.js
@@ -2763,6 +2836,7 @@ const composeLayer = composeItem;
 // desktop/src/ui/logic/shop.js
 const __m11 = (function () {
   const joinAssetUrl = __m3["joinAssetUrl"];
+  const safeRelativeAssetPath = __m3["safeRelativeAssetPath"];
   const speciesBodyPath = __m3["speciesBodyPath"];
   const composeItem = __m10["composeItem"];
   const DEFAULT_NATIVE_SIZE = __m10["DEFAULT_NATIVE_SIZE"];
@@ -2916,7 +2990,7 @@ function itemThumbPath(item, manifest) {
     return SHOP_THUMB_DIR + "/" + shortName + SHOP_THUMB_SUFFIX;
   }
   const fallback = item.assetUrl || item.asset_url || (asset && asset.path) || "";
-  return fallback ? String(fallback) : "";
+  return fallback ? safeRelativeAssetPath(fallback) : "";
 }
 
 function itemThumbUrl(assetBase, item, manifest) {

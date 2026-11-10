@@ -33,14 +33,66 @@ export const NPC_PORTRAITS = Object.freeze({
   "npc.southpaw": "px3/npcs/southpaw_portrait.png",
 });
 
+const INLINE_ASSET = /^(?:data:|blob:)/i;
+const URL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+
+export function isInlineAssetUrl(value) {
+  return typeof value === "string" && INLINE_ASSET.test(value.trim());
+}
+
+/** Absolute http(s), protocol-relative, or any other non-inline scheme. */
+export function isRemoteAssetUrl(value) {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (!text || isInlineAssetUrl(text)) return false;
+  if (text.startsWith("//") || URL_SCHEME.test(text)) return true;
+  const stripped = text.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
+  return URL_SCHEME.test(stripped) || stripped.startsWith("//");
+}
+
+/**
+ * Relative path safe to join under the bridge assets route, or a data:/blob: URL.
+ * Remote and traversing paths return "".
+ */
+export function safeRelativeAssetPath(path) {
+  if (!path) return "";
+  const value = String(path).trim();
+  if (!value) return "";
+  if (isInlineAssetUrl(value)) return value;
+  if (isRemoteAssetUrl(value)) return "";
+  const parts = [];
+  for (const part of value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "").split("/")) {
+    if (!part || part === ".") continue;
+    if (part === ".." || URL_SCHEME.test(part) || part.includes("\\") || part.includes("%")) {
+      return "";
+    }
+    parts.push(part);
+  }
+  return parts.join("/");
+}
+
+function safeAssetBase(baseUrl) {
+  if (typeof baseUrl !== "string") return "";
+  const base = baseUrl.trim().replace(/\/+$/, "");
+  if (!base) return "";
+  if (isRemoteAssetUrl(base) || isInlineAssetUrl(base)) return "";
+  if (base.split("/").includes("..")) return "";
+  return base;
+}
+
 export function joinAssetUrl(baseUrl, path) {
   if (!path) return "";
-  const value = String(path);
-  if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
-  const base = typeof baseUrl === "string" ? baseUrl.replace(/\/+$/, "") : "";
-  const relative = value.replace(/^(?:\.\/)+/, "").replace(/^\/+/, "");
-  if (!base) return relative;
-  if (!relative) return base;
+  const value = String(path).trim();
+  if (!value) return "";
+  if (isInlineAssetUrl(value)) return value;
+  const relative = safeRelativeAssetPath(value);
+  if (!relative) return "";
+  const base = safeAssetBase(baseUrl);
+  if (!base) {
+    // A remote base must not produce an absolute URL; a missing base may
+    // still return the relative path for later joining.
+    return isRemoteAssetUrl(String(baseUrl || "")) ? "" : relative;
+  }
   return base + "/" + relative;
 }
 
@@ -120,7 +172,7 @@ export function itemAssetPath(manifest, itemOrId) {
   if (itemOrId && typeof itemOrId === "object") {
     const direct =
       itemOrId.asset_url || itemOrId.assetUrl || itemOrId.path || "";
-    if (direct) return String(direct);
+    if (direct) return safeRelativeAssetPath(direct);
   }
   // Prefer a silent miss over a guessed path that 404s in the shop grid.
   return "";

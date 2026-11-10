@@ -91,6 +91,42 @@ def scrub(value: Any) -> Any:
     return value
 
 
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]+")
+# Player-authored string fields in lobby, DM, inbox and history payloads.
+_THIRD_PARTY_TEXT_KEYS = frozenset({"body", "text", "content", "taunt", "preview", "last_message"})
+
+
+def sanitize_third_party_text(value: str) -> str:
+    """Strip control characters and collapse newlines in untrusted player text."""
+
+    cleaned = _CONTROL_CHARS.sub(" ", value)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def as_third_party_text(value: str) -> dict[str, Any]:
+    return {
+        "third_party_text": True,
+        "quoted": sanitize_third_party_text(value),
+    }
+
+
+def mark_third_party_payload(data: Any) -> Any:
+    """Wrap player-authored strings so tool results mark them as third-party text."""
+
+    if isinstance(data, list):
+        return [mark_third_party_payload(item) for item in data]
+    if isinstance(data, Mapping):
+        return {
+            key: (
+                as_third_party_text(value)
+                if str(key) in _THIRD_PARTY_TEXT_KEYS and isinstance(value, str)
+                else mark_third_party_payload(value)
+            )
+            for key, value in data.items()
+        }
+    return data
+
+
 class OnlineError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
@@ -289,7 +325,7 @@ def build_online_handlers(client: Any, transport: OnlineTransport) -> dict:
         return _seg(a.get("channel_id") or "lobby")
 
     def social_read(a):
-        return get(f"/chat/channels/{channel(a)}/messages")
+        return mark_third_party_payload(get(f"/chat/channels/{channel(a)}/messages"))
 
     def social_send(a):
         body = {"body": a.get("body"), "actor_mode": "agent"}
@@ -330,7 +366,7 @@ def build_online_handlers(client: Any, transport: OnlineTransport) -> dict:
         raise OnlineError("invalid_arguments")
 
     def social_history(a):
-        return get("/social/history", filter=a.get("filter") or "all")
+        return mark_third_party_payload(get("/social/history", filter=a.get("filter") or "all"))
 
     def leaderboard(a):
         return get("/leaderboard", season_id=a.get("season_id"))
@@ -369,7 +405,7 @@ def build_online_handlers(client: Any, transport: OnlineTransport) -> dict:
         ("hermagotchi_social", "send"): social_send,
         ("hermagotchi_social", "block"): social_block,
         ("hermagotchi_social", "report"): social_report,
-        ("hermagotchi_social", "inbox"): lambda a: get("/chat/inbox"),
+        ("hermagotchi_social", "inbox"): lambda a: mark_third_party_payload(get("/chat/inbox")),
         ("hermagotchi_social", "taunt"): social_taunt,
         ("hermagotchi_social", "friends"): social_friends,
         ("hermagotchi_social", "history"): social_history,

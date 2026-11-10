@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from game_client import auth as auth_mod  # noqa: E402
 from game_client.auth import PairingClient, SessionStore, normalise_user_code  # noqa: E402
 from game_client.client import GameClient  # noqa: E402
 from game_client.errors import GameClientError  # noqa: E402
@@ -506,3 +507,34 @@ def test_status_schema_exposes_pair_and_keeps_eight_tools() -> None:
     assert len(schemas.TOOL_SCHEMAS) == 8
     assert set(schemas.TOOL_SCHEMAS) == set(schemas.TOOL_NAMES)
     assert len(tools.HANDLERS) == 8
+
+
+def test_default_session_path_uses_plugin_data_dir(monkeypatch, tmp_path: Path) -> None:
+    import sys
+    import types
+
+    target = tmp_path / "plugin-data" / "hermagotchi"
+    storage = types.ModuleType("plugins.plugin_storage")
+    storage.plugin_data_dir = lambda name: target if name == "hermagotchi" else (_ for _ in ()).throw(AssertionError(name))
+    plugins = types.ModuleType("plugins")
+    plugins.plugin_storage = storage
+    monkeypatch.setitem(sys.modules, "plugins", plugins)
+    monkeypatch.setitem(sys.modules, "plugins.plugin_storage", storage)
+    environ = {}
+    assert auth_mod.data_dir(environ) == target
+    assert auth_mod.default_session_path(environ) == target / "session.json"
+
+
+def test_default_session_path_finds_legacy_plugins_data(monkeypatch, tmp_path: Path) -> None:
+    import sys
+    import types
+
+    # Simulate Hermes APIs being unavailable so the fallback path is used.
+    missing = types.ModuleType("plugins.plugin_storage")
+    monkeypatch.setitem(sys.modules, "plugins.plugin_storage", missing)
+    home = tmp_path / "old-home"
+    legacy = home / "plugins_data" / "hermagotchi" / "session.json"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text("{}", encoding="utf-8")
+    environ = {"HERMES_HOME": str(home)}
+    assert auth_mod.default_session_path(environ) == legacy
