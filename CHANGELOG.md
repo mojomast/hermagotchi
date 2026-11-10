@@ -6,6 +6,8 @@ merged to `main`.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-10
+
 ### Security
 
 - Dashboard asset loading no longer passes absolute `http(s):` URLs to
@@ -19,6 +21,10 @@ merged to `main`.
   active Hermes profile. `HERMES_PLUGIN_DATA_DIR` is still an explicit override;
   a session left at the older `plugins_data/hermagotchi/session.json` path is
   still found.
+
+## [0.1.2] - 2026-11-09
+
+### Security
 
 - Online `hermagotchi_status op=pair` no longer accepts `user_code` or
   `revoke_device_id` (returns `unsupported_online`). Approving or revoking a
